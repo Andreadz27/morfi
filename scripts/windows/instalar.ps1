@@ -82,6 +82,16 @@ New-Item -ItemType Directory -Force -Path $pm2Home | Out-Null
 [Environment]::SetEnvironmentVariable('PM2_HOME', $pm2Home, 'Machine')
 $env:PM2_HOME = $pm2Home
 
+# Volver a instalar con Morfi andando: se detiene antes (con sqlite3 en uso, npm ci falla en Windows con EPERM).
+# También Morfi Nube si corre en esta PC (morfi-nube): se vuelve a levantar al final
+$habiaNube = $false
+if (Get-Command pm2 -ErrorAction SilentlyContinue) {
+  $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+  $habiaNube = [bool](pm2 jlist 2>$null | Select-String '"name":"morfi-nube"')
+  $ErrorActionPreference = $prev
+  foreach ($proceso in 'morfi', 'gastromanager', 'morfi-nube') { Tolerante { pm2 stop $proceso } }
+}
+
 npm ci --omit=dev --no-audit --no-fund; Revisar 'instalar dependencias (npm ci)'
 if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) { npm install -g pm2; Revisar 'instalar pm2'; Refrescar-Path }
 $pm2Cmd = (Get-Command pm2.cmd -ErrorAction SilentlyContinue).Source
@@ -176,6 +186,9 @@ Paso 'Servidor con pm2'
 # Lo levanta la misma tarea del arranque: así el proceso queda en el pm2 de SYSTEM desde el primer día
 Tolerante { pm2 delete gastromanager }
 Tolerante { pm2 delete morfi }
+# Si la tarea quedó "en ejecución" desde el último arranque de la PC, Windows rechaza iniciarla otra vez y Morfi
+# quedaba apagado al volver a correr el instalador: se detiene antes
+Stop-ScheduledTask -TaskName 'Morfi' -ErrorAction SilentlyContinue
 Start-ScheduledTask -TaskName 'Morfi'
 $arranco = $false
 for ($i = 0; $i -lt 45 -and -not $arranco; $i++) {
@@ -183,6 +196,10 @@ for ($i = 0; $i -lt 45 -and -not $arranco; $i++) {
   try { $arranco = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 3 "http://127.0.0.1:$Puerto/api/salud" -ErrorAction Stop).StatusCode -gt 0 } catch { $arranco = [bool]$_.Exception.Response }
 }
 if (-not $arranco) { throw "El servidor no respondió en el puerto $Puerto. Revisá $Carpeta\logs\pm2-error.log" }
+if ($habiaNube) {
+  Tolerante { pm2 restart morfi-nube }
+  Tolerante { pm2 save }
+}
 
 if ($ActualizacionAutomatica) {
   Paso 'Actualización automática diaria (05:00)'
