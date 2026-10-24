@@ -27,6 +27,7 @@ Corren en orden; si uno falla, los siguientes no corren.
 | CP-VEN-03 | Llega a cocina | Ingresar como cocina | La comanda muestra "2× Ensalada César" y la nota; al tocar LISTO desaparece y queda la hora | P1 | humo, regresión |
 | CP-VEN-04 | Cobro en efectivo | Pedidos → el pedido → Cobrar; recibe $10.000 | Vuelto $1.000; el pedido queda pagado | P1 | humo, regresión |
 | CP-VEN-05 | Cierre de caja | Caja → Cerrar con el efectivo esperado | Esperado = $5.000 + $9.000; cierra con diferencia $0 | P1 | regresión |
+| CP-COB-01 | Cuenta por plato | Mesa con 2 ensaladas → Cobrar → Por plato: una persona paga 1, la siguiente la otra | Cada una paga $4.500; la segunda ve solo lo que falta y no puede elegir de más; el pedido cierra | P1 | regresión |
 
 ## Carta del QR en el celular (CP-CAR) · `qa/e2e/specs/03-carta-celular.spec.js` (Pixel 7 emulado)
 

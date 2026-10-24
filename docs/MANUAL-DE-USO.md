@@ -64,7 +64,9 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
 
 ### Cobrar una mesa
 - Desde **Mesas** o **Pedidos**, **Cobrar**.
-- **Dividir la cuenta**: en partes iguales, y cada parte se cobra con **Cobrar al siguiente**.
+- **Dividir la cuenta**: **Partes iguales** (se elige cuántas personas) o **Por plato**: cada persona marca lo que
+  comió y paga eso. El descuento y la propina se reparten solos. Después de cada pago, **Cobrar al siguiente** muestra
+  solo lo que falta, y el último paga lo que queda.
 - **Pagos mixtos**: una parte en efectivo y otra con tarjeta, por ejemplo.
 - **Propina**: se suma aparte. No va en la factura ni en el IVA, y queda para repartir al personal.
 - **Descuento** y **cupones** (si el local tiene Fidelización).

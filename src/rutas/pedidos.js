@@ -296,7 +296,7 @@ app.post('/api/pedidos/:id/cobro', autenticar, requiereCobro, async (req, res) =
     }
 
     const r = await transaccion(() => registrarCobroTx(pedidoId, {
-      pagos, propina: body.propina, usuarioId: req.usuario.id
+      pagos, propina: body.propina, usuarioId: req.usuario.id, items: body.items
     }));
     await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)',
       [req.usuario.id, 'cobro_mesa', `Pedido ${r.pedido.numero_pedido}: cobrado ${r.cobrado} (${pagos.map(p => p.metodo).join(' + ')})` +

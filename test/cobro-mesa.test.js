@@ -8,7 +8,7 @@ before(async () => {
   s = await iniciarServidor();
   [prod] = await s.q('SELECT id FROM productos WHERE activo = 1 ORDER BY id LIMIT 1');
   await s.q('UPDATE productos SET precio_venta = 1000, tracking_stock = 1, stock_actual = 100 WHERE id = ?', [prod.id]);
-  mesas = (await s.q('SELECT id FROM mesas ORDER BY id LIMIT 6')).map(m => m.id);
+  mesas = (await s.q('SELECT id FROM mesas ORDER BY id LIMIT 7')).map(m => m.id);
   const hash = require('bcryptjs').hashSync('mozo1234', 4);
   await s.q("INSERT INTO usuarios (nombre, email, password, rol, debe_cambiar_password) VALUES ('Mozo Test', 'mozo@test.com', ?, 'mozo', 0)", [hash]);
   tokenMozo = s.token((await s.q("SELECT id FROM usuarios WHERE email = 'mozo@test.com'"))[0].id);
@@ -149,4 +149,33 @@ test('el arqueo de caja cuenta cada parte en su medio de pago y el efectivo espe
   assert.equal(de(despues, 'efectivo') - de(antes, 'efectivo'), 1000, 'entra lo cobrado, no lo recibido (el vuelto sale de la caja)');
   assert.equal(de(despues, 'tarjeta') - de(antes, 'tarjeta'), 2000);
   assert.equal(despues.efectivo_esperado - antes.efectivo_esperado, 1000);
+});
+
+test('cuenta por plato: cada uno marca lo suyo, no se paga dos veces el mismo plato y el último cierra', async () => {
+  const p = await pedidoMesa(mesas[6], 3); // 3 x 1000
+  const [{ id: item }] = await s.q('SELECT id FROM pedido_items WHERE pedido_id = ?', [p.id]);
+
+  const [st1, r1] = await cobrar(p.id, { pagos: [{ metodo: 'efectivo', monto: 1000 }], items: [{ id: item, cantidad: 1 }] });
+  assert.equal(st1, 200, JSON.stringify(r1));
+  assert.deepEqual([r1.cerrado, r1.saldo], [false, 2000]);
+  const [, det] = await s.llamar('GET', `/api/pedidos/${p.id}`, null, s.tokenVendedor);
+  assert.equal(det.items[0].cantidad_pagada, 1, 'el pedido informa cuánto de cada plato ya se pagó');
+
+  // Querer pagar 3 cuando faltan 2: se rechaza y no se cobra nada
+  const [st2, r2] = await cobrar(p.id, { pagos: [{ metodo: 'tarjeta', monto: 2000 }], items: [{ id: item, cantidad: 3 }] });
+  assert.equal(st2, 400);
+  assert.match(r2.error, /ya está pago/);
+  // Un plato de otro pedido tampoco
+  const otro = await pedidoMesa(mesas[5], 1);
+  const [{ id: itemOtro }] = await s.q('SELECT id FROM pedido_items WHERE pedido_id = ?', [otro.id]);
+  assert.equal((await cobrar(p.id, { pagos: [{ metodo: 'tarjeta', monto: 1000 }], items: [{ id: itemOtro, cantidad: 1 }] }))[0], 400);
+  assert.equal((await cobrar(p.id, { pagos: [{ metodo: 'tarjeta', monto: 1000 }], items: [] }))[0], 400);
+  const [{ suma }] = await s.q('SELECT SUM(monto) suma FROM pagos WHERE pedido_id = ?', [p.id]);
+  assert.equal(suma, 1000, 'los cobros rechazados no dejaron pagos');
+
+  const [, r3] = await cobrar(p.id, { pagos: [{ metodo: 'tarjeta', monto: 2000 }], items: [{ id: item, cantidad: 2 }] });
+  assert.deepEqual([r3.cerrado, r3.saldo], [true, 0]);
+  const [{ cantidad_pagada }] = await s.q('SELECT cantidad_pagada FROM pedido_items WHERE id = ?', [item]);
+  assert.equal(cantidad_pagada, 3);
+  await cobrar(otro.id, { pagos: [{ metodo: 'efectivo', monto: 1000 }] });
 });
