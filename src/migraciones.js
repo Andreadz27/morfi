@@ -315,6 +315,10 @@ async function migrarEsquema() {
   await run('CREATE INDEX IF NOT EXISTS idx_pedidos_mp_payment ON pedidos(mp_payment_id)');
   await run('CREATE INDEX IF NOT EXISTS idx_comprobantes_pedido ON comprobantes_afip(pedido_id)');
 
+  // Pedidos reenviados por el celular del mozo después de un corte de WiFi: no se duplican (src/idempotencia.js)
+  await run(`CREATE TABLE IF NOT EXISTS idempotencia (
+    clave TEXT PRIMARY KEY, ruta TEXT, estado_http INTEGER, respuesta TEXT, creado_en TEXT DEFAULT CURRENT_TIMESTAMP)`);
+
   // Contabilidad: gastos y compras con su comprobante (cuentas a pagar e IVA compras)
   await run(`CREATE TABLE IF NOT EXISTS gastos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

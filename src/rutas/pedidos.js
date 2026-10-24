@@ -4,6 +4,7 @@ const {
   registrarCobroTx, saldoPedido, requiereCobro, facturarOEncolar, validarDatosFactura, avisarEstadoPedido,
   autorizar, requiereAutorizacion, facturaVigente, datosTicketFiscalConQR, getIntCfg, revertirFidelizacionTx
 } = require('../contexto');
+const { idempotente } = require('../idempotencia');
 
 module.exports = function registrarRutas(app) {
 
@@ -12,7 +13,7 @@ module.exports = function registrarRutas(app) {
 // Los del selector del POS. DEF-001: antes se guardaba cualquier texto y el pedido quedaba fuera de los reportes por tipo.
 const TIPOS_PEDIDO = ['salon', 'mostrador', 'takeaway', 'delivery'];
 
-app.post('/api/pedidos', autenticar, requiere('pedidos.tomar'), async (req, res) => {
+app.post('/api/pedidos', autenticar, requiere('pedidos.tomar'), idempotente, async (req, res) => {
   try {
     const { cliente, notas, descuento, propina, plataforma, codigo_externo, direccion, telefono, costo_envio } = req.body;
     const tipo = req.body.tipo || 'salon';
@@ -36,7 +37,24 @@ app.post('/api/pedidos', autenticar, requiere('pedidos.tomar'), async (req, res)
       if (mesa_id) {
         // DEF-002: sin esto, la base rechazaba la clave foránea con un mensaje genérico
         if (!await get('SELECT 1 AS x FROM mesas WHERE id = ?', [mesa_id])) throw errorHttp(400, 'La mesa no existe');
-        const abierto = await get("SELECT numero_pedido FROM pedidos WHERE mesa_id = ? AND estado = 'abierto' LIMIT 1", [mesa_id]);
+        const abierto = await get("SELECT id, numero_pedido FROM pedidos WHERE mesa_id = ? AND estado = 'abierto' LIMIT 1", [mesa_id]);
+        // Pedido que el celular del mozo guardó sin WiFi y reenvía (public/js/cola-pedidos.js): si mientras tanto la
+        // mesa se abrió (otro mozo, u otro pedido guardado para la misma mesa), lo pedido se suma ahí en vez de perderse
+        if (abierto && req.body.sumar_si_mesa_abierta === true) {
+          const itemIds = [];
+          for (const item of items) {
+            const r = await run(
+              `INSERT INTO pedido_items (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal, notas)
+               VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [abierto.id, item.producto_id || null, item.nombre, item.cantidad, item.precio, item.subtotal, item.notas || '']);
+            itemIds.push(r.id);
+          }
+          const { subtotal, total } = await recalcularTotales(abierto.id);
+          await run('UPDATE pedidos SET listo_en = NULL WHERE id = ?', [abierto.id]);
+          emitEvento('cocina:actualizar', { pedido_id: abierto.id, accion: 'item_agregado' });
+          emitEvento('dashboard:actualizar', { motivo: 'pedido_actualizado' });
+          return { id: abierto.id, numero_pedido: abierto.numero_pedido, subtotal, total, agregado_a_mesa: true, itemIds };
+        }
         if (abierto) throw errorHttp(409, `La mesa ya tiene el pedido ${abierto.numero_pedido} abierto: agregá los ítems ahí`);
       }
       const numero = await generarNumeroPedido();
@@ -79,8 +97,10 @@ app.post('/api/pedidos', autenticar, requiere('pedidos.tomar'), async (req, res)
     });
 
     // Comanda a las impresoras térmicas (si no hay, el POS usa la impresión del navegador)
-    const impresionComanda = await comandaAutomatica(resultado.id).catch(() => false);
-    res.status(201).json({ ...resultado, impresion_comanda: impresionComanda });
+    const { itemIds, ...respuesta } = resultado;
+    const impresionComanda = await (itemIds ? comandaAutomatica(resultado.id, { itemIds, titulo: 'AGREGADO' })
+      : comandaAutomatica(resultado.id)).catch(() => false);
+    res.status(201).json({ ...respuesta, impresion_comanda: impresionComanda });
   } catch (err) {
     errorInterno(res, err);
   }
@@ -189,7 +209,7 @@ app.get('/api/pedidos/:id', autenticar, requiere('pedidos.ver'), async (req, res
   }
 });
 
-app.post('/api/pedidos/:id/items', autenticar, requiere('pedidos.tomar'), async (req, res) => {
+app.post('/api/pedidos/:id/items', autenticar, requiere('pedidos.tomar'), idempotente, async (req, res) => {
   try {
     const itemId = await transaccion(async () => {
       const pedido = await get('SELECT id, estado FROM pedidos WHERE id = ?', [req.params.id]);

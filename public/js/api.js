@@ -24,8 +24,9 @@ const API = {
     localStorage.removeItem('gm_token');
   },
 
-  async request(method, url, data = null, pin = null) {
-    const headers = {};
+  // extra: headers propios de la petición (X-Idempotencia para los pedidos que pueden quedar en la cola)
+  async request(method, url, data = null, pin = null, extra = {}) {
+    const headers = { ...extra };
     if (pin) headers['X-Autorizacion-Pin'] = pin;
     const token = this.getToken();
     if (token) {
@@ -40,7 +41,13 @@ const API = {
       options.body = JSON.stringify(data);
     }
 
-    const response = await fetch(`${this.baseURL}${url}`, options);
+    let response;
+    try {
+      response = await fetch(`${this.baseURL}${url}`, options);
+    } catch (e) {
+      // Sin conexión con la PC del local (WiFi cortado): lo distingue de un error del servidor
+      throw Object.assign(new Error('Sin conexión con Morfi. Revisá el WiFi.'), { sinConexion: true });
+    }
 
     if (response.status === 401) {
       this.clearToken();
@@ -54,7 +61,7 @@ const API = {
       // Acción que necesita la autorización de un encargado: se pide el PIN y se reintenta
       if (result.requiere_pin && response.status === 403) {
         const nuevoPin = await pedirPinAutorizacion(result.error);
-        if (nuevoPin) return this.request(method, url, data, nuevoPin);
+        if (nuevoPin) return this.request(method, url, data, nuevoPin, extra);
         throw new Error('Acción cancelada: falta la autorización');
       }
       throw new Error(result.error || 'Error en la petici\u00f3n');
@@ -143,8 +150,9 @@ const API = {
   },
 
   getPedido(id) { return this.request('GET', `/pedidos/${id}`); },
-  createPedido(data) { return this.request('POST', '/pedidos', data); },
-  addItemToPedido(id, data) { return this.request('POST', `/pedidos/${id}/items`, data); },
+  // Si se corta el WiFi quedan guardados en el celular y se mandan solos al volver: devuelven { encolado: true }
+  createPedido(data, descripcion = 'Pedido') { return ColaPedidos.enviarOGuardar('POST', '/pedidos', data, descripcion); },
+  addItemToPedido(id, data, descripcion = 'Agregado') { return ColaPedidos.enviarOGuardar('POST', `/pedidos/${id}/items`, data, descripcion); },
   aplicarDescuento(id, descuento) { return this.request('PUT', `/pedidos/${id}/descuento`, { descuento }); },
   pagarPedido(id, data) { return this.request('POST', `/pedidos/${id}/pagar`, data); },
   cobrarEnMesa(id, data) { return this.request('POST', `/pedidos/${id}/cobro`, data); },
