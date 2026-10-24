@@ -73,8 +73,12 @@ function instalarDependencias() {
 // El proceso se llama "morfi"; antes del cambio de nombre, "gastromanager". Se manejan los dos: si quedara uno de
 // cada versión, serían dos servidores peleando por el mismo puerto.
 const PROCESOS = ['morfi', 'gastromanager'];
+// Morfi Nube corriendo en esta misma PC (docs/INSTALACION.md, 4b): usa el mismo node_modules, así que también se
+// detiene antes de npm ci (si no, sqlite3 queda en uso y falla con EPERM) y se reinicia con el código nuevo.
+// Conserva sus variables (PORT, NUBE_DATOS...): pm2 restart no las borra.
+const NUBE = 'morfi-nube';
 function detener() {
-  for (const p of PROCESOS) { try { correr('pm2', ['stop', p]); } catch (e) { /* no existe con ese nombre */ } }
+  for (const p of [...PROCESOS, NUBE]) { try { correr('pm2', ['stop', p]); } catch (e) { /* no existe con ese nombre */ } }
 }
 // Se borran los dos y se levanta el de ecosystem.config.js (el nombre de la versión que quedó instalada)
 function reiniciar() {
@@ -82,6 +86,7 @@ function reiniciar() {
   log('Reiniciando el servidor...');
   for (const p of PROCESOS) { try { correr('pm2', ['delete', p]); } catch (e) { /* no existe con ese nombre */ } }
   correr('pm2', ['start', path.join(RAIZ, 'ecosystem.config.js'), '--env', 'production', '--update-env']);
+  try { correr('pm2', ['restart', NUBE]); } catch (e) { /* esta PC no tiene la nube */ }
   try { correr('pm2', ['save']); } catch (e) { log('pm2 save: ' + e.message); }
 }
 
