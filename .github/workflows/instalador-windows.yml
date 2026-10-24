@@ -18,8 +18,6 @@ jobs:
   instalar:
     runs-on: windows-latest
     timeout-minutes: 40
-    env:
-      INSTALADOR: ${{ runner.temp }}\instalar.ps1
     steps:
       # Node como en una PC real: para toda la máquina (la tarea de inicio corre como SYSTEM y lo busca en el PATH)
       - name: Node.js 22 para toda la PC
