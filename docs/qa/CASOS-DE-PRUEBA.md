@@ -36,6 +36,7 @@ Corren en orden; si uno falla, los siguientes no corren.
 | CP-CAR-02 | Filtrar por categoría | Tocar "Bebidas" | Solo la sección Bebidas; no aparece la ensalada | P2 | celular |
 | CP-CAR-03 | Entra en la pantalla | Abrir la carta en el celular | Sin desplazamiento horizontal | P2 | celular |
 | CP-CAR-04 | Nada interno a la vista | Abrir la carta | No aparecen costo, stock ni "admin" | P1 | celular, seguridad |
+| CP-CAR-05 | Aviso de privacidad en el pedido online | Abrir `pedido.html` | El formulario dice quién guarda los datos (el local, con su CUIT), para qué y cómo pedir borrarlos (Ley 25.326) | P2 | celular |
 
 ## Ganancias (CP-GAN) · `qa/e2e/specs/04-ganancias.spec.js`
 

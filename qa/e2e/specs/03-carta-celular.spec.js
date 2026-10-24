@@ -26,6 +26,13 @@ test.describe('Carta pública en el celular', { tag: '@celular' }, () => {
     expect(contenido, 'el contenido no debe ser más ancho que la pantalla').toBeLessThanOrEqual(ancho);
   });
 
+  test('CP-CAR-05 · el pedido online informa quién guarda los datos del cliente y cómo pedir borrarlos', async ({ page }) => {
+    await page.goto('/pedido.html');
+    const aviso = page.locator('#avisoDatos');
+    await expect(aviso).toContainText('Ley 25.326');
+    await expect(aviso).toContainText('borrarlos');
+  });
+
   test('CP-CAR-04 · el cliente no ve nada del sistema interno', { tag: '@seguridad' }, async ({ page, carta }) => {
     await carta.abrir();
     await expect(page.locator('body')).not.toContainText(/costo|stock|admin/i);

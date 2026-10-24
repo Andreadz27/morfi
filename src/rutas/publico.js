@@ -42,7 +42,7 @@ app.get('/api/publico/menu', async (req, res) => {
 
 app.get('/api/publico/info', async (req, res) => {
   try {
-    const config = await get('SELECT nombre_negocio, direccion, telefono, email FROM configuracion WHERE id = 1');
+    const config = await get('SELECT nombre_negocio, direccion, telefono, email, cuit FROM configuracion WHERE id = 1');
     // Sin BASE_URL no hay links: el navegador arma los suyos con la dirección por la que entró
     // (antes salían con localhost y el QR impreso en las mesas no abría en ningún celular)
     const base = urlPublica();
@@ -53,6 +53,8 @@ app.get('/api/publico/info', async (req, res) => {
       descripcion: config?.direccion ? `Dirección: ${config.direccion}` : '',
       telefono: config?.telefono || '',
       email: config?.email || '',
+      // Para el aviso de privacidad del formulario del pedido (el local es el responsable de los datos)
+      cuit: config?.cuit || '',
       links: nube ? {
         carta:     `${nube}/pedido.html`,
         whatsapp:  `${nube}/pedido.html?origen=whatsapp`,

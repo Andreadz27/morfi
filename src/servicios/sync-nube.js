@@ -90,8 +90,8 @@ async function cartaLocal() {
     WHERE c.activo = 1 AND EXISTS (SELECT 1 FROM productos p WHERE p.categoria_id = c.id AND p.activo = 1) ORDER BY c.orden, c.nombre`);
   const productos = await all(`SELECT id, nombre, descripcion, precio_venta, categoria_id, tracking_stock, stock_actual, es_plato
     FROM productos WHERE activo = 1 ORDER BY nombre`);
-  const c = await get('SELECT nombre_negocio, direccion, telefono, email FROM configuracion WHERE id = 1') || {};
-  return { info: { nombre: c.nombre_negocio, direccion: c.direccion, telefono: c.telefono, email: c.email }, categorias, productos };
+  const c = await get('SELECT nombre_negocio, direccion, telefono, email, cuit FROM configuracion WHERE id = 1') || {};
+  return { info: { nombre: c.nombre_negocio, direccion: c.direccion, telefono: c.telefono, email: c.email, cuit: c.cuit }, categorias, productos };
 }
 async function enviarCarta() {
   const carta = JSON.stringify(await cartaLocal());

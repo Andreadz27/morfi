@@ -164,8 +164,13 @@ Render (más abajo).
    toma la IP real del cliente. Comprobarlo en `https://nube.<dominio>/api/salud` (el campo `ip`).
 4. Conectar el propio local: alta del local (ver "Altas"), y en su `.env` `NUBE_URL=http://127.0.0.1:4000` y su
    `NUBE_TOKEN`. Los demás locales usan `NUBE_URL=https://nube.<dominio>`.
-5. Copia de la base de la nube: hacer copia de la carpeta `Morfi-nube-datos`, por ejemplo con la copia en la nube
-   de esa PC (`BACKUP_COPIA_DIR`) o a mano.
+5. Copia de la base de la nube: la nube copia su base sola al iniciar y cada 24 h en `Morfi-nube-datos\copias`
+   (las últimas 30; `NUBE_COPIAS_CONSERVAR` cambia la cantidad). `/api/salud` muestra la fecha de la última copia.
+   Como esa carpeta está en el mismo disco, conviene sacarla de la PC:
+   - `NUBE_COPIA_DIR`: guarda un duplicado en otra carpeta, por ejemplo una de Google Drive u OneDrive sincronizada.
+   - `BACKUP_S3_*`: las mismas variables que la copia del local. La sube cifrada al bucket, en la carpeta `nube/`.
+   Restaurar: `pm2 stop morfi-nube`, copiar la copia elegida sobre `Morfi-nube-datos\nube.db`, borrar
+   `nube.db-wal` y `nube.db-shm`, y `pm2 start morfi-nube`.
 
 **Montar la nube en Render (cuando haya clientes que paguen):** no hay servidor que mantener, tiene https incluido y se
 actualiza sola cuando el CI pasa. Cuesta unos USD 7,25 por mes: plan Starter más 1 GB de disco.

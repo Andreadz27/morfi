@@ -235,3 +235,6 @@
 .pago-propina input { width:120px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px; }
 #comprobanteTel { flex:1;min-width:150px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px; }
 #pagoContenido { padding:4px 24px 24px; }
+/* Aviso de privacidad debajo de los datos del cliente (Ley 25.326) */
+.aviso-datos { font-size:.78rem;color:#64748b;line-height:1.45;margin-top:12px; }
+.aviso-datos:empty { display:none; }
