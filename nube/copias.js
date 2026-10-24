@@ -32,12 +32,17 @@ function crearCopia() {
     let nombre = `${base}.db`;
     for (let n = 2; fs.existsSync(path.join(DIR_COPIAS, nombre)); n++) nombre = `${base}_${n}.db`;
     const destino = path.join(DIR_COPIAS, nombre);
+    // Se escribe con otro nombre y se renombra al terminar: mientras se escribía, la copia a medio hacer ya figuraba
+    // como la última (en /api/salud y en la rotación)
+    const parcial = destino + '.parcial';
+    fs.rmSync(parcial, { force: true });
     // VACUUM INTO: copia consistente aunque la nube esté recibiendo ventas (conexión propia, como en el local)
     await new Promise((ok, mal) => {
       const con = new sqlite3.Database(path.join(DIR, 'nube.db'));
       con.configure('busyTimeout', 10000);
-      con.run('VACUUM INTO ?', [destino], e => con.close(() => e ? mal(e) : ok()));
+      con.run('VACUUM INTO ?', [parcial], e => con.close(() => e ? mal(e) : ok()));
     });
+    fs.renameSync(parcial, destino);
     const otraCarpeta = process.env.NUBE_COPIA_DIR || process.env.BACKUP_COPIA_DIR;
     if (otraCarpeta) {
       try {

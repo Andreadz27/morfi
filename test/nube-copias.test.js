@@ -29,12 +29,14 @@ test('al iniciar copia la base, conserva solo las últimas y deja un duplicado e
     env: { ...process.env, NUBE_DATOS: datos, PORT: String(port), NUBE_COPIAS_CONSERVAR: '2', NUBE_COPIA_DIR: otra,
       BACKUP_S3_ENDPOINT: '', BACKUP_COPIA_DIR: '' } });
   try {
+    // Hasta que informe la copia NUEVA (las dos viejas ya figuran desde el arranque)
+    const reciente = s => s && s.ultima_copia && Date.parse(s.ultima_copia) > Date.now() - 60000;
     let salud = null;
-    for (let t = 0; t < 20000; t += 250) {
-      try { salud = await (await fetch(`http://127.0.0.1:${port}/api/salud`)).json(); if (salud.ultima_copia) break; } catch (e) {}
-      await esperar(250);
+    for (let t = 0; t < 30000 && !reciente(salud); t += 250) {
+      try { salud = await (await fetch(`http://127.0.0.1:${port}/api/salud`)).json(); } catch (e) {}
+      if (!reciente(salud)) await esperar(250);
     }
-    assert.ok(salud && salud.ultima_copia, '/api/salud informa la última copia');
+    assert.ok(reciente(salud), '/api/salud informa la copia recién hecha: ' + JSON.stringify(salud));
     const copias = fs.readdirSync(path.join(datos, 'copias')).sort();
     assert.equal(copias.length, 2, copias.join(', '));
     assert.equal(copias[0], 'nube_2026-01-02_000000.db', 'se borró la más vieja');
