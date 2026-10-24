@@ -286,6 +286,7 @@ Entrar como administrador. Cada punto es opcional según lo que contrate el loca
 | 5 | Impresoras de comandas y tickets | Configuración → Impresoras | IP o USB de cada una |
 | 6 | **Factura electrónica**: CUIT, punto de venta, Access Token de AfipSDK y certificado | Integraciones → AFIP | Clave fiscal del dueño; punto de venta "Web Services" dado de alta en ARCA |
 | 7 | **Padrón de ARCA** (datos del cliente en la Factura A) | ARCA → Administrador de relaciones | Habilitar *ws_sr_constancia_inscripcion* para la CUIT |
+| 7b | **CAEA (contingencia)**: punto de venta CAEA | Integraciones → AFIP → "Punto de venta CAEA" | Otro punto de venta dado de alta en ARCA **solo para CAEA**. Desde el 1/8/2026 (RG 5782 y 5785) es la primera alternativa si ARCA no responde. Ver "CAEA" más abajo |
 | 8 | Mercado Pago (QR y links de pago) | Integraciones → Mercado Pago | Acceso remoto (punto 5) para el cierre automático |
 | 9 | **WhatsApp Business**: número, token, secreto, plantillas y webhook | Integraciones → WhatsApp | App en Meta for Developers, número verificado, 3 plantillas aprobadas, acceso remoto |
 | 10 | **Cobro en la mesa** (los mozos cobran y facturan desde el celular) | Configuración | Mozos con celular en la red del local |
@@ -297,6 +298,27 @@ Para la factura, primero en modo **homologación** (pruebas) y recién después 
 
 **Al terminar:** desactivar los usuarios de prueba (Configuración → Usuarios) y verificar que la copia en la nube
 y el monitoreo estén funcionando (puntos 3 y 4).
+
+### CAEA: facturar aunque ARCA no responda
+
+Desde el 1/8/2026 (RG ARCA 5782/2025 y 5785/2025), si no se puede pedir el CAE (falla técnica, corte de internet o
+caída de ARCA), la primera alternativa es el **CAEA**: un código que ARCA otorga por quincena, por adelantado.
+
+1. En ARCA (clave fiscal del dueño): **Administración de puntos de venta y domicilios** → dar de alta un punto de
+   venta **nuevo, solo para CAEA**, con el mismo domicilio y la misma condición de IVA que el de siempre. Confirmar con
+   el contador el sistema que corresponde elegir.
+2. En Morfi: **Integraciones → AFIP → Punto de venta CAEA** → ese número → Guardar → **Actualizar con ARCA**. Tiene que
+   aparecer "CAEA … hasta el …".
+3. Listo. Morfi pide solo el CAEA de cada quincena (cada 6 horas revisa; el de la quincena siguiente, desde 5 días
+   antes). Si ARCA no responde al cobrar, la factura sale igual con CAEA en ese punto de venta: el ticket dice "CAEA"
+   y el QR lo marca así. Al volver internet la informa a ARCA sola (hay plazo hasta 8 días después de que termina la
+   quincena). Una quincena sin uso se informa "sin movimiento".
+4. Controlar en la misma pantalla: comprobantes **sin informar** (tienen que volver a 0 al volver internet),
+   **rechazados** (avisar al contador) y el **% del mes facturado con CAEA**. ARCA lo admite como excepción: más del
+   5 % del mes es incumplimiento y puede quitar el CAEA.
+
+Sin punto de venta CAEA configurado, o si todavía no se obtuvo el CAEA (hace falta internet al menos una vez en la
+quincena), la factura queda **en espera** y se emite con CAE cuando vuelve la conexión, como antes.
 
 ## 8. Plan ante cortes (dejárselo al dueño)
 

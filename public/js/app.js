@@ -733,7 +733,7 @@ const App = {
         </table>
         <div class="sep"></div>
         <div class="center qr">${f.qr_svg || ''}</div>
-        <div class="center">CAE: ${esc(f.cae)} &middot; Vto.: ${esc(f.cae_vencimiento)}</div>
+        <div class="center">${esc(f.autorizacion || 'CAE')}: ${esc(f.cae)} &middot; Vto.: ${esc(f.cae_vencimiento)}</div>
         ${prueba}
         <div class="sep"></div>` : '<div class="center">Documento no v&aacute;lido como factura</div><div class="sep"></div>';
     return `

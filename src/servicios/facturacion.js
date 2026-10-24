@@ -274,6 +274,84 @@ async function emitirFactura(pedidoId, tipoComprobante, cuitReceptor, { condicio
   }
 }
 
+// ---- CAEA (contingencia): factura sin conexión con ARCA, RG ARCA 5782/2025 y 5785/2025 ----
+// Quincena de una fecha AAAA-MM-DD: periodo AAAAMM y orden 1 (del 1 al 15) o 2 (del 16 a fin de mes)
+function quincena(fecha) {
+  const [a, m, d] = fecha.split('-').map(Number);
+  return { periodo: a * 100 + m, orden: d <= 15 ? 1 : 2 };
+}
+const modoDe = cfg => (cfg.modo === 'produccion' ? 'produccion' : 'homologacion');
+// Fecha y hora de generación del comprobante (AAAAMMDDhhmmss, hora del negocio)
+function fechaHoraArca() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: process.env.ZONA_HORARIA || 'America/Argentina/Buenos_Aires',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date()).map(x => [x.type, x.value]));
+  return `${p.year}${p.month}${p.day}${p.hour}${p.minute}${p.second}`;
+}
+
+// Factura con el CAEA de la quincena, sin ARCA: se numera en el punto de venta CAEA desde el último número conocido y
+// queda para informar (servicios/caea.js lo informa al volver internet). null si no se puede: sin punto de venta CAEA
+// configurado, sin CAEA vigente o sin la numeración (se obtienen con conexión). Entonces la factura queda en espera.
+async function emitirConCAEA(pedidoId, tipoComprobante, cuitReceptor, { condicionIva, razonSocial } = {}) {
+  const { tipo, cuit, condicion } = validarDatosFactura(tipoComprobante, cuitReceptor, condicionIva);
+  const cfg = await configAfip();
+  const pto = parseInt(cfg.pto_venta_caea, 10);
+  if (!pto) return null;
+  const modo = modoDe(cfg);
+  const hoy = fechaLocal();
+  const { periodo, orden } = quincena(hoy);
+  const caea = await get('SELECT * FROM caea WHERE modo = ? AND periodo = ? AND orden = ?', [modo, periodo, orden]);
+  const numeracion = await get('SELECT ultimo FROM caea_numeracion WHERE modo = ? AND pto_venta = ? AND tipo = ?', [modo, pto, tipo]);
+  if (!caea || !numeracion) return null;
+
+  const clave = `pedido-${pedidoId}`;
+  if (enCurso.has(clave)) throw errorHttp(409, 'Ya se está generando el comprobante de este pedido.');
+  enCurso.add(clave);
+  try {
+    const pedido = await get('SELECT * FROM pedidos WHERE id = ?', [pedidoId]);
+    if (!pedido) throw errorHttp(404, 'Pedido no encontrado.');
+    if (pedido.estado !== 'pagado') throw errorHttp(400, 'Solo se pueden facturar pedidos cobrados.');
+    const yaFacturado = await facturaVigente(pedidoId, { soloReales: modo === 'produccion' });
+    if (yaFacturado) throw errorHttp(409, `Este pedido ya tiene ${yaFacturado.tipo_comprobante_nombre} ${yaFacturado.autorizacion || 'CAE'} ${yaFacturado.cae}.`);
+    const total = Math.round(((parseFloat(pedido.total) || 0) - (parseFloat(pedido.propina) || 0)) * 100) / 100;
+    if (!(total > 0)) throw errorHttp(400, 'El pedido no tiene importe para facturar.');
+    const { neto, iva, codigoAlicuota } = importes(cfg, tipo, total);
+    const receptor = { cuit, condicion, razon_social: String(razonSocial || '').slice(0, 200) };
+
+    return await enFila(`caea-${modo}-${pto}-${tipo}`, async () => {
+      const { maximo } = await get(`SELECT COALESCE(MAX(numero_comprobante), 0) AS maximo FROM comprobantes_afip
+        WHERE punto_venta = ? AND tipo_comprobante = ? AND COALESCE(modo, '') = ?`, [pto, tipo, modo]);
+      const actual = await get('SELECT ultimo FROM caea_numeracion WHERE modo = ? AND pto_venta = ? AND tipo = ?', [modo, pto, tipo]);
+      const numero = Math.max(Number(actual.ultimo) || 0, Number(maximo) || 0) + 1;
+      const datos = {
+        Concepto: 1, DocTipo: cuit ? 80 : 99, DocNro: cuit ? parseInt(cuit, 10) : 0, CondicionIVAReceptorId: condicion,
+        CbteDesde: numero, CbteHasta: numero, CbteFch: parseInt(hoy.replace(/-/g, ''), 10),
+        ImpTotal: total, ImpTotConc: 0, ImpNeto: neto, ImpOpEx: 0, ImpIVA: iva, ImpTrib: 0, MonId: 'PES', MonCotiz: 1,
+        ...(codigoAlicuota ? { Iva: { AlicIva: [{ Id: codigoAlicuota, BaseImp: neto, Importe: iva }] } } : {}),
+        CAEA: caea.caea, CbteFchHsGen: fechaHoraArca()
+      };
+      const nombre = NOMBRES_COMPROBANTE[tipo];
+      const { id } = await run(
+        `INSERT INTO comprobantes_afip
+           (pedido_id, tipo_comprobante, tipo_comprobante_nombre, punto_venta, numero_comprobante, cae, cae_vencimiento,
+            fecha_comprobante, total, imp_neto, imp_iva, cuit_receptor, razon_social_receptor, condicion_iva_receptor,
+            motivo, modo, autorizacion, caea_informado, caea_datos)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, 'CAEA', 0, ?)`,
+        [pedidoId, tipo, nombre, pto, numero, caea.caea, caea.vig_hasta, hoy, total, neto, iva,
+         receptor.cuit, receptor.razon_social, condicion, modo, JSON.stringify({ PtoVta: pto, CbteTipo: tipo, ...datos })]);
+      await run('UPDATE caea_numeracion SET ultimo = ? WHERE modo = ? AND pto_venta = ? AND tipo = ?', [numero, modo, pto, tipo]);
+      emitEvento('afip:comprobante', { pedido_id: pedidoId, cae: caea.caea, autorizacion: 'CAEA' });
+      return {
+        ok: true, id, cae: caea.caea, cae_vencimiento: caea.vig_hasta, numero_comprobante: numero, punto_venta: pto,
+        tipo_comprobante: tipo, tipo_nombre: nombre, autorizacion: 'CAEA',
+        mensaje: 'Sin conexión con ARCA: factura emitida con CAEA (contingencia). Se informa sola a ARCA cuando vuelve internet.'
+      };
+    });
+  } finally {
+    enCurso.delete(clave);
+  }
+}
+
 // Nota de crédito por el total de una factura: la anula ante ARCA. El cobro no se toca
 // (si hay que devolver plata, se registra como egreso de caja).
 async function emitirNotaCredito(comprobanteId, motivo, cuitReceptor) {
@@ -369,5 +447,6 @@ async function consultarPadron(cuitConsultado) {
 
 module.exports = {
   emitirFactura, emitirNotaCredito, consultarPadron, validarDatosFactura, cuitValido, crearAfip, facturaVigente,
+  emitirConCAEA, configAfip, quincena, modoDe, fechaDeArca, FACTURAS,
   CONDICIONES_IVA, CONDICIONES_FACTURA_A
 };

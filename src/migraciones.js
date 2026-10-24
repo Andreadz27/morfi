@@ -304,6 +304,22 @@ async function migrarEsquema() {
     }
   }
 
+  // CAEA: facturas de contingencia cuando ARCA no responde (servicios/caea.js, RG ARCA 5782/2025 y 5785/2025)
+  await run(`CREATE TABLE IF NOT EXISTS caea (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, modo TEXT NOT NULL, periodo INTEGER NOT NULL, orden INTEGER NOT NULL,
+    caea TEXT NOT NULL, vig_desde TEXT, vig_hasta TEXT, tope_informar TEXT,
+    sin_movimiento INTEGER NOT NULL DEFAULT 0, creado_en TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE (modo, periodo, orden))`);
+  // Último número autorizado en el punto de venta CAEA (se pide a ARCA con conexión; sin conexión se sigue desde acá)
+  await run(`CREATE TABLE IF NOT EXISTS caea_numeracion (
+    modo TEXT NOT NULL, pto_venta INTEGER NOT NULL, tipo INTEGER NOT NULL, ultimo INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (modo, pto_venta, tipo))`);
+  // autorizacion: CAE (en línea) o CAEA. caea_informado: 0 falta informar, 1 informado, -1 ARCA lo rechazó.
+  // caea_datos: el comprobante tal cual se informa a ARCA
+  await agregarColumna('comprobantes_afip', 'autorizacion', "TEXT NOT NULL DEFAULT 'CAE'");
+  await agregarColumna('comprobantes_afip', 'caea_informado', 'INTEGER');
+  await agregarColumna('comprobantes_afip', 'caea_datos', 'TEXT');
+  await agregarColumna('comprobantes_afip', 'caea_error', 'TEXT');
+
   // Numeración secuencial de pedidos
   await run(`CREATE TABLE IF NOT EXISTS secuencias (nombre TEXT PRIMARY KEY, valor INTEGER NOT NULL)`);
   await run(`INSERT OR IGNORE INTO secuencias (nombre, valor)

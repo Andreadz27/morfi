@@ -3,6 +3,7 @@ const {
   run, get, all, transaccion, errorInterno, autenticar, esAdmin, emitEvento, generarNumeroPedido, getIntCfg, setIntCfg, urlPublica, mpRequest, esperar, tnRequest, PAUSA_TN_MS, comandaAutomatica, requiere, requiereCobro, configWhatsApp, requiereAutorizacion, pedidoDeSalon, emitirNotaCredito, consultarPadron, crearAfip, saldoPedido, aplicarPagoMercadoPago, configAsistente,
   validarDatosFactura, facturarOEncolar, listarFacturasPendientes, procesarFacturasPendientes, descartarFacturaPendiente, estadoConexion
 } = require('../contexto');
+const { estadoCAEA, mantenerCAEA } = require('../servicios/caea');
 
 module.exports = function registrarRutas(app) {
 
@@ -161,6 +162,16 @@ app.get('/api/integraciones/afip/pendientes', autenticar, requiereCobro, async (
 
 app.post('/api/integraciones/afip/pendientes/reintentar', autenticar, requiereCobro, async (req, res) => {
   try { res.json(await procesarFacturasPendientes()); } catch (e) { errorInterno(res, e); }
+});
+
+// CAEA (contingencia): vigente, comprobantes sin informar a ARCA y % del mes facturado con CAEA
+app.get('/api/integraciones/afip/caea', autenticar, esAdmin, async (req, res) => {
+  try { res.json(await estadoCAEA()); } catch (e) { errorInterno(res, e); }
+});
+
+// Pedir el CAEA, informar lo emitido y las quincenas sin movimiento ahora (lo hace solo cada 6 horas y al volver internet)
+app.post('/api/integraciones/afip/caea/actualizar', autenticar, esAdmin, async (req, res) => {
+  try { res.json({ resultado: await mantenerCAEA(), estado: await estadoCAEA() }); } catch (e) { errorInterno(res, e); }
 });
 
 app.post('/api/integraciones/afip/pendientes/:id/descartar', autenticar, esAdmin, async (req, res) => {

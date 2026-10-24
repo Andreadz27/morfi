@@ -154,6 +154,7 @@ Morfi hace **una copia de la base todos los días**, sola. Conviene tener tambi�
 | El celular no abre Morfi | Que esté en el mismo WiFi que la PC. Volver a escanear el QR de **Conectar celulares**. |
 | Se cortó internet | Seguir trabajando. Las facturas y los cobros con Mercado Pago se mandan solos al volver. |
 | Una factura dice "pendiente" | Se reintenta sola. Si dice "error", tocar **Reintentar factura** o avisar a soporte. |
+| Una factura dice "CAEA" en vez de "CAE" | Es normal: ARCA no respondía y salió con el código de contingencia. Es válida y Morfi la informa sola a ARCA cuando vuelve internet. |
 | La impresora no imprime | Que esté encendida y con papel. En **Configuración → Impresora**, probar la impresión. |
 | La PC no abre Morfi | Reiniciar la PC: Morfi arranca solo. Si sigue sin abrir, avisar a soporte. |
 | Algo raro con un cobro o la caja | No borrar nada. Sacar una foto de la pantalla y avisar a soporte. |
