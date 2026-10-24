@@ -341,6 +341,9 @@ async function migrarEsquema() {
   )`);
   await run('CREATE INDEX IF NOT EXISTS idx_gastos_fecha ON gastos(fecha)');
   await run('CREATE INDEX IF NOT EXISTS idx_gastos_estado ON gastos(estado, anulado)');
+
+  // Cuenta dividida por plato: cuánto de cada ítem ya pagó alguien (servicios/pedidos.js, marcarItemsPagadosTx)
+  await agregarColumna('pedido_items', 'cantidad_pagada', 'REAL NOT NULL DEFAULT 0');
 }
 
 // ============ Migración segura (lo que usa server.js) ============

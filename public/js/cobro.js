@@ -23,7 +23,11 @@ const Cobro = {
   },
 
   // partes: al dividir la cuenta, cuántas personas faltan pagar (se mantiene entre un pago y el siguiente)
-  async abrir(pedidoId, partes = 1) {
+  // modo: 'iguales' (partes iguales) o 'platos' (cada uno paga lo suyo; sel = { idItem: cantidad })
+  modo: 'iguales',
+  sel: {},
+
+  async abrir(pedidoId, partes = 1, modo = 'iguales') {
     try {
       const [p, estado, puntos] = await Promise.all([
         API.getPedido(pedidoId),
@@ -38,6 +42,8 @@ const Cobro = {
       this.waActiva = estado.whatsapp === 'conectada';
       Integraciones._padron = null;
       this.partes = Math.max(1, partes);
+      this.sel = {};
+      this.modo = modo === 'platos' && this.itemsPendientes().length ? 'platos' : 'iguales';
       this.propina = null;
       this.pagos = [{ metodo: 'efectivo', monto: this.montoParte(), recibido: '' }];
       this.paint();
@@ -105,16 +111,20 @@ const Cobro = {
 
       <div class="form-group">
         <label><i class="fas fa-users"></i> Dividir la cuenta</label>
-        <div class="cobro-chips">
+        ${this.itemsPendientes().length ? `<div class="cobro-chips cobro-modo">
+          <button type="button" class="btn btn-sm ${this.modo === 'iguales' ? 'btn-primary' : 'btn-outline'}" onclick="Cobro.setModo('iguales')">Partes iguales</button>
+          <button type="button" class="btn btn-sm ${this.modo === 'platos' ? 'btn-primary' : 'btn-outline'}" onclick="Cobro.setModo('platos')">Por plato</button>
+        </div>` : ''}
+        ${this.modo === 'platos' ? this.htmlPlatos() : `<div class="cobro-chips">
           <button type="button" class="btn btn-sm btn-outline" onclick="Cobro.setPartes(${this.partes - 1})" aria-label="Menos personas">−</button>
           <strong class="cobro-partes">${this.partes === 1 ? 'Paga uno' : this.partes + ' personas'}</strong>
           <button type="button" class="btn btn-sm btn-outline" onclick="Cobro.setPartes(${this.partes + 1})" aria-label="Más personas">+</button>
           ${this.partes > 1 ? `<span class="text-muted">${fmtMoneda(this.montoParte())} c/u</span>` : ''}
-        </div>
+        </div>`}
       </div>
 
       <div class="form-group">
-        <label><i class="fas fa-credit-card"></i> ${this.partes > 1 ? 'Paga esta persona' : 'Pago'}</label>
+        <label><i class="fas fa-credit-card"></i> ${this.partes > 1 || this.modo === 'platos' ? 'Paga esta persona' : 'Pago'}</label>
         ${filas}
         <button type="button" class="btn btn-sm btn-outline mt-10" onclick="Cobro.agregarPago()">
           <i class="fas fa-plus"></i> Otro medio de pago</button>
@@ -293,8 +303,65 @@ const Cobro = {
   },
 
   montoParte() {
+    if (this.modo === 'platos') return this.montoPlatos();
     // Se redondea para arriba; la última persona paga lo que quede (absorbe el redondeo)
     return this.partes > 1 ? Math.min(this.saldo(), Math.ceil(this.saldo() / this.partes)) : this.saldo();
+  },
+
+  // ===== Dividir por plato =====
+  // Ítems con algo sin pagar (cantidad_pagada la marca el servidor en cada cobro por plato)
+  itemsPendientes() {
+    return ((this.p && this.p.items) || []).map(i => {
+      const cantidad = Number(i.cantidad) || 0;
+      const falta = Math.max(0, cantidad - (Number(i.cantidad_pagada) || 0));
+      return { ...i, falta, unitario: cantidad ? (Number(i.subtotal) || 0) / cantidad : 0 };
+    }).filter(i => i.falta > 1e-9 && i.unitario > 0);
+  },
+
+  // Lo que paga esta persona: su parte de lo que falta cobrar, en proporción a los platos que eligió entre los que
+  // faltan pagar. Así descuentos, cupones y propina se reparten solos. Si elige todo lo que falta, paga el saldo justo.
+  montoPlatos() {
+    const pend = this.itemsPendientes();
+    const totalPend = pend.reduce((s, i) => s + i.falta * i.unitario, 0);
+    const elegido = pend.reduce((s, i) => s + Math.min(Number(this.sel[i.id]) || 0, i.falta) * i.unitario, 0);
+    if (!elegido || !totalPend) return 0;
+    if (elegido >= totalPend - 0.009) return this.saldo();
+    return Math.min(this.saldo(), this.r2(this.saldo() * elegido / totalPend));
+  },
+
+  htmlPlatos() {
+    const pend = this.itemsPendientes();
+    return `<div class="cobro-platos">${pend.map(i => {
+      const n = Math.min(Number(this.sel[i.id]) || 0, i.falta);
+      // Un ítem por peso (cantidad con decimales) se paga entero
+      const entero = Number.isInteger(i.falta);
+      return `<div class="cobro-plato ${n ? 'elegido' : ''}">
+        <span>${esc(i.nombre_producto)}<small class="text-muted"> · ${entero ? `faltan ${i.falta}` : 'por peso'} · ${fmtMoneda(i.unitario)}${entero ? ' c/u' : ''}</small></span>
+        <span class="cobro-plato-cant">
+          <button type="button" class="btn btn-sm btn-outline" onclick="Cobro.elegirPlato(${i.id}, -1)" aria-label="Uno menos de ${esc(i.nombre_producto)}" ${n ? '' : 'disabled'}>−</button>
+          <strong>${entero ? n : (n ? 'sí' : 'no')}</strong>
+          <button type="button" class="btn btn-sm btn-outline" onclick="Cobro.elegirPlato(${i.id}, 1)" aria-label="Uno más de ${esc(i.nombre_producto)}" ${n >= i.falta - 1e-9 ? 'disabled' : ''}>+</button>
+        </span>
+      </div>`;
+    }).join('')}
+    <p class="text-muted">${this.montoPlatos() ? `Esta persona paga ${fmtMoneda(this.montoPlatos())}` : 'Elegí los platos que paga esta persona.'}</p></div>`;
+  },
+
+  elegirPlato(id, delta) {
+    const i = this.itemsPendientes().find(x => x.id === id);
+    if (!i) return;
+    const paso = Number.isInteger(i.falta) ? 1 : i.falta;
+    const n = Math.max(0, Math.min(i.falta, (Number(this.sel[id]) || 0) + delta * paso));
+    if (n) this.sel[id] = n; else delete this.sel[id];
+    this.pagos = [{ metodo: this.pagos[0].metodo, monto: this.montoParte(), recibido: '' }];
+    this.paint();
+  },
+
+  setModo(modo) {
+    this.modo = modo === 'platos' ? 'platos' : 'iguales';
+    this.sel = {};
+    this.pagos = [{ metodo: this.pagos[0].metodo, monto: this.montoParte(), recibido: '' }];
+    this.paint();
   },
 
   setPartes(n) {
@@ -336,6 +403,11 @@ const Cobro = {
     if (this.aCobrar() > this.saldo() + 0.009) return App.showToast('El monto supera lo que falta cobrar', 'warning');
 
     const body = { pagos };
+    if (this.modo === 'platos') {
+      const items = Object.entries(this.sel).map(([id, cantidad]) => ({ id: Number(id), cantidad })).filter(x => x.cantidad > 0);
+      if (!items.length) return App.showToast('Elegí los platos que paga esta persona', 'warning');
+      body.items = items;
+    }
     if (this.propina !== null && this.propina !== (Number(this.p.propina) || 0)) body.propina = this.propina;
     const facturar = document.getElementById('cobroFacturar');
     if (facturar && facturar.checked) {
@@ -375,7 +447,7 @@ const Cobro = {
             El cobro quedó registrado; podés reintentarla desde el pedido.</p>` : ''}
       </div>
       <div class="modal-footer">
-        ${r.cerrado ? '' : `<button class="btn btn-success" onclick="Cobro.abrir(${id}, ${Math.max(1, this.partes - 1)})"><i class="fas fa-user-plus"></i> Cobrar al siguiente</button>`}
+        ${r.cerrado ? '' : `<button class="btn btn-success" onclick="Cobro.abrir(${id}, ${Math.max(1, this.partes - 1)}, '${this.modo}')"><i class="fas fa-user-plus"></i> Cobrar al siguiente</button>`}
         ${f && !f.ok && !f.pendiente ? `<button class="btn btn-primary" onclick="Integraciones.abrirModalFacturar(${id}, ${Number(p.total) || 0})"><i class="fas fa-redo"></i> Reintentar factura</button>` : ''}
         ${r.cerrado ? `<button class="btn btn-outline" onclick="Cobro.whatsapp()"><i class="fab fa-whatsapp"></i> Enviar por WhatsApp</button>
           <button class="btn btn-outline" onclick="Pedidos.imprimirTicket(${id})"><i class="fas fa-print"></i> Ticket</button>` : ''}

@@ -118,7 +118,27 @@ async function saldoPedido(pedidoId) {
 // Cobro en la mesa: uno o varios pagos (dividir la cuenta o pagar con varios medios).
 // Va dentro de transaccion(): el pedido se relee acá, así dos cobros a la vez no pagan de más.
 // Si los pagos cubren el saldo, el pedido se cierra (mesa libre y stock), igual que un cobro único.
-async function registrarCobroTx(pedidoId, { pagos, propina, usuarioId }) {
+// Cuenta dividida por plato: marca qué cantidad de cada ítem pagó esta persona (pedido_items.cantidad_pagada),
+// así el próximo ve solo lo que falta. El dinero lo deciden los pagos; esto es para no cobrar dos veces el mismo plato.
+// items: [{ id, cantidad }]. Error 400 si un ítem no es del pedido o ya está pago.
+async function marcarItemsPagadosTx(pedidoId, items) {
+  if (!Array.isArray(items) || !items.length || items.length > 200) throw Object.assign(new Error('Elegí los platos que paga esta persona'), { status: 400 });
+  const porItem = new Map();
+  for (const it of items) {
+    const id = parseInt(it && it.id, 10), cantidad = Number(it && it.cantidad);
+    if (!id || !Number.isFinite(cantidad) || cantidad <= 0) throw Object.assign(new Error('Plato o cantidad inválidos'), { status: 400 });
+    porItem.set(id, (porItem.get(id) || 0) + cantidad);
+  }
+  for (const [id, cantidad] of porItem) {
+    const it = await get('SELECT nombre_producto, cantidad, cantidad_pagada FROM pedido_items WHERE id = ? AND pedido_id = ?', [id, pedidoId]);
+    if (!it) throw Object.assign(new Error('Ese plato no es de este pedido'), { status: 400 });
+    const falta = (Number(it.cantidad) || 0) - (Number(it.cantidad_pagada) || 0);
+    if (cantidad > falta + 1e-9) throw Object.assign(new Error(`${it.nombre_producto}: ya está pago`), { status: 400 });
+    await run('UPDATE pedido_items SET cantidad_pagada = cantidad_pagada + ? WHERE id = ?', [cantidad, id]);
+  }
+}
+
+async function registrarCobroTx(pedidoId, { pagos, propina, usuarioId, items }) {
   const pedido = await get('SELECT * FROM pedidos WHERE id = ?', [pedidoId]);
   if (!pedido) throw Object.assign(new Error('Pedido no encontrado'), { status: 404 });
   if (pedido.estado !== 'abierto') throw Object.assign(new Error('El pedido ya fue cobrado o cancelado'), { status: 409 });
@@ -134,6 +154,7 @@ async function registrarCobroTx(pedidoId, { pagos, propina, usuarioId }) {
   const aCobrar = centavos(pagos.reduce((s, p) => s + p.monto, 0));
   if (aCobrar > saldo + 0.009)
     throw Object.assign(new Error(`Se quiere cobrar ${aCobrar} y el saldo es ${saldo}`), { status: 400 });
+  if (items) await marcarItemsPagadosTx(pedido.id, items);
 
   for (const p of pagos) {
     const ref = await pagoConGiftCardTx(pedido.id, p, usuarioId);

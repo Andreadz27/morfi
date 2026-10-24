@@ -20,7 +20,7 @@ cuesta al local si falla:
 |---|---|---|---|---|
 | API, servicios, migraciones, seguridad | `node:test` | `test/*.test.js` | 238 | `npm test` · CI en cada push (Linux y Windows) |
 | Navegador, flujos del equipo de desarrollo | Playwright (`playwright-core`) | `test/e2e/` | 22 | `npm run test:e2e` · CI en cada push |
-| **Casos de prueba de QA, E2E** | **Playwright Test** | `qa/e2e/` | 24 (19 casos + 5 de defectos cerrados) | `npm run qa:e2e` · workflow **QA** en cada PR |
+| **Casos de prueba de QA, E2E** | **Playwright Test** | `qa/e2e/` | 25 (20 casos + 5 de defectos cerrados) | `npm run qa:e2e` · workflow **QA** en cada PR |
 | **API, contrato y validaciones** | **Postman + Newman** | `qa/api/` | 44 pedidos, 142 verificaciones | `npm run qa:api` · workflow **QA** |
 | **Celular real o emulado** | **Maestro** | `qa/mobile/` | 3 flujos | workflow **QA móvil** (a mano, lunes y al cambiar flujos) |
 | **Reporte** | **Mochawesome** | `qa/reportes/` | junta E2E y API | `npm run qa:reporte` · artefacto `reporte-qa` |
