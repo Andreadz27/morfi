@@ -94,7 +94,7 @@ module.exports = function registrarTienda(app, { ruta, errorHttp, autenticarLoca
     const base = `${req.protocol}://${req.get('host')}/l/${encodeURIComponent(l.cliente)}`;
     res.json({
       nombre: carta.info.nombre || 'Morfi', descripcion: carta.info.direccion ? `Dirección: ${carta.info.direccion}` : '',
-      telefono: carta.info.telefono, email: carta.info.email,
+      telefono: carta.info.telefono, email: carta.info.email, cuit: carta.info.cuit || '',
       links: { carta: `${base}/pedido.html`, whatsapp: `${base}/pedido.html?origen=whatsapp`, instagram: `${base}/pedido.html?origen=instagram` },
       recibe_pedidos: recibe(l), aviso: recibe(l) ? '' : sinConexion(carta)
     });

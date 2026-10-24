@@ -12,6 +12,7 @@ const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { run, get, all, transaccion, listo, DIR } = require('./db');
+const { listarCopias } = require('./copias');
 
 // Clave para firmar las sesiones del panel: NUBE_SECRETO o una propia guardada junto a la base
 function secreto() {
@@ -53,7 +54,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/', rateLimit({ windowMs: 60000, max: 600, standardHeaders: true, legacyHeaders: false }));
 
 // ip: la que la nube ve de quien pregunta (para ajustar TRUST_PROXY: tiene que ser la IP pública propia)
-app.get('/api/salud', ruta(async (req, res) => { res.json({ ok: true, ip: req.ip }); }));
+app.get('/api/salud', ruta(async (req, res) => {
+  const ultima = listarCopias()[0];
+  res.json({ ok: true, ip: req.ip, ultima_copia: ultima ? ultima.fecha : null });
+}));
 
 // ============ LO QUE MANDAN LOS LOCALES ============
 

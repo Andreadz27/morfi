@@ -70,5 +70,7 @@ para que lo pegue en su carta online, en el ticket o en un cartel. Reemplazar lo
 Si el local activa el Asistente IA o WhatsApp, agregar: "Si nos escribís por WhatsApp, tus mensajes pasan por
 WhatsApp (Meta) y, si te atiende el asistente automático, por Anthropic, que pueden procesarlos fuera de la Argentina."
 
-Pendiente en el sistema: mostrar este aviso solo, con los datos del local, en la carta online y en el pedido desde
-la mesa (`public/menu.html`, `public/pedido.html`). Hoy hay que pegarlo a mano.
+El sistema ya muestra solo un aviso corto en el formulario del pedido online y desde la mesa (`public/pedido.html`,
+`PedidoOnline._avisoDatos`). Lo arma con el nombre, el CUIT, el teléfono y el email del local que figuran en
+Configuración (caso de prueba CP-CAR-05). La carta de solo lectura (`menu.html`) no pide datos, así que no lo
+necesita. El texto largo de arriba sirve para el ticket, un cartel o la web del local.

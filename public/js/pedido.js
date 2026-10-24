@@ -37,10 +37,23 @@ const PedidoOnline={
         const wa=document.getElementById("confirmacionWA");
         if(wa){wa.href="https://wa.me/"+info.telefono.replace(/\D/g,"");wa.style.display="";}
       }
+      this._avisoDatos(info);
       this.paintCats();this.paintItems();this._initEvents();
     }catch(err){
       document.getElementById("menuItems").innerHTML='<div class="menu-empty"><i class="fas fa-exclamation-triangle"></i><p>No se pudo cargar el menu.</p></div>';
     }
+  },
+
+  // Aviso de privacidad (Ley 25.326, art. 6): quién guarda los datos, para qué y cómo pedir verlos o borrarlos.
+  // El responsable es el local; por la nube los datos solo pasan hasta que el local recibe el pedido.
+  _avisoDatos(info){
+    const el=document.getElementById("avisoDatos");
+    if(!el)return;
+    const quien=(info.nombre||"El local")+(info.cuit?" (CUIT "+info.cuit+")":"");
+    const contacto=[info.telefono&&("al "+info.telefono),info.email&&("a "+info.email)].filter(Boolean).join(" o ");
+    el.textContent="Tus datos los usa "+quien+" solo para preparar y entregar tu pedido; no los vende ni los cede."+
+      (PD_API?" Pasan por Morfi Nube solo hasta que el local recibe el pedido.":"")+
+      " Podés pedir verlos, corregirlos o borrarlos"+(contacto?" escribiendo "+contacto:" en el local")+". Ley 25.326.";
   },
 
   // ── Pedido desde la mesa ──
