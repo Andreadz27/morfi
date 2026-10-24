@@ -278,7 +278,7 @@ function plantillaTicket(pedido, negocio, opciones, impresora, extra = {}) {
       t.columnas2('IVA contenido', moneda(f.iva_contenido));
     }
     t.separador().alinear('centro').qr(f.qr, impresora.ancho === 58 ? 4 : 6);
-    t.linea(`CAE: ${f.cae}`).linea(`Vto. CAE: ${f.cae_vencimiento}`);
+    t.linea(`${f.autorizacion || 'CAE'}: ${f.cae}`).linea(`Vto. ${f.autorizacion || 'CAE'}: ${f.cae_vencimiento}`);
     if (f.prueba) t.negrita().linea('SIN VALIDEZ FISCAL').normal().alinear('centro');
   } else {
     t.alinear('centro');

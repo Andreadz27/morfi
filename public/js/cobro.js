@@ -369,7 +369,8 @@ const Cobro = {
         ${r.vuelto > 0 ? `<p class="cobro-vuelto">Vuelto: <strong>${fmtMoneda(r.vuelto)}</strong></p>` : ''}
         ${r.cerrado ? '<p>Cuenta cerrada y mesa liberada.</p>' : `<p>Falta cobrar <strong>${fmtMoneda(r.saldo)}</strong>.</p>`}
         ${f && f.ok ? `<p class="text-success"><i class="fas fa-file-invoice"></i> ${esc(f.tipo_nombre)}
-            ${String(f.punto_venta).padStart(4, '0')}-${String(f.numero_comprobante).padStart(8, '0')} &mdash; CAE ${esc(f.cae)}</p>` : ''}
+            ${String(f.punto_venta).padStart(4, '0')}-${String(f.numero_comprobante).padStart(8, '0')} &mdash; ${esc(f.autorizacion || 'CAE')} ${esc(f.cae)}</p>
+            ${f.autorizacion === 'CAEA' ? `<p class="text-muted">${esc(f.mensaje || '')}</p>` : ''}` : ''}
         ${f && f.pendiente ? `<p class="text-warning"><i class="fas fa-clock"></i> ${esc(f.mensaje)}</p>` : ''}
         ${f && !f.ok && !f.pendiente ? `<p class="text-danger"><i class="fas fa-exclamation-triangle"></i> La factura no se emitió: ${esc(f.error)}.
             El cobro quedó registrado; podés reintentarla desde el pedido.</p>` : ''}
@@ -444,7 +445,7 @@ const Cobro = {
       p.propina ? `Propina: ${fmtMoneda(p.propina)}` : '',
       `*Total: ${fmtMoneda(p.total)}*`,
       ...p.pagos.map(x => `Pago ${this.METODOS[x.metodo] || x.metodo}: ${fmtMoneda(x.monto)}`),
-      c ? `${c.tipo_comprobante_nombre} ${String(c.punto_venta).padStart(4, '0')}-${String(c.numero_comprobante).padStart(8, '0')} - CAE ${c.cae}` : '',
+      c ? `${c.tipo_comprobante_nombre} ${String(c.punto_venta).padStart(4, '0')}-${String(c.numero_comprobante).padStart(8, '0')} - ${c.autorizacion || 'CAE'} ${c.cae}` : '',
       '¡Gracias por tu visita!'
     ].filter(Boolean);
     window.open('https://wa.me/?text=' + encodeURIComponent(lineas.join('\n')), '_blank', 'noopener');

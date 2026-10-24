@@ -196,7 +196,7 @@ const Pedidos = {
     const esFactura = [1, 6, 11].includes(c.tipo_comprobante);
     const receptor = c.razon_social_receptor || c.cuit_receptor
       ? `<br><small class="text-muted">${esc(c.razon_social_receptor || '')} ${c.cuit_receptor ? 'CUIT ' + esc(c.cuit_receptor) : ''}</small>` : '';
-    return `<p class="${anulada ? 'comprobante-anulado' : ''}"><strong>${esc(c.tipo_comprobante_nombre)}</strong> ${numero} &mdash; CAE ${esc(c.cae)}
+    return `<p class="${anulada ? 'comprobante-anulado' : ''}"><strong>${esc(c.tipo_comprobante_nombre)}</strong> ${numero} &mdash; ${esc(c.autorizacion || 'CAE')} ${esc(c.cae)}
       ${anulada ? '<span class="badge badge-red">Anulada</span>' : ''}
       ${c.comprobante_asociado_id ? `<br><small class="text-muted">Motivo: ${esc(c.motivo || '-')}</small>` : ''}${receptor}
       ${esFactura && !anulada && App.puede('pedidos.cancelar')

@@ -171,6 +171,38 @@ const Integraciones = {
     this._setWebhookUrls();
     this._cargarDeliveryPlataformas();
     if (est.afip==='conectada'||est.afip==='configurada') this._cargarComprobantes();
+    if (afip.pto_venta_caea && App.puede('admin')) this._cargarCaea();
+  },
+
+  // CAEA (contingencia): el vigente, lo que falta informar a ARCA y cuánto se usó en el mes (máximo 5 %)
+  async _cargarCaea(estado) {
+    const cont = document.getElementById('afipCaeaEstado');
+    if (!cont) return;
+    try {
+      const e = estado || await API.request('GET', '/integraciones/afip/caea');
+      if (!e.configurado) { cont.innerHTML = ''; return; }
+      cont.innerHTML = `<small>
+        ${e.vigente ? `<span class="text-success"><i class="fas fa-check-circle"></i> CAEA ${esc(e.vigente.caea)}</span> hasta el ${esc(fmtFecha(e.vigente.vig_hasta))}`
+          : '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Sin CAEA para esta quincena (se pide solo cuando hay internet)</span>'}
+        ${e.sin_informar ? `<br>${e.sin_informar} comprobante(s) con CAEA sin informar a ARCA` : ''}
+        ${e.rechazados ? `<br><span class="text-danger">${e.rechazados} rechazado(s) por ARCA al informar: avisá a tu contador</span>` : ''}
+        <br><span class="${e.excedido ? 'text-danger' : 'text-muted'}">Este mes: ${e.porcentaje_mes} % facturado con CAEA (máximo ${e.limite} %)</span>
+        </small>
+        <button type="button" class="btn btn-outline btn-sm mt-10" onclick="Integraciones.actualizarCaea(this)"><i class="fas fa-sync"></i> Actualizar con ARCA</button>`;
+    } catch (err) { cont.innerHTML = `<small class="text-muted">${esc(err.message)}</small>`; }
+  },
+
+  async actualizarCaea(btn) {
+    if (btn) btn.disabled = true;
+    try {
+      const r = await API.request('POST', '/integraciones/afip/caea/actualizar');
+      const errores = Object.values(r.resultado || {}).filter(x => x && x.error).map(x => x.error);
+      App.showToast(errores.length ? `ARCA: ${errores[0]}` : 'CAEA al día', errores.length ? 'warning' : 'success', 8000);
+      this._cargarCaea(r.estado);
+    } catch (err) {
+      App.showToast(err.message, 'error');
+      if (btn) btn.disabled = false;
+    }
   },
 
   // ──────── WHATSAPP BUSINESS ────────
@@ -521,6 +553,11 @@ const Integraciones = {
               <div class="form-group"><label>Punto de venta</label>
                 <input type="number" id="afipPtoVenta" value="${esc(afip.pto_venta||1)}" min="1" max="99999">
               </div>
+              <div class="form-group"><label>Punto de venta CAEA <span style="font-weight:400;color:var(--text-muted)">(contingencia)</span></label>
+                <input type="number" id="afipPtoVentaCaea" value="${esc(afip.pto_venta_caea||'')}" min="1" max="99999" placeholder="Sin CAEA">
+                <small class="form-hint">Otro punto de venta, habilitado en ARCA solo para CAEA. Si ARCA no responde, la factura sale igual con CAEA y se informa sola despu&eacute;s.</small>
+                <div id="afipCaeaEstado" class="mt-10"></div>
+              </div>
               <div class="form-group"><label>IVA por defecto</label>
                 <select id="afipIvaTipo">
                   <option value="5" ${!afip.iva_tipo||afip.iva_tipo==5?'selected':''}>21%</option>
@@ -722,6 +759,9 @@ const Integraciones = {
 
   async guardarAFIP(e) {
     e.preventDefault();
+    const ptoCaea = parseInt(document.getElementById('afipPtoVentaCaea').value) || null;
+    if (ptoCaea && ptoCaea === (parseInt(document.getElementById('afipPtoVenta').value) || 1))
+      return App.showToast('El punto de venta CAEA tiene que ser otro, habilitado en ARCA solo para CAEA', 'warning', 8000);
     try {
       await API.saveIntegracionConfig('afip', {
         cuit:         document.getElementById('afipCuit').value.trim(),
@@ -730,6 +770,7 @@ const Integraciones = {
         cert:         document.getElementById('afipCert').value.trim(),
         key:          document.getElementById('afipKey').value.trim(),
         pto_venta:    parseInt(document.getElementById('afipPtoVenta').value) || 1,
+        pto_venta_caea: ptoCaea,
         iva_tipo:     parseInt(document.getElementById('afipIvaTipo').value) || 5,
         activa:       document.getElementById('afipActiva').value === '1',
         razon_social:       document.getElementById('afipRazonSocial').value.trim(),
@@ -765,7 +806,7 @@ const Integraciones = {
       App.showToast('Generando comprobante AFIP...', 'info');
       const r = await API.generarComprobante(data);
       if (r.pendiente) App.showToast(r.mensaje, 'warning', 8000);
-      else App.showToast(`✓ ${r.tipo_nombre} emitida — CAE: ${r.cae}`, 'success');
+      else App.showToast(`✓ ${r.tipo_nombre} emitida — ${r.autorizacion || 'CAE'}: ${r.cae}`, 'success');
       App.closeModal();
       if (typeof Pedidos !== 'undefined') Pedidos.render();
     } catch (err) { App.showToast(err.message, 'error'); }
@@ -838,7 +879,7 @@ const Integraciones = {
         cuit_receptor: (document.getElementById('ncCuit')?.value || '').replace(/\D/g, '')
       });
       App.closeModal();
-      App.showToast(`✓ ${r.tipo_nombre} emitida — CAE: ${r.cae}`, 'success');
+      App.showToast(`✓ ${r.tipo_nombre} emitida — ${r.autorizacion || 'CAE'}: ${r.cae}`, 'success');
       if (typeof Pedidos !== 'undefined' && Pedidos.ultimoPedido) Pedidos.verDetalle(Pedidos.ultimoPedido.id);
     } catch (err) {
       btn.disabled = false;

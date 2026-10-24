@@ -7,7 +7,8 @@ const net = require('net');
 const { run, get, all } = require('../db');
 const { emitEvento } = require('../realtime');
 const { errorHttp } = require('../util');
-const { emitirFactura } = require('./facturacion');
+const { emitirFactura, emitirConCAEA } = require('./facturacion');
+const { mantenerCAEA } = require('./caea');
 
 // ¿El error es por falta de conexión (se puede reintentar) o ARCA contestó que no (lo tiene que ver una persona)?
 function esFaltaDeConexion(e) {
@@ -21,13 +22,20 @@ function esFaltaDeConexion(e) {
 
 const facturaEnEspera = pedidoId => get("SELECT * FROM facturas_pendientes WHERE pedido_id = ? AND estado = 'pendiente' LIMIT 1", [pedidoId]);
 
-// Factura del pedido o, si no hay conexión con ARCA, en espera. { pendiente: true, mensaje } si quedó esperando.
+// Factura del pedido. Si no hay conexión con ARCA: con CAEA (contingencia, RG 5785/2025: es la primera alternativa)
+// y, si no hay CAEA disponible, en espera. { pendiente: true, mensaje } si quedó esperando.
 async function facturarOEncolar(pedidoId, { tipo, cuit, condicion, razonSocial }) {
   if (await facturaEnEspera(pedidoId)) throw errorHttp(409, 'La factura de este pedido ya está en espera: se emite sola cuando vuelva la conexión.');
   try {
     return await emitirFactura(pedidoId, tipo, cuit, { condicionIva: condicion, razonSocial });
   } catch (e) {
     if (!esFaltaDeConexion(e)) throw e;
+    // Si el CAE se pidió y no se sabe si ARCA lo emitió (se cortó después de pedirlo), no se emite otra con CAEA:
+    // queda en espera y al volver se consulta ese número (comprobanteYaEmitido)
+    if (!e.numeroIntentado) {
+      const conCaea = await emitirConCAEA(pedidoId, tipo, cuit, { condicionIva: condicion, razonSocial });
+      if (conCaea) return conCaea;
+    }
     const { id } = await run(`INSERT INTO facturas_pendientes
       (pedido_id, tipo_comprobante, cuit_receptor, condicion_iva_receptor, razon_social_receptor, intentos, numero_intentado, ultimo_error)
       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
@@ -100,8 +108,11 @@ function cambiarConexion(internet) {
   conexion.internet = internet;
   conexion.desde = new Date().toISOString();
   emitEvento('conexion:internet', { ...conexion });
-  // Volvió: salen las facturas que esperaban
-  if (internet) procesarFacturasPendientes().catch(e => console.error('[facturas en espera]', e.message));
+  // Volvió: salen las facturas que esperaban y se informan a ARCA las emitidas con CAEA
+  if (internet) {
+    procesarFacturasPendientes().catch(e => console.error('[facturas en espera]', e.message));
+    mantenerCAEA().catch(e => console.error('[CAEA]', e.message));
+  }
 }
 
 function probarConexion(destino, ms = 5000) {
@@ -131,6 +142,11 @@ function iniciarModoSinConexion() {
   // Por si la conexión volvió entre revisiones: cada 2 minutos se reintenta lo que espera
   setInterval(() => procesarFacturasPendientes().catch(e => console.error('[facturas en espera]', e.message)),
     Number(process.env.GM_FACTURAS_REINTENTO_MS) || 120000).unref();
+  // CAEA: pedir el de la quincena y la siguiente, informar lo emitido y las quincenas sin movimiento
+  if (process.env.NODE_ENV !== 'test') {
+    mantenerCAEA().catch(() => {});
+    setInterval(() => mantenerCAEA().catch(() => {}), 6 * 3600 * 1000).unref();
+  }
 }
 
 async function estadoConexion() {

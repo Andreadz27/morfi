@@ -49,7 +49,8 @@ function urlQrArca(cfg, c) {
     ctz: 1,
     tipoDocRec: c.cuit_receptor ? 80 : 99,
     nroDocRec: c.cuit_receptor ? Number(digitos(c.cuit_receptor)) : 0,
-    tipoCodAut: 'E',
+    // E: CAE (en línea); A: CAEA (contingencia)
+    tipoCodAut: c.autorizacion === 'CAEA' ? 'A' : 'E',
     codAut: Number(c.cae)
   };
   return 'https://www.afip.gob.ar/fe/qr/?p=' + Buffer.from(JSON.stringify(datos)).toString('base64');
@@ -86,6 +87,7 @@ function datosTicketFiscal(c, cfg = {}, negocio = {}) {
     discriminado: letra === 'A' ? { neto, iva, alicuota: neto ? Math.round(iva / neto * 1000) / 10 : 0 } : null,
     iva_contenido: letra === 'B' ? iva : null,
     cae: String(c.cae || ''),
+    autorizacion: c.autorizacion === 'CAEA' ? 'CAEA' : 'CAE',
     cae_vencimiento: fechaAR(c.cae_vencimiento),
     qr: urlQrArca(cfg, c),
     // Emitida contra el servicio de pruebas de ARCA: no tiene validez fiscal

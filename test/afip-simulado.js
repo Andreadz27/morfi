@@ -15,7 +15,10 @@ const PADRON = {
 async function iniciarArcaSimulado() {
   // caido: ARCA no responde (503). cortarDespuesDeEmitir: emite el comprobante pero la respuesta no llega (503),
   // como cuando se corta internet justo después de pedir el CAE. emitidos: para FECompConsultar.
-  const arca = { pedidos: [], ultimo: {}, rechazar: null, padron: { ...PADRON }, caido: false, cortarDespuesDeEmitir: false, emitidos: {} };
+  // CAEA: ptoCaea es el punto de venta de contingencia (su numeración va en ultimoCaea), caeas los otorgados,
+  // rechazarInforme hace que ARCA rechace informar un comprobante emitido con CAEA
+  const arca = { pedidos: [], ultimo: {}, rechazar: null, padron: { ...PADRON }, caido: false, cortarDespuesDeEmitir: false, emitidos: {},
+    ptoCaea: 9, ultimoCaea: {}, caeas: {}, rechazarInforme: null };
   const servidor = http.createServer((req, res) => {
     let cuerpo = '';
     req.on('data', d => { cuerpo += d; });
@@ -29,8 +32,36 @@ async function iniciarArcaSimulado() {
         const c = arca.emitidos[`${params.FeCompConsReq.CbteTipo}-${params.FeCompConsReq.CbteNro}`];
         return responder({ FECompConsultarResult: c ? { ResultGet: c } : { Errors: { Err: { Code: 602, Msg: 'Sin Resultados' } } } });
       }
-      if (method === 'FECompUltimoAutorizado')
-        return responder({ FECompUltimoAutorizadoResult: { CbteNro: arca.ultimo[params.CbteTipo] || 0 } });
+      if (method === 'FECompUltimoAutorizado') {
+        const numeros = params.PtoVta === arca.ptoCaea ? arca.ultimoCaea : arca.ultimo;
+        return responder({ FECompUltimoAutorizadoResult: { CbteNro: numeros[params.CbteTipo] || 0 } });
+      }
+      if (method === 'FECAEASolicitar' || method === 'FECAEAConsultar') {
+        const clave = `${params.Periodo}-${params.Orden}`;
+        const r = `${method}Result`;
+        // Como ARCA: un CAEA ya otorgado no se vuelve a solicitar (se consulta); uno no otorgado no se puede consultar
+        if (method === 'FECAEASolicitar' && arca.caeas[clave]) return responder({ [r]: { Errors: { Err: { Code: 15008, Msg: 'CAEA ya otorgado' } } } });
+        if (method === 'FECAEAConsultar' && !arca.caeas[clave]) return responder({ [r]: { Errors: { Err: { Code: 602, Msg: 'Sin Resultados' } } } });
+        if (!arca.caeas[clave]) {
+          const a = Math.floor(params.Periodo / 100), m = params.Periodo % 100;
+          const mm = String(m).padStart(2, '0'), fin = new Date(Date.UTC(a, m, 0)).getUTCDate();
+          const [desde, hasta] = params.Orden === 1 ? ['01', '15'] : ['16', String(fin)];
+          arca.caeas[clave] = { CAEA: String(31000000000000 + Object.keys(arca.caeas).length), Periodo: params.Periodo, Orden: params.Orden,
+            FchVigDesde: `${a}${mm}${desde}`, FchVigHasta: `${a}${mm}${hasta}`, FchTopeInf: `${a}${mm}${hasta}`, FchProceso: '20260101' };
+        }
+        return responder({ [r]: { ResultGet: arca.caeas[clave] } });
+      }
+      if (method === 'FECAEARegInformativo') {
+        const det = params.FeCAEARegInfReq.FeDetReq.FECAEADetRequest[0];
+        if (arca.rechazarInforme) {
+          return responder({ FECAEARegInformativoResult: { FeDetResp: { FECAEADetResponse: [{ Resultado: 'R', CbteDesde: det.CbteDesde,
+            Observaciones: { Obs: { Code: 724, Msg: arca.rechazarInforme } } }] } } });
+        }
+        arca.ultimoCaea[params.FeCAEARegInfReq.FeCabReq.CbteTipo] = det.CbteDesde;
+        return responder({ FECAEARegInformativoResult: { FeDetResp: { FECAEADetResponse: [{ Resultado: 'A', CbteDesde: det.CbteDesde, CAEA: det.CAEA }] } } });
+      }
+      if (method === 'FECAEASinMovimientoInformar')
+        return responder({ FECAEASinMovimientoInformarResult: { Resultado: 'A', CAEA: params.CAEA, PtoVta: params.PtoVta } });
       if (method === 'FECAESolicitar') {
         if (arca.rechazar) {
           return responder({ FECAESolicitarResult: { FeDetResp: { FECAEDetResponse: {
