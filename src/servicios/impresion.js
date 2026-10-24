@@ -89,7 +89,11 @@ const SCRIPT_WINDOWS_B64 = Buffer.from(SCRIPT_WINDOWS, 'utf16le').toString('base
 
 function ejecutar(comando, args, opciones = {}) {
   return new Promise((resolve, reject) => {
-    execFile(comando, args, { timeout: 30000, windowsHide: true, ...opciones }, (err, stdout, stderr) => {
+    // GM_IMPRESION_TIMEOUT_MS: en el CI de Windows, PowerShell tarda en arrancar mucho más que en una PC real
+    const timeout = Number(process.env.GM_IMPRESION_TIMEOUT_MS) || 30000;
+    execFile(comando, args, { timeout, windowsHide: true, ...opciones }, (err, stdout, stderr) => {
+      // Cortado por tiempo: el mensaje era "Command failed: powershell.exe ..." con el script entero
+      if (err && err.killed) return reject(new Error(`La impresora no respondió en ${Math.round(timeout / 1000)} segundos. Revisá que esté prendida y conectada.`));
       if (err) {
         // PowerShell puede devolver los errores serializados como CLIXML: extraer el texto
         let salida = String(stderr || err.message);

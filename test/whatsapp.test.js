@@ -136,6 +136,14 @@ test('pedido para llevar listo en cocina: avisa una sola vez; delivery en camino
   await s.llamar('PUT', `/api/cocina/${sinTel.id}/listo`, {}, s.tokenAdmin);
   await esperar(400);
   assert.equal(meta.envios.length, antes + 2);
+
+  // Marcado listo varias veces A LA VEZ (dos pantallas de cocina): igual sale un solo aviso
+  const [, otro] = await s.llamar('POST', '/api/pedidos', { tipo: 'takeaway', cliente: 'Ana', telefono: '351 555-9999',
+    items: [{ producto_id: prod.id, cantidad: 1 }] }, s.tokenVendedor);
+  await Promise.all(Array.from({ length: 5 }, () => s.llamar('PUT', `/api/cocina/${otro.id}/listo`, {}, s.tokenAdmin)));
+  await esperarEnvios(antes + 3);
+  await esperar(400);
+  assert.equal(meta.envios.length, antes + 3, 'un solo aviso aunque lo marquen a la vez');
 });
 
 test('recordatorio de reservas: solo las próximas N horas, una vez cada una', async () => {

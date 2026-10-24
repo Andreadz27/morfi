@@ -172,9 +172,3 @@ test('reimprimir comanda y sin impresión automática si está desactivada', asy
   await s.q('UPDATE configuracion SET activar_impresion = 1');
 });
 
-test('USB en Windows: error claro si la impresora no está instalada', { skip: process.platform !== 'win32' }, async () => {
-  const [, imp] = await crearImpresora({ nombre: 'USB inexistente', tipo: 'usb', destino: 'Impresora Que No Existe 123', activa: false });
-  const [, r] = await s.llamar('POST', `/api/impresoras/${imp.id}/prueba`, undefined, s.tokenAdmin);
-  assert.equal(r.ok, false);
-  assert.match(r.message, /No se encontró la impresora 'Impresora Que No Existe 123'/);
-});

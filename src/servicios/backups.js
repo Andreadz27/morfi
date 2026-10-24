@@ -45,13 +45,18 @@ function crearBackup() {
     let nombre = `${base}.db`;
     for (let n = 2; fs.existsSync(path.join(DIR_BACKUPS, nombre)); n++) nombre = `${base}_${n}.db`;
     const destino = path.join(DIR_BACKUPS, nombre);
+    // Se escribe como .parcial y se renombra al terminar: mientras se escribía, la copia a medio hacer ya figuraba
+    // como la última (en /api/salud, en "npm run restaurar" y en la rotación)
+    const parcial = destino + '.parcial';
+    fs.rmSync(parcial, { force: true });
     // VACUUM INTO genera una copia consistente aunque la base esté en uso
     // Se usa una conexión propia: en la compartida, VACUUM falla si otro pedido tiene una consulta en curso
     await new Promise((resolve, reject) => {
       const con = new sqlite3.Database(rutaBase(DATA_DIR));
       con.configure('busyTimeout', 10000);
-      con.run('VACUUM INTO ?', [destino], err => con.close(() => err ? reject(err) : resolve()));
+      con.run('VACUUM INTO ?', [parcial], err => con.close(() => err ? reject(err) : resolve()));
     });
+    fs.renameSync(parcial, destino);
 
     if (process.env.BACKUP_COPIA_DIR) {
       try {
