@@ -144,7 +144,30 @@ sin noticias hace más de 15 minutos, sin copia de seguridad, facturas que ARCA 
 - Se mandan números de pedido, productos e importes. **No** se mandan nombres, teléfonos ni CUIT de los clientes.
 - El local no depende de la nube: si se cae o no hay internet, se sigue cobrando y lo pendiente se manda al volver.
 
-**Montar la nube en Render (la opción elegida, una vez):** no hay servidor que mantener, tiene https incluido y se
+**Montar la nube en la PC de un local (gratis; la opción elegida para empezar):** corre junto al Morfi del local, con
+una dirección fija por Cloudflare Tunnel. Su punto débil: si esa PC se apaga o pierde internet, a todos los clientes
+se les caen el panel y la carta online. Los locales siguen vendiendo igual. Cuando haya clientes que paguen, pasar a
+Render (más abajo).
+1. Carpeta de datos fuera de la instalación, para que las actualizaciones no la toquen. Por ejemplo,
+   `Documents\Morfi-nube-datos`.
+2. En la carpeta de la instalación, en PowerShell:
+   ```
+   $env:PORT='4000'; $env:NUBE_DATOS='C:\Users\<usuario>\Documents\Morfi-nube-datos'
+   $env:NUBE_CLAVE_LICENCIAS='C:\Users\<usuario>\Documents\Morfi-claves\licencias-privada.pem'; $env:NODE_ENV='production'
+   pm2 start nube/servidor.js --name morfi-nube --update-env; pm2 save
+   ```
+   `npm run actualizar` la detiene antes de instalar dependencias y la reinicia con el código nuevo.
+3. Dirección fija: comprar un dominio (en NIC.ar, `.com.ar`) y agregarlo a una cuenta gratis de Cloudflare.
+   En Cloudflare, **Zero Trust → Networks → Tunnels**, crear un túnel, que se instala con `scripts/windows/tunel.ps1`.
+   En el túnel, agregar el *Public hostname* `nube.<dominio>` → `http://localhost:4000`.
+   `TRUST_PROXY` queda sin definir: cloudflared se conecta desde la misma PC, y el valor por defecto (`loopback`) ya
+   toma la IP real del cliente. Comprobarlo en `https://nube.<dominio>/api/salud` (el campo `ip`).
+4. Conectar el propio local: alta del local (ver "Altas"), y en su `.env` `NUBE_URL=http://127.0.0.1:4000` y su
+   `NUBE_TOKEN`. Los demás locales usan `NUBE_URL=https://nube.<dominio>`.
+5. Copia de la base de la nube: hacer copia de la carpeta `Morfi-nube-datos`, por ejemplo con la copia en la nube
+   de esa PC (`BACKUP_COPIA_DIR`) o a mano.
+
+**Montar la nube en Render (cuando haya clientes que paguen):** no hay servidor que mantener, tiene https incluido y se
 actualiza sola cuando el CI pasa. Cuesta unos USD 7,25 por mes: plan Starter más 1 GB de disco.
 1. En Render: **New → Blueprint**, elegir el repositorio `Andreadz27/morfi` y, en **Blueprint path**, poner
    `nube/render.yaml`. Crea el servicio `morfi-nube` con el disco y las variables.
