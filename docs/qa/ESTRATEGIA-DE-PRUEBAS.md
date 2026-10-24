@@ -18,12 +18,13 @@ cuesta al local si falla:
 
 | Capa | Herramienta | Dónde | Casos | Corre |
 |---|---|---|---|---|
-| API, servicios, migraciones, seguridad | `node:test` | `test/*.test.js` | 238 | `npm test` · CI en cada push (Linux y Windows) |
+| API, servicios, migraciones, seguridad | `node:test` | `test/*.test.js` | 256 | `npm test` · CI en cada push (Linux y Windows) |
 | Navegador, flujos del equipo de desarrollo | Playwright (`playwright-core`) | `test/e2e/` | 22 | `npm run test:e2e` · CI en cada push |
-| **Casos de prueba de QA, E2E** | **Playwright Test** | `qa/e2e/` | 25 (20 casos + 5 de defectos cerrados) | `npm run qa:e2e` · workflow **QA** en cada PR |
+| **Casos de prueba de QA, E2E** | **Playwright Test** | `qa/e2e/` | 26 (21 casos + 5 de defectos cerrados) | `npm run qa:e2e` · workflow **QA** en cada PR |
 | **API, contrato y validaciones** | **Postman + Newman** | `qa/api/` | 44 pedidos, 142 verificaciones | `npm run qa:api` · workflow **QA** |
 | **Celular real o emulado** | **Maestro** | `qa/mobile/` | 3 flujos | workflow **QA móvil** (a mano, lunes y al cambiar flujos) |
 | **Reporte** | **Mochawesome** | `qa/reportes/` | junta E2E y API | `npm run qa:reporte` · artefacto `reporte-qa` |
+| **Instalador en Windows limpio** | GitHub Actions (`windows-latest`) | `.github/workflows/instalador-windows.yml` | instalar, reinicio, reinstalar | workflow **Instalador (Windows limpio)**: al cambiar el instalador, los lunes y a mano |
 | Mutaciones (¿los tests detectan roturas?) | script propio | `scripts/prueba-de-fuego.js` | 24 mutaciones | A mano antes de una versión grande |
 
 `test/` son las pruebas que el desarrollo escribe junto con cada cambio. `qa/` sigue los **casos de prueba**
