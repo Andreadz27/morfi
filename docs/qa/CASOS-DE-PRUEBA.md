@@ -38,6 +38,12 @@ Corren en orden; si uno falla, los siguientes no corren.
 | CP-CAR-04 | Nada interno a la vista | Abrir la carta | No aparecen costo, stock ni "admin" | P1 | celular, seguridad |
 | CP-CAR-05 | Aviso de privacidad en el pedido online | Abrir `pedido.html` | El formulario dice quién guarda los datos (el local, con su CUIT), para qué y cómo pedir borrarlos (Ley 25.326) | P2 | celular |
 
+## Celular del mozo sin WiFi (CP-MOZ) · `qa/e2e/specs/07-pedidos-sin-wifi.spec.js`
+
+| ID | Caso | Pasos | Resultado esperado | Prio. | Etiquetas |
+|---|---|---|---|---|---|
+| CP-MOZ-01 | Pedido sin WiFi | Cortar la conexión al confirmar un pedido → volver la conexión → Reintentar (dos veces) | Aviso "quedó guardado"; el pedido no llega mientras no hay conexión; al volver llega **una sola vez** | P1 | regresión |
+
 ## Ganancias (CP-GAN) · `qa/e2e/specs/04-ganancias.spec.js`
 
 | ID | Caso | Pasos | Resultado esperado | Prio. | Etiquetas |

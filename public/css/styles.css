@@ -2288,3 +2288,9 @@ tr:hover td {
 .gan-hoy-detalle { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 14px; }
 @media (max-width: 600px) { .gan-cascada-fila { grid-template-columns: 1fr auto; } .gan-cascada-barra { display: none; } .gan-fijo { grid-template-columns: 1fr 110px auto; } }
 #view-ganancias td.text-right, #view-ganancias th.text-right { white-space: nowrap; }
+
+/* Pedidos guardados en el celular sin WiFi (js/cola-pedidos.js) */
+.cola-pedidos { position: fixed; left: 12px; right: 12px; bottom: 76px; z-index: 1500; display: flex; align-items: center;
+  gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 10px; background: #fef3c7; color: #78350f;
+  border: 1px solid #f59e0b; box-shadow: 0 6px 20px rgba(0,0,0,.15); font-size: .9rem; }
+@media (min-width: 900px) { .cola-pedidos { left: auto; right: 20px; bottom: 20px; max-width: 460px; } }

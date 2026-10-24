@@ -476,6 +476,13 @@ checkout() {
     return App.sinDobleEnvio('pos.checkout', () => this._confirmCheckout());
   },
 
+  // Nombre para los avisos de un pedido guardado sin WiFi ("Pedido de Mesa 3")
+  descripcionPedido(tipo, mesaId, cliente) {
+    const sel = document.getElementById('checkoutMesa');
+    const mesa = tipo === 'salon' && mesaId && sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : '';
+    return mesa ? `Pedido de ${mesa}` : `Pedido ${cliente || ''}`.trim();
+  },
+
   async _confirmCheckout() {
     const tipo = document.getElementById('checkoutTipo').value;
     const mesaId = document.getElementById('checkoutMesa') ? document.getElementById('checkoutMesa').value : null;
@@ -512,8 +519,16 @@ checkout() {
         direccion,
         telefono,
         costo_envio
-      });
+      }, this.descripcionPedido(tipo, mesaId, cliente));
       App.closeModal();
+      if (pedido.encolado) {
+        App.showToast('Sin WiFi: el pedido quedó guardado en este celular y se envía solo al volver la conexión', 'warning', 8000);
+        this.cart = [];
+        this.descuento = 0;
+        this.propina = 0;
+        this.paint(document.getElementById('view-pos'));
+        return;
+      }
       App.showToast(`Pedido ${pedido.numero_pedido} creado`, 'success');
 
       // Si el servidor mandó la comanda a una impresora térmica no hace falta nada más.

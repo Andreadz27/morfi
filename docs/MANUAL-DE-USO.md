@@ -46,7 +46,11 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
 4. **Pedidos desde el QR de la mesa:** si el cliente pide con el QR de su mesa, al mozo le aparece el aviso para
    **Confirmar** o **Rechazar** el pedido (si el local lo configuró así).
 5. **"Llamar al mozo" y "pagó":** cuando el cliente toca *Llamar al mozo* o paga desde su celular, aparece el aviso.
-6. **Reservas**: en **Mesas → Reservas**, con **Nueva reserva** se carga nombre, teléfono, día, hora y cantidad de
+6. **Si se corta el WiFi del celular** al mandar un pedido o un agregado: aparece "quedó guardado en este celular" y
+   un aviso amarillo abajo. No hay que volver a cargarlo, porque se envía solo cuando vuelve el WiFi (o con
+   **Reintentar**). Si la mesa se abrió mientras tanto, lo pedido se suma a esa mesa. Si algo no se pudo enviar (por
+   ejemplo, un producto que se dio de baja), Morfi avisa para cargarlo de nuevo.
+7. **Reservas**: en **Mesas → Reservas**, con **Nueva reserva** se carga nombre, teléfono, día, hora y cantidad de
    personas.
 
 ---
