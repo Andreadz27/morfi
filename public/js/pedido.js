@@ -383,11 +383,15 @@ const PedidoOnline={
       :q===0
       ?`<button class="btn-agregar" onclick="PedidoOnline.agregar(${p.id})" aria-label="${pdE(pdT("agregar"))}"><i class="fas fa-plus"></i> ${pdE(pdT("agregar"))}</button>`
       :`<button class="btn-qty btn-qty-minus" onclick="PedidoOnline.quitar(${p.id})" aria-label="Quitar">&#8722;</button><span class="qty-num">${q}</span><button class="btn-qty btn-qty-plus" onclick="PedidoOnline.agregar(${p.id})" aria-label="Sumar">+</button>`;
+    // Como en una carta impresa: nombre, puntos guía y precio en una línea; la descripción debajo
     return `<div class="menu-item-card pedido-item-card" data-id="${p.id}">
   <div class="menu-item-info">
-    <div class="menu-item-nombre">${pdE(pdTr(p,"nombre"))}</div>
+    <div class="carta-linea">
+      <span class="menu-item-nombre">${pdE(pdTr(p,"nombre"))}</span>
+      <span class="carta-puntos" aria-hidden="true"></span>
+      <span class="menu-item-precio">${pdM(p.precio_venta)}</span>
+    </div>
     ${pdTr(p,"descripcion")?`<div class="menu-item-desc">${pdE(pdTr(p,"descripcion"))}</div>`:""}
-    <div class="menu-item-precio">${pdM(p.precio_venta)}</div>
   </div>
   <div class="item-qty-ctrl">${qc}</div>
 </div>`;
