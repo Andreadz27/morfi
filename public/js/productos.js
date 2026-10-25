@@ -11,7 +11,8 @@ const Productos = {
     const view = document.getElementById('view-productos');
     view.innerHTML = '<div class="text-center mt-20"><i class="fas fa-spinner fa-spin fa-3x"></i></div>';
     try {
-      const [productos, categorias] = await Promise.all([API.getProductos(), API.getCategorias()]);
+      const [productos, categorias, momentos] = await Promise.all([API.getProductos(), API.getCategorias(), API.getMomentos().catch(() => [])]);
+      this.momentos = momentos;
       this.productos = productos;
       this.categorias = categorias;
       this.paint(view);
@@ -69,6 +70,8 @@ const Productos = {
         </div>
         <div class="pos-categories">${chips}</div>
       </div>
+
+      ${esAdmin ? this.htmlMomentos() : ''}
 
       <div id="prodListado">${this.htmlListado(esAdmin)}</div>
     `;
@@ -206,6 +209,12 @@ const Productos = {
             Controlar stock
           </label>
         </div>
+        <div class="form-group">
+          <label>Destacar en la carta</label>
+          <label class="checkbox-label"><input type="checkbox" id="prodRecomendado" ${p && p.recomendado ? 'checked' : ''}> Recomendado de la casa</label>
+          <label class="checkbox-label"><input type="checkbox" id="prodNuevo" ${p && p.nuevo ? 'checked' : ''}> Nuevo</label>
+          <small class="form-hint">"Lo más pedido" se marca solo con las ventas de las últimas 4 semanas.</small>
+        </div>
         <div class="form-group" id="stockInicialGroup" ${(!p && 'style="display:none"') || ''}>
           <label>Stock inicial</label>
           <input type="number" id="prodStockInicial" min="0" value="${p ? p.stock_actual : '0'}">
@@ -235,6 +244,8 @@ async guardar(e, id) {
       stock_minimo: parseInt(document.getElementById('prodStockMin').value || 0),
       tracking_stock: document.getElementById('prodTracking').checked ? 1 : 0,
       orden: parseInt(document.getElementById('prodOrden').value || 0),
+      recomendado: document.getElementById('prodRecomendado').checked ? 1 : 0,
+      nuevo: document.getElementById('prodNuevo').checked ? 1 : 0,
       traducciones: this.leerTraducciones('prod', true)
     };
     if (data.tracking_stock && !id) {
@@ -296,6 +307,90 @@ async guardar(e, id) {
       App.showToast(err.message, 'error');
     }
   },
+
+  // ===== Momentos de la carta (Desayuno, Brunch, Almuerzo, Merienda) =====
+  momentos: [],
+  htmlMomentos() {
+    const botones = this.momentos.map(m => `
+      <button class="pos-cat-btn" onclick="Productos.formMomento(${Number(m.id)})" title="Editar">
+        ${m.icono ? esc(m.icono) + ' ' : ''}${esc(m.nombre)} <span class="pos-cat-count">${esc(m.desde)}–${esc(m.hasta)}</span>${m.activo ? '' : ' (apagado)'}
+      </button>`).join('');
+    return `
+      <div class="card mb-20">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-clock"></i> Momentos de la carta</span>
+          <button class="btn btn-outline btn-sm" onclick="Productos.formMomento(null)"><i class="fas fa-plus"></i> Momento</button>
+        </div>
+        <p class="text-muted">La carta del QR abre en el momento de la hora (por ejemplo, a las 9 en el Desayuno) y muestra los otros a un toque.</p>
+        <div class="pos-categories">${botones || '<span class="text-muted">Todavía no hay momentos: la carta muestra todo junto.</span>'}</div>
+      </div>`;
+  },
+
+  formMomento(id) {
+    const m = this.momentos.find(x => x.id === id) || null;
+    const elegidas = m ? m.categorias : [];
+    const t = (m && m.traducciones) || {};
+    // Primero las elegidas, en su orden; después las demás
+    const cats = [...elegidas.map(i => this.categorias.find(c => c.id === i)).filter(Boolean), ...this.categorias.filter(c => !elegidas.includes(c.id))];
+    App.showModal(`
+      <form onsubmit="Productos.guardarMomento(event, ${m ? Number(m.id) : 'null'})">
+        <div class="grid grid-2">
+          <div class="form-group"><label>Nombre</label><input type="text" id="momNombre" maxlength="40" value="${m ? esc(m.nombre) : ''}" placeholder="Ej.: Desayuno" required></div>
+          <div class="form-group"><label>Ícono (emoji)</label><input type="text" id="momIcono" maxlength="8" value="${m ? esc(m.icono) : ''}" placeholder="🌅"></div>
+        </div>
+        <div class="grid grid-2">
+          <div class="form-group"><label>Desde</label><input type="time" id="momDesde" value="${m ? esc(m.desde) : '08:00'}" required></div>
+          <div class="form-group"><label>Hasta</label><input type="time" id="momHasta" value="${m ? esc(m.hasta) : '12:00'}" required></div>
+        </div>
+        <div class="form-group">
+          <label>Categorías de este momento (en este orden)</label>
+          <div class="cierre-dias">${cats.map(c => `<label class="checkbox-label"><input type="checkbox" class="momCat" value="${Number(c.id)}" ${elegidas.includes(c.id) ? 'checked' : ''}> ${esc(c.nombre)}</label>`).join('')}</div>
+          <small class="form-hint">Una categoría puede estar en varios momentos (por ejemplo, los cafés en el desayuno y en la merienda).</small>
+        </div>
+        <div class="grid grid-2">
+          <div class="form-group"><label>Inglés: nombre</label><input type="text" id="momEn" maxlength="40" value="${esc((t.en && t.en.nombre) || '')}" placeholder="Breakfast"></div>
+          <div class="form-group"><label>Portugués: nombre</label><input type="text" id="momPt" maxlength="40" value="${esc((t.pt && t.pt.nombre) || '')}" placeholder="Café da manhã"></div>
+        </div>
+        <div class="form-group"><label class="checkbox-label"><input type="checkbox" id="momActivo" ${!m || m.activo ? 'checked' : ''}> Mostrar en la carta</label></div>
+        <div class="modal-footer">
+          ${m ? `<button type="button" class="btn btn-danger" onclick="Productos.borrarMomento(${Number(m.id)})"><i class="fas fa-trash"></i> Borrar</button>` : ''}
+          <button type="button" class="btn btn-outline" onclick="App.closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-success">Guardar</button>
+        </div>
+      </form>`, { title: m ? `Momento: ${m.nombre}` : 'Nuevo momento de la carta' });
+  },
+
+  async guardarMomento(e, id) {
+    e.preventDefault();
+    const data = {
+      nombre: document.getElementById('momNombre').value,
+      icono: document.getElementById('momIcono').value,
+      desde: document.getElementById('momDesde').value,
+      hasta: document.getElementById('momHasta').value,
+      categorias: [...document.querySelectorAll('.momCat')].filter(x => x.checked).map(x => Number(x.value)),
+      activo: document.getElementById('momActivo').checked ? 1 : 0,
+      orden: id ? (this.momentos.find(x => x.id === id) || {}).orden : this.momentos.length,
+      traducciones: { en: { nombre: document.getElementById('momEn').value }, pt: { nombre: document.getElementById('momPt').value } }
+    };
+    try {
+      if (id) await API.actualizarMomento(id, data);
+      else await API.crearMomento(data);
+      App.closeModal();
+      App.showToast('Momento guardado', 'success');
+      this.render();
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  async borrarMomento(id) {
+    if (!confirm('¿Borrar este momento de la carta? Las categorías y los productos no se borran.')) return;
+    try {
+      await API.borrarMomento(id);
+      App.closeModal();
+      App.showToast('Momento borrado', 'success');
+      this.render();
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
 
   nuevaCategoria() {
     this.formCategoria(null);

@@ -100,6 +100,11 @@ const API = {
   getCategorias() { return this.request('GET', '/categorias'); },
   createCategoria(data) { return this.request('POST', '/categorias', data); },
   updateCategoria(id, data) { return this.request('PUT', `/categorias/${id}`, data); },
+  // Momentos de la carta (Desayuno, Brunch...)
+  getMomentos() { return this.request('GET', '/carta/momentos'); },
+  crearMomento(data) { return this.request('POST', '/carta/momentos', data); },
+  actualizarMomento(id, data) { return this.request('PUT', `/carta/momentos/${id}`, data); },
+  borrarMomento(id) { return this.request('DELETE', `/carta/momentos/${id}`); },
   deleteCategoria(id) { return this.request('DELETE', `/categorias/${id}`); },
 
   // ===== Productos =====

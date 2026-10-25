@@ -1,7 +1,7 @@
 'use strict';
 const {
   run, get, all, errorHttp, actualizarParcial, errorInterno, autenticar, requiere, transaccion, obtenerReceta, guardarRecetaTx, recalcularCostosConIngrediente, costoReceta,
-  normalizarTraducciones, ORDEN_CARTA
+  normalizarTraducciones, ORDEN_CARTA, listarMomentos, guardarMomento, borrarMomento
 } = require('../contexto');
 
 module.exports = function registrarRutas(app) {
@@ -48,6 +48,25 @@ app.delete('/api/categorias/:id', autenticar, requiere('catalogo'), async (req, 
   } catch (err) {
     errorInterno(res, err);
   }
+});
+
+// ============ MOMENTOS DE LA CARTA (servicios/carta.js) ============
+// Desayuno, Brunch, Almuerzo, Merienda...: horario y categorías. La carta abre en el de la hora.
+
+app.get('/api/carta/momentos', autenticar, async (req, res) => {
+  try { res.json(await listarMomentos()); } catch (err) { errorInterno(res, err); }
+});
+
+app.post('/api/carta/momentos', autenticar, requiere('catalogo'), async (req, res) => {
+  try { res.status(201).json(await guardarMomento(req.body)); } catch (err) { errorInterno(res, err); }
+});
+
+app.put('/api/carta/momentos/:id', autenticar, requiere('catalogo'), async (req, res) => {
+  try { res.json(await guardarMomento(req.body, Number(req.params.id))); } catch (err) { errorInterno(res, err); }
+});
+
+app.delete('/api/carta/momentos/:id', autenticar, requiere('catalogo'), async (req, res) => {
+  try { await borrarMomento(Number(req.params.id)); res.json({ message: 'Momento borrado' }); } catch (err) { errorInterno(res, err); }
 });
 
 // ============ PRODUCTOS ============
@@ -106,6 +125,9 @@ async function datosProducto(body, actual = {}) {
     unidad: String(valor('unidad', 'unidad') || 'unidad'),
     activo: bandera('activo', 1),
     orden: Math.trunc(numero('orden', 0)),
+    // Destacados de la carta: "Nuevo" y "Recomendado de la casa"
+    nuevo: bandera('nuevo', 0),
+    recomendado: bandera('recomendado', 0),
     // Sin "traducciones" en el body, la edición conserva las que tenía
     traducciones: body.traducciones !== undefined ? normalizarTraducciones(body.traducciones) : (actual.traducciones || null)
   };
@@ -115,9 +137,9 @@ app.post('/api/productos', autenticar, requiere('catalogo'), async (req, res) =>
   try {
     const p = await datosProducto(req.body || {});
     const result = await run(
-      `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo, traducciones, orden)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden]
+      `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo, traducciones, orden, nuevo, recomendado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado]
     );
     res.status(201).json({ id: result.id, message: 'Producto creado' });
   } catch (err) {
@@ -137,9 +159,9 @@ app.put('/api/productos/:id', autenticar, requiere('catalogo'), async (req, res)
       await run(
         `UPDATE productos SET
          nombre = ?, descripcion = ?, categoria_id = ?, precio_venta = ?, costo = ?,
-         es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?, traducciones = ?, orden = ?
+         es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?, traducciones = ?, orden = ?, nuevo = ?, recomendado = ?
          WHERE id = ?`,
-        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, actual.id]
+        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, actual.id]
       );
       // Si es ingrediente y cambió su costo, se actualiza el costo de los platos que lo usan
       if (Number(p.costo) !== Number(actual.costo)) await recalcularCostosConIngrediente(actual.id);

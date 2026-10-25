@@ -33,6 +33,7 @@ module.exports = {
   ...require('./servicios/personal'),
   ...require('./servicios/caja'),
   ...require('./servicios/cierre-dia'),
+  ...require('./servicios/carta'),
   ...require('./servicios/fidelizacion'),
   ...require('./servicios/whatsapp'),
   ...require('./servicios/asistente'),

@@ -329,3 +329,75 @@ body.menu-body.carta-elegante::before { display: none; }
 
 /* Sin carrito (carta solo para ver, ?ver=1): la carta va centrada */
 .carta-elegante .pedido-layout { justify-content: center; }
+
+/* ---- Momentos del día (Desayuno, Brunch...): pestañas con su horario ---- */
+.carta-elegante .momentos-carta {
+  display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 6px;
+  scrollbar-width: none;
+}
+.carta-elegante .momentos-carta::-webkit-scrollbar { display: none; }
+.carta-elegante .momento-btn {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 96px; padding: 10px 14px; cursor: pointer;
+  background: rgba(255, 250, 243, .6); color: var(--tinta);
+  border: 1.5px solid var(--linea); border-radius: 12px;
+  font-family: var(--fuente); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+}
+.carta-elegante .momento-btn small { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: var(--gris); text-transform: none; }
+.carta-elegante .momento-icono { font-size: 20px; line-height: 1; }
+.carta-elegante .momento-btn.activo { background: var(--tinta); border-color: var(--tinta); color: var(--blanco); }
+.carta-elegante .momento-btn.activo small { color: #e9d8c2; }
+.carta-elegante .momento-btn:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* ---- Buscador de la carta ---- */
+.carta-elegante .buscador-carta {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 10px 14px;
+  background: rgba(255, 250, 243, .75); border: 1.5px solid var(--linea); border-radius: 999px;
+}
+.carta-elegante .buscador-carta i { color: var(--gris); }
+.carta-elegante .buscador-carta input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; color: var(--tinta); font-family: var(--fuente);
+}
+
+/* ---- Destacados: Recomendado, Lo más pedido, Nuevo ---- */
+.carta-elegante .carta-marcas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.carta-elegante .carta-marca {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.carta-elegante .carta-marca.reco { background: var(--tinta); color: var(--blanco); }
+.carta-elegante .carta-marca.mas { background: #f3dcc4; color: #7a3f1d; }
+.carta-elegante .carta-marca.nuevo { background: transparent; color: var(--acento); border: 1.5px solid var(--acento); }
+
+/* La carta ocupa el ancho de la pantalla: con align-items:flex-start (pedido.css) tomaba el ancho de su
+   contenido y las pestañas de momentos la ensanchaban más que el celular */
+.carta-elegante .pedido-carta { width: 100%; min-width: 0; }
+.carta-elegante .momentos-carta { max-width: 100%; }
+
+/* ---- Para todas las edades: letra legible y botones fáciles de tocar ---- */
+.carta-elegante .menu-item-nombre { font-size: 15px; }
+.carta-elegante .menu-item-precio { font-size: 16px; }
+.carta-elegante .menu-item-desc { font-size: 14px; color: var(--tinta-suave); }
+.carta-elegante .btn-agregar { min-height: 36px; padding: 6px 16px; font-size: 11px; }
+.carta-elegante .btn-qty { width: 36px; height: 36px; font-size: 1.05rem; }
+.carta-elegante .menu-cat-btn, .carta-elegante .mobile-cat-btn { min-height: 40px; }
+.carta-elegante .mesa-acciones .btn { min-height: 44px; }
+
+/* Botón "Aa": agranda toda la carta (se recuerda en el celular) */
+.carta-elegante .selector-idioma .boton-letra { letter-spacing: 0; font-size: 13px; margin-left: 6px; border: 1.5px solid var(--linea); border-radius: 8px; min-width: 44px; }
+.carta-elegante .selector-idioma .boton-letra span { font-size: 18px; margin-left: 1px; }
+.carta-elegante .selector-idioma .boton-letra.activo { background: var(--tinta); color: var(--blanco); border-color: var(--tinta); }
+body.carta-elegante.letra-grande .menu-item-nombre { font-size: 17px; }
+body.carta-elegante.letra-grande .menu-item-precio { font-size: 18px; }
+body.carta-elegante.letra-grande .menu-item-desc { font-size: 15.5px; line-height: 1.55; }
+body.carta-elegante.letra-grande .menu-section-title { font-size: 16px; }
+body.carta-elegante.letra-grande .carta-nota { font-size: 14.5px; }
+body.carta-elegante.letra-grande .carta-marca { font-size: 11.5px; }
+body.carta-elegante.letra-grande .menu-cat-btn,
+body.carta-elegante.letra-grande .mobile-cat-btn,
+body.carta-elegante.letra-grande .momento-btn { font-size: 13px; }
+body.carta-elegante.letra-grande .btn-agregar { font-size: 12.5px; min-height: 40px; }
+body.carta-elegante.letra-grande .mesa-sol,
+body.carta-elegante.letra-grande .form-group label,
+body.carta-elegante.letra-grande .form-group input,
+body.carta-elegante.letra-grande .form-group textarea { font-size: 16px; }
