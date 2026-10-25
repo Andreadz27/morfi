@@ -24,60 +24,36 @@ const Productos = {
     return App.puede('catalogo');
   },
 
-  catNombre(id) {
-    const c = this.categorias.find(c => c.id === id);
-    return c ? c.nombre : '-';
-  },
+  // Filtro de la vista: categoría elegida ('todas' o su id) y texto buscado
+  filtroCat: 'todas',
+  busqueda: '',
 
   paint(view) {
     const esAdmin = this.esAdmin();
-
-    const rows = this.productos.map(p => `
-      <tr>
-        <td>${esc(p.nombre)}</td>
-        <td>${esc(this.catNombre(p.categoria_id))}</td>
-        <td class="font-bold">${fmtMoneda(p.precio_venta)}</td>
-        <td>${fmtMoneda(p.costo)}</td>
-        <td>
-          ${
-            p.tracking_stock ? `
-            <span class="${p.stock_actual <= p.stock_minimo ? 'text-danger font-bold' : ''}">${p.stock_actual} ${esc(p.unidad || '')}</span>
-            ` : '<span class="text-muted">Sin control</span>'
-          }
-        </td>
-        <td>${p.es_plato ? '<span class="badge badge-blue">Plato</span>' : '<span class="badge badge-gray">Producto</span>'}</td>
-        <td>
-          ${p.activo ? '<span class="badge badge-green">Activo</span>' : '<span class="badge badge-red">Inactivo</span>'}
-        </td>
-        ${
-          esAdmin ? `
-          <td>
-            <button class="btn btn-outline btn-sm" onclick="Productos.receta(${p.id})" title="Receta e ingredientes">
-              <i class="fas fa-blender"></i>${p.ingredientes_receta ? ` ${p.ingredientes_receta}` : ''}</button>
-            <button class="btn btn-outline btn-sm" onclick="Productos.editar(${p.id})"><i class="fas fa-edit"></i></button>
-            <button class="btn btn-danger btn-sm" onclick="Productos.eliminar(${p.id})"><i class="fas fa-trash"></i></button>
-          </td>
-          ` : ''
-        }
-      </tr>
-    `).join('');
-
-    const catRows = this.categorias.map(c => `
-      <button class="pos-cat-btn" style="background:${esc(c.color || '#64748b')}" onclick="Productos.verCategoria(${c.id})">
-        ${esc(c.nombre)}
-      </button>
-    `).join('');
+    const cuenta = id => this.productos.filter(p => p.categoria_id === id).length;
+    const sinCat = this.productos.filter(p => !this.categorias.some(c => c.id === p.categoria_id)).length;
+    const chip = (id, nombre, n, color, icono) => `
+      <button class="pos-cat-btn ${String(this.filtroCat) === String(id) ? 'active' : ''}" onclick="Productos.verCategoria('${id}')"
+        ${color ? `style="--cat-color:${esc(color)}"` : ''}>
+        ${icono ? `<i class="fas ${icono}"></i> ` : `<span class="prod-cat-punto" style="background:${esc(color || '#64748b')}"></span>`}${esc(nombre)}
+        <span class="pos-cat-count">${n}</span>
+      </button>`;
+    const chips = [
+      chip('todas', 'Todas', this.productos.length, '', 'fa-th-large'),
+      ...this.categorias.map(c => chip(c.id, c.nombre, cuenta(c.id), c.color)),
+      ...(sinCat ? [chip('sin', 'Sin categoría', sinCat, '#94a3b8')] : [])
+    ].join('');
 
     view.innerHTML = `
       <div class="page-header">
         <div>
           <h2><i class="fas fa-hamburger"></i> Productos</h2>
-          <p>Gesti\u00f3n del men\u00fa y precios</p>
+          <p>${this.productos.length} productos en ${this.categorias.length} categorías</p>
         </div>
         <div>
           ${
             esAdmin ? `
-            <button class="btn btn-primary" onclick="Productos.nuevaCategoria()"><i class="fas fa-tag"></i> Categor\u00eda</button>
+            <button class="btn btn-primary" onclick="Productos.nuevaCategoria()"><i class="fas fa-tag"></i> Categoría</button>
             <button class="btn btn-success" onclick="Productos.nuevo()"><i class="fas fa-plus"></i> Nuevo producto</button>
             ` : ''
           }
@@ -86,36 +62,78 @@ const Productos = {
       </div>
 
       <div class="card mb-20">
-        <div class="card-header">
-          <span class="card-title"><i class="fas fa-tags"></i> Categor\u00edas</span>
+        <div class="prod-buscador">
+          <i class="fas fa-search"></i>
+          <input type="search" id="prodBuscar" placeholder="Buscar producto..." value="${esc(this.busqueda)}"
+            oninput="Productos.buscar(this.value)" aria-label="Buscar producto">
         </div>
-        <div class="pos-categories">${catRows || '<span class="text-muted">Sin categor\u00edas</span>'}</div>
+        <div class="pos-categories">${chips}</div>
       </div>
 
-      <div class="card">
-        ${
-          this.productos.length > 0 ? `
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Producto</th><th>Categor\u00eda</th><th>Precio</th><th>Costo</th>
-                  <th>Stock</th><th>Tipo</th><th>Estado</th>${esAdmin ? '<th>Acciones</th>' : ''}
-                </tr>
-              </thead>
-              <tbody>${rows}</tbody>
-            </table>
-          </div>
-          ` : `<div class="empty-state"><i class="fas fa-box-open"></i><p>Sin productos</p></div>`
-        }
-      </div>
+      <div id="prodListado">${this.htmlListado(esAdmin)}</div>
     `;
   },
 
-  verCategoria(id) {
-    App.showToast(`Categor\u00eda ${this.catNombre(id)}`, 'info');
+  // Productos agrupados por categoría, en el orden de la carta; cada grupo con su color y cantidad
+  htmlListado(esAdmin = this.esAdmin()) {
+    if (!this.productos.length) return `<div class="card"><div class="empty-state"><i class="fas fa-box-open"></i><p>Sin productos</p></div></div>`;
+    const texto = this.busqueda.trim().toLowerCase();
+    const coincide = p => !texto || p.nombre.toLowerCase().includes(texto) || String(p.descripcion || '').toLowerCase().includes(texto);
+    const grupos = [
+      ...this.categorias.map(c => ({ id: c.id, nombre: c.nombre, color: c.color, productos: this.productos.filter(p => p.categoria_id === c.id) })),
+      { id: 'sin', nombre: 'Sin categoría', color: '#94a3b8', productos: this.productos.filter(p => !this.categorias.some(c => c.id === p.categoria_id)) }
+    ].filter(g => this.filtroCat === 'todas' || String(g.id) === String(this.filtroCat))
+      .map(g => ({ ...g, productos: g.productos.filter(coincide) }))
+      .filter(g => g.productos.length);
+    if (!grupos.length) return `<div class="card"><div class="empty-state"><i class="fas fa-search"></i><p>No hay productos${texto ? ` que coincidan con "${esc(this.busqueda.trim())}"` : ' en esta categoría'}</p></div></div>`;
+
+    const fila = p => `
+      <tr>
+        <td><div class="font-bold">${esc(p.nombre)}</div>${p.descripcion ? `<small class="text-muted prod-desc">${esc(p.descripcion)}</small>` : ''}</td>
+        <td class="font-bold">${fmtMoneda(p.precio_venta)}</td>
+        <td>${fmtMoneda(p.costo)}</td>
+        <td>${p.tracking_stock
+          ? `<span class="${p.stock_actual <= p.stock_minimo ? 'text-danger font-bold' : ''}">${p.stock_actual} ${esc(p.unidad || '')}</span>`
+          : '<span class="text-muted">Sin control</span>'}</td>
+        <td>${p.es_plato ? '<span class="badge badge-blue">Plato</span>' : '<span class="badge badge-gray">Producto</span>'}</td>
+        ${esAdmin ? `
+          <td class="prod-acciones">
+            <button class="btn btn-outline btn-sm" onclick="Productos.receta(${p.id})" title="Receta e ingredientes">
+              <i class="fas fa-blender"></i>${p.ingredientes_receta ? ` ${p.ingredientes_receta}` : ''}</button>
+            <button class="btn btn-outline btn-sm" onclick="Productos.editar(${p.id})" title="Editar"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="Productos.eliminar(${p.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+          </td>` : ''}
+      </tr>`;
+    return grupos.map(g => `
+      <div class="card mb-20 prod-grupo" style="--cat-color:${esc(g.color || '#64748b')}">
+        <div class="card-header">
+          <span class="card-title"><span class="prod-cat-punto"></span> ${esc(g.nombre)}</span>
+          <span class="pos-cat-count">${g.productos.length}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Producto</th><th>Precio</th><th>Costo</th><th>Stock</th><th>Tipo</th>${esAdmin ? '<th>Acciones</th>' : ''}</tr>
+            </thead>
+            <tbody>${g.productos.map(fila).join('')}</tbody>
+          </table>
+        </div>
+      </div>`).join('');
   },
-nuevo() {
+
+  verCategoria(id) {
+    this.filtroCat = id;
+    this.paint(document.getElementById('view-productos'));
+  },
+
+  // Al escribir solo se rehace el listado: el buscador no pierde el foco
+  buscar(texto) {
+    this.busqueda = texto;
+    const el = document.getElementById('prodListado');
+    if (el) el.innerHTML = this.htmlListado();
+  },
+
+  nuevo() {
     this.abrirFormulario(null);
   },
 
