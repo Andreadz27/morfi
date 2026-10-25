@@ -199,6 +199,13 @@ const API = {
   getIva(mes) { return this.request('GET', `/contabilidad/iva?mes=${mes}`); },
   getLibroDiario(desde, hasta) { return this.request('GET', `/contabilidad/libro-diario?desde=${desde}&hasta=${hasta}`); },
   getArqueoCaja(id) { return this.request('GET', `/caja/${id}/arqueo`); },
+  completarArqueo(id, data) { return this.request('POST', `/caja/${id}/arqueo`, data); },
+  // Cierre del día
+  getCierreConfig() { return this.request('GET', '/cierre/config'); },
+  getCierreHoy() { return this.request('GET', '/cierre/hoy'); },
+  getCierres() { return this.request('GET', '/cierres'); },
+  getCierre(fecha) { return this.request('GET', `/cierres/${encodeURIComponent(fecha)}`); },
+  cerrarDia() { return this.request('POST', '/cierres', {}); },
   registrarMovimientoCaja(data) { return this.request('POST', '/caja/movimiento', data); },
 // ===== Proveedores =====
   getProveedores() { return this.request('GET', '/proveedores'); },

@@ -15,6 +15,7 @@ const { iniciarMonitoreo } = require('./src/servicios/monitoreo');
 const { iniciarRecordatoriosWhatsApp } = require('./src/servicios/whatsapp');
 const { iniciarModoSinConexion } = require('./src/servicios/sin-conexion');
 const { iniciarSyncNube } = require('./src/servicios/sync-nube');
+const { iniciarCierreAutomatico } = require('./src/servicios/cierre-dia');
 
 iniciarRealtime(server);
 
@@ -40,6 +41,8 @@ migrarConRespaldo({ respaldar: crearBackup }).then(() => server.listen(PORT, () 
   iniciarModoSinConexion();
   // Ventas y estado del local al panel Morfi Nube (si NUBE_URL y NUBE_TOKEN están en el .env)
   iniciarSyncNube();
+  // Cierre del día a la hora configurada (si está activado en Caja → Cierre del día)
+  iniciarCierreAutomatico();
 })).catch(err => {
   console.error('Error al migrar la base de datos:', err);
   process.exit(1);

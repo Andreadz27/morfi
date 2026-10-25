@@ -1,6 +1,7 @@
 'use strict';
 const {
-  run, get, all, transaccion, errorHttp, errorInterno, autenticar, importe, requiere, autorizar, controlCaja, esSupervisor
+  run, get, all, transaccion, errorHttp, errorInterno, autenticar, importe, requiere, autorizar, controlCaja, esSupervisor,
+  redondear, resumenCaja, cerrarCajaTx, completarArqueo
 } = require('../contexto');
 
 module.exports = function registrarRutas(app) {
@@ -26,33 +27,7 @@ app.post('/api/caja/abrir', autenticar, requiere('caja.operar'), async (req, res
   }
 });
 
-const redondear = n => Math.round((Number(n) || 0) * 100) / 100;
-
-// Arqueo: cobros del turno por medio de pago, ingresos/egresos de efectivo y
-// efectivo esperado = inicial + ventas en efectivo + ingresos − egresos
-async function resumenCaja(caja) {
-  const hasta = caja.fecha_cierre || '9999-12-31';
-  const porMetodo = await all(`
-    SELECT metodo, COALESCE(SUM(monto), 0) AS total, COUNT(*) AS cantidad
-    FROM pagos WHERE fecha >= ? AND fecha <= ?
-    GROUP BY metodo ORDER BY total DESC`, [caja.fecha_apertura, hasta]);
-  const movimientos = await all(`
-    SELECT m.id, m.tipo, m.concepto, m.monto, m.fecha, u.nombre AS usuario_nombre
-    FROM movimientos_caja m LEFT JOIN usuarios u ON u.id = m.usuario_id
-    WHERE m.caja_id = ? ORDER BY m.fecha`, [caja.id]);
-  const suma = tipo => redondear(movimientos.filter(m => m.tipo === tipo).reduce((s, m) => s + m.monto, 0));
-  const ventasEfectivo = redondear((porMetodo.find(m => m.metodo === 'efectivo') || {}).total);
-  const ingresos = suma('ingreso'), egresos = suma('egreso');
-  return {
-    monto_inicial: redondear(caja.monto_inicial),
-    por_metodo: porMetodo.map(m => ({ ...m, total: redondear(m.total) })),
-    total_ventas: redondear(porMetodo.reduce((s, m) => s + m.total, 0)),
-    cobros: porMetodo.reduce((s, m) => s + m.cantidad, 0),
-    ventas_efectivo: ventasEfectivo,
-    ingresos, egresos, movimientos,
-    efectivo_esperado: redondear(caja.monto_inicial + ventasEfectivo + ingresos - egresos)
-  };
-}
+// El arqueo (resumenCaja) y el cierre (cerrarCajaTx) están en servicios/caja.js: también los usa el cierre del día
 
 // Arqueo ciego: quien no es encargado no ve lo que "debería" haber; cuenta y declara.
 // Ve sus movimientos, pero no las ventas por medio de pago, el efectivo esperado ni la diferencia.
@@ -99,15 +74,7 @@ app.post('/api/caja/cerrar', autenticar, requiere('caja.operar'), async (req, re
     const resultado = await transaccion(async () => {
       const caja = await get("SELECT * FROM caja WHERE estado = 'abierta'");
       if (!caja) throw errorHttp(400, 'No hay caja abierta');
-      const resumen = await resumenCaja(caja);
-      const diferencia = redondear(contado - resumen.efectivo_esperado);
-      await run(`UPDATE caja SET estado = 'cerrada', fecha_cierre = CURRENT_TIMESTAMP, monto_final_real = ?,
-                   monto_esperado = ?, diferencia = ?, resumen = ?, observaciones_cierre = ? WHERE id = ?`,
-        [redondear(contado), resumen.efectivo_esperado, diferencia, JSON.stringify(resumen),
-         String((req.body && req.body.observaciones) || ''), caja.id]);
-      await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)',
-        [req.usuario.id, 'cerrar_caja', `Caja #${caja.id} cerrada. Esperado ${resumen.efectivo_esperado}, contado ${redondear(contado)}, diferencia ${diferencia}`]);
-      return { resumen, diferencia };
+      return cerrarCajaTx(caja, { contado, observaciones: req.body && req.body.observaciones, usuarioId: req.usuario.id });
     });
     const { ciego } = await controlCaja();
     if (ciego && !esSupervisor(req.usuario))
@@ -140,7 +107,7 @@ app.get('/api/caja/historial', autenticar, requiere('caja.historial'), async (re
   try {
     const cajas = await all(`
       SELECT c.id, c.fecha_apertura, c.fecha_cierre, c.monto_inicial, c.monto_final_real, c.estado,
-        c.monto_esperado, c.diferencia, c.observaciones, c.observaciones_cierre, u.nombre as usuario_nombre,
+        c.monto_esperado, c.diferencia, c.observaciones, c.observaciones_cierre, c.pendiente_arqueo, u.nombre as usuario_nombre,
         (SELECT COALESCE(SUM(pg.monto), 0) FROM pagos pg
           WHERE pg.fecha >= c.fecha_apertura AND pg.fecha <= COALESCE(c.fecha_cierre, '9999-12-31')) as ventas
       FROM caja c
@@ -149,6 +116,17 @@ app.get('/api/caja/historial', autenticar, requiere('caja.historial'), async (re
       LIMIT 200
     `);
     res.json(cajas);
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// Caja que cerró sola en el cierre del día (nadie había contado): el encargado carga el efectivo contado
+app.post('/api/caja/:id/arqueo', autenticar, requiere('caja.historial'), async (req, res) => {
+  try {
+    const contado = Number(req.body && req.body.monto_final_real);
+    if (!Number.isFinite(contado) || contado < 0) return res.status(400).json({ error: 'Ingresá el efectivo contado en caja' });
+    res.json(await completarArqueo(Number(req.params.id), { contado, observaciones: req.body.observaciones, usuarioId: req.usuario.id }));
   } catch (err) {
     errorInterno(res, err);
   }

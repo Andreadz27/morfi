@@ -173,6 +173,21 @@ const App = {
         if (this.puede('pedidos.cobrar')) this.showToast(`La factura en espera del pedido ${data.numero_pedido} no se pudo emitir: ${data.error}`, 'error', 12000);
       });
 
+      // Cierre del día: aviso antes de la hora (contar el efectivo) y cierre hecho
+      this.socket.on('cierre:aviso', (data) => {
+        if (!this.puede('caja.operar')) return;
+        this.showToast(`En ${data.minutos} minutos (${data.hora}) cierra el día.${data.caja_abierta ? ' Contá el efectivo y cerrá la caja.' : ''}`, 'warning', 20000);
+        this.sonarAviso();
+      });
+      this.socket.on('cierre:hecho', (data) => {
+        if (!this.puede('caja.operar')) return;
+        this.showToast(data.caja_cerrada
+          ? 'Se cerró el día. La caja quedó cerrada sin contar: el encargado carga el efectivo contado en Caja.'
+          : 'Se cerró el día: el resumen está en Caja → Cierre del día.', data.caja_cerrada ? 'warning' : 'success', 15000);
+        if (App.currentView === 'caja') Caja.render();
+      });
+      this.socket.on('caja:actualizar', () => { if (App.currentView === 'caja') Caja.render(); });
+
       // Personal: alguien fichó (el encargado ve las fichadas al día) o cambiaron los turnos
       this.socket.on('personal:fichaje', (data) => {
         if (this.usuario && data.usuario_id === this.usuario.id) this.revisarFichaje();
