@@ -64,3 +64,32 @@ test('los datos de ejemplo no se duplican al reinicializar la base', async () =>
   assert.deepEqual(productos, []);
   assert.equal((await s.q('SELECT COUNT(*) c FROM plataformas_delivery'))[0].c, 3);
 });
+
+test('init-db --sin-ejemplos (instalar.ps1 -BaseLimpia): base vacía que igual se puede usar', async () => {
+  const { execFileSync } = require('child_process');
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gm-test-limpia-'));
+  const initDb = () => execFileSync(process.execPath, [path.join(__dirname, '..', 'init-db.js'), '--sin-ejemplos'],
+    { env: { ...process.env, GM_DATA_DIR: dataDir }, stdio: 'ignore' });
+  initDb();
+  initDb(); // volver a correrlo tampoco carga ejemplos
+  const limpio = await iniciarServidor({}, { dataDir });
+  try {
+    for (const tabla of ['productos', 'categorias', 'mesas', 'proveedores', 'promociones', 'pedidos']) {
+      assert.equal((await limpio.q(`SELECT COUNT(*) c FROM ${tabla}`))[0].c, 0, tabla);
+    }
+    assert.equal((await limpio.q("SELECT COUNT(*) c FROM usuarios WHERE email = 'admin@morfi.local'"))[0].c, 1);
+    assert.equal((await limpio.q('SELECT COUNT(*) c FROM plataformas_delivery'))[0].c, 3);
+    // Lo primero que hace el dueño: su categoría, su producto y su mesa
+    const [stCat, cat] = await limpio.llamar('POST', '/api/categorias', { nombre: 'Brunch' }, limpio.tokenAdmin);
+    assert.equal(stCat, 201);
+    const [stProd] = await limpio.llamar('POST', '/api/productos', { nombre: 'Tostado', precio_venta: 5000, categoria_id: cat.id }, limpio.tokenAdmin);
+    assert.equal(stProd, 201);
+    const [stMesa] = await limpio.llamar('POST', '/api/mesas', { nombre: 'Mesa 1', capacidad: 2 }, limpio.tokenAdmin);
+    assert.equal(stMesa, 201);
+  } finally {
+    await limpio.cerrar();
+  }
+});

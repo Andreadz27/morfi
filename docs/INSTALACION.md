@@ -29,11 +29,14 @@ Antes de que venza, generar uno nuevo y volver a ejecutar el instalador en cada 
 **PowerShell como Administrador** en esa carpeta y ejecutar:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File instalar.ps1 -Cliente "la-buena-mesa" -Token "github_pat_..." -ActualizacionAutomatica
+powershell -ExecutionPolicy Bypass -File instalar.ps1 -Cliente "la-buena-mesa" -Token "github_pat_..." -ActualizacionAutomatica -BaseLimpia
 ```
 
 `-Cliente` = nombre corto del local, en minúsculas y sin espacios (se usa en la nube y en el monitoreo).
 `-ActualizacionAutomatica` = actualiza todos los días a las 05:00, con copia previa y vuelta atrás si algo falla.
+`-BaseLimpia` = la base arranca vacía: sin la carta, las mesas, las categorías, los proveedores ni las promociones de
+ejemplo. Quedan el administrador inicial y las plataformas de delivery (apagadas). Solo vale cuando la base todavía no
+existe: volver a ejecutar el instalador con `-BaseLimpia` no borra nada.
 
 El instalador deja el sistema corriendo y muestra la dirección para las tablets (ej. `http://192.168.0.10:3000`).
 Se puede volver a ejecutar: no borra datos.

@@ -16,6 +16,10 @@ if (!fs.existsSync(dataDir)) {
 const { rutaBase } = require('./src/archivo-base');
 const db = new sqlite3.Database(rutaBase(dataDir));
 
+// --sin-ejemplos: base limpia para un local nuevo (sin la carta, mesas, categorías, proveedores ni promociones
+// de ejemplo). Quedan el administrador inicial, la configuración y las plataformas de delivery (vienen apagadas).
+const SIN_EJEMPLOS = process.argv.includes('--sin-ejemplos');
+
 db.serialize(() => {
   // ============ TABLAS BASE ============
 
@@ -327,56 +331,58 @@ db.serialize(() => {
   // Configuración por defecto
   db.run(`INSERT OR IGNORE INTO configuracion (id, nombre_negocio) VALUES (1, 'Mi Restaurante')`);
 
-  // Categorías iniciales
-  const categorias = [
-    ['Entradas', 'Aperitivos y entradas', '#FF9800', 1],
-    ['Platos Principales', 'Platos principales', '#4CAF50', 2],
-    ['Bebidas', 'Bebidas sin alcohol', '#2196F3', 3],
-    ['Postres', 'Postres y dulces', '#9C27B0', 4],
-    ['Bebidas Alcohólicas', 'Bebidas con alcohol', '#F44336', 5],
-    ['Delivery', 'Productos para entrega', '#673AB7', 6]
-  ];
+  if (!SIN_EJEMPLOS) {
+    // Categorías iniciales
+    const categorias = [
+      ['Entradas', 'Aperitivos y entradas', '#FF9800', 1],
+      ['Platos Principales', 'Platos principales', '#4CAF50', 2],
+      ['Bebidas', 'Bebidas sin alcohol', '#2196F3', 3],
+      ['Postres', 'Postres y dulces', '#9C27B0', 4],
+      ['Bebidas Alcohólicas', 'Bebidas con alcohol', '#F44336', 5],
+      ['Delivery', 'Productos para entrega', '#673AB7', 6]
+    ];
 
-  const stmtCat = db.prepare('INSERT OR IGNORE INTO categorias (nombre, descripcion, color, orden) VALUES (?, ?, ?, ?)');
-  categorias.forEach(c => stmtCat.run(c[0], c[1], c[2], c[3]));
-  stmtCat.finalize();
+    const stmtCat = db.prepare('INSERT OR IGNORE INTO categorias (nombre, descripcion, color, orden) VALUES (?, ?, ?, ?)');
+    categorias.forEach(c => stmtCat.run(c[0], c[1], c[2], c[3]));
+    stmtCat.finalize();
 
-  console.log('✅ Categorías iniciales creadas.');
+    console.log('✅ Categorías iniciales creadas.');
 
-  // Productos iniciales de ejemplo (solo si no existen: productos.nombre no es UNIQUE
-  // y con INSERT OR IGNORE cada ejecución duplicaba la carta)
-  const stmtProd = db.prepare(`INSERT INTO productos
-    (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad)
-    SELECT ?1, ?2, (SELECT id FROM categorias WHERE nombre = ?3), ?4, ?5, ?6, ?7, ?8, ?9, ?10
-    WHERE NOT EXISTS (SELECT 1 FROM productos WHERE nombre = ?1)`);
+    // Productos iniciales de ejemplo (solo si no existen: productos.nombre no es UNIQUE
+    // y con INSERT OR IGNORE cada ejecución duplicaba la carta)
+    const stmtProd = db.prepare(`INSERT INTO productos
+      (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad)
+      SELECT ?1, ?2, (SELECT id FROM categorias WHERE nombre = ?3), ?4, ?5, ?6, ?7, ?8, ?9, ?10
+      WHERE NOT EXISTS (SELECT 1 FROM productos WHERE nombre = ?1)`);
 
-  const productos = [
-    ['Ensalada César', 'Lechuga, pollo, croutons, aderezo César', 'Entradas', 4500, 1800, 1, 1, 20, 5, 'plato'],
-    ['Milanesa con papas', 'Milanesa de carne con papas fritas', 'Platos Principales', 6500, 2800, 1, 1, 15, 5, 'plato'],
-    ['Pizza Margarita', 'Pizza con salsa, mozzarella y albahaca', 'Platos Principales', 7200, 3000, 1, 1, 12, 4, 'unidad'],
-    ['Hamburguesa Clásica', 'Carne, lechuga, tomate, cheddar', 'Platos Principales', 5800, 2400, 1, 1, 18, 6, 'unidad'],
-    ['Coca-Cola 500ml', 'Gaseosa 500ml', 'Bebidas', 1500, 800, 0, 1, 100, 20, 'botella'],
-    ['Agua Mineral 500ml', 'Agua sin gas', 'Bebidas', 1200, 600, 0, 1, 100, 20, 'botella'],
-    ['Flan con crema', 'Flan casero con crema y dulce de leche', 'Postres', 2500, 1000, 1, 1, 10, 3, 'postre'],
-    ['Cerveza Artesanal IPA', 'Cerveza artesanal 500ml', 'Bebidas Alcohólicas', 3000, 1500, 0, 1, 50, 10, 'botella'],
-    ['Vino Tinto Malbec', 'Botella 750ml', 'Bebidas Alcohólicas', 12000, 6000, 0, 1, 20, 5, 'botella'],
-    ['Café Expresso', 'Café expresso', 'Bebidas', 1000, 300, 0, 1, 200, 50, 'taza'],
-    ['Papas Fritas', 'Porción de papas fritas', 'Entradas', 3200, 1200, 1, 1, 30, 8, 'porcion'],
-    ['Bondiola de cerdo', 'Bondiola con guarnición', 'Platos Principales', 7800, 3200, 1, 1, 10, 3, 'plato']
-  ];
+    const productos = [
+      ['Ensalada César', 'Lechuga, pollo, croutons, aderezo César', 'Entradas', 4500, 1800, 1, 1, 20, 5, 'plato'],
+      ['Milanesa con papas', 'Milanesa de carne con papas fritas', 'Platos Principales', 6500, 2800, 1, 1, 15, 5, 'plato'],
+      ['Pizza Margarita', 'Pizza con salsa, mozzarella y albahaca', 'Platos Principales', 7200, 3000, 1, 1, 12, 4, 'unidad'],
+      ['Hamburguesa Clásica', 'Carne, lechuga, tomate, cheddar', 'Platos Principales', 5800, 2400, 1, 1, 18, 6, 'unidad'],
+      ['Coca-Cola 500ml', 'Gaseosa 500ml', 'Bebidas', 1500, 800, 0, 1, 100, 20, 'botella'],
+      ['Agua Mineral 500ml', 'Agua sin gas', 'Bebidas', 1200, 600, 0, 1, 100, 20, 'botella'],
+      ['Flan con crema', 'Flan casero con crema y dulce de leche', 'Postres', 2500, 1000, 1, 1, 10, 3, 'postre'],
+      ['Cerveza Artesanal IPA', 'Cerveza artesanal 500ml', 'Bebidas Alcohólicas', 3000, 1500, 0, 1, 50, 10, 'botella'],
+      ['Vino Tinto Malbec', 'Botella 750ml', 'Bebidas Alcohólicas', 12000, 6000, 0, 1, 20, 5, 'botella'],
+      ['Café Expresso', 'Café expresso', 'Bebidas', 1000, 300, 0, 1, 200, 50, 'taza'],
+      ['Papas Fritas', 'Porción de papas fritas', 'Entradas', 3200, 1200, 1, 1, 30, 8, 'porcion'],
+      ['Bondiola de cerdo', 'Bondiola con guarnición', 'Platos Principales', 7800, 3200, 1, 1, 10, 3, 'plato']
+    ];
 
-  productos.forEach(p => stmtProd.run(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9]));
-  stmtProd.finalize();
+    productos.forEach(p => stmtProd.run(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9]));
+    stmtProd.finalize();
 
-  console.log('✅ Productos iniciales creados.');
+    console.log('✅ Productos iniciales creados.');
 
-  // Mesas iniciales
-  const stmtMesa = db.prepare('INSERT OR IGNORE INTO mesas (nombre, capacidad, sector, orden) VALUES (?, ?, ?, ?)');
-  for (let i = 1; i <= 10; i++) {
-    const sector = i <= 5 ? 'Salón Principal' : (i <= 8 ? 'Terraza' : 'VIP');
-    stmtMesa.run(`Mesa ${i}`, 4, sector, i);
+    // Mesas iniciales
+    const stmtMesa = db.prepare('INSERT OR IGNORE INTO mesas (nombre, capacidad, sector, orden) VALUES (?, ?, ?, ?)');
+    for (let i = 1; i <= 10; i++) {
+      const sector = i <= 5 ? 'Salón Principal' : (i <= 8 ? 'Terraza' : 'VIP');
+      stmtMesa.run(`Mesa ${i}`, 4, sector, i);
+    }
+    stmtMesa.finalize();
   }
-  stmtMesa.finalize();
 
   // ============ ÍNDICES PARA PERFORMANCE ============
   const indices = [
@@ -412,7 +418,7 @@ db.serialize(() => {
     `INSERT INTO ${tabla} (${columnas}) SELECT * FROM (${filas}) WHERE NOT EXISTS (SELECT 1 FROM ${tabla})`);
 
   // Proveedores de ejemplo
-  siVacia('proveedores', 'nombre, cuit, telefono, email', `
+  if (!SIN_EJEMPLOS) siVacia('proveedores', 'nombre, cuit, telefono, email', `
     SELECT 'Distribuidora Central', '30-12345678-9', '011-1234-5678', 'ventas@central.com.ar'
     UNION ALL SELECT 'Carnes del Norte', '27-87654321-4', '011-8765-4321', 'carnes@norte.com.ar'
     UNION ALL SELECT 'Bebidas del Sur', '33-11111111-2', '011-1111-2222', 'info@bebidasdelsur.com.ar'`);
@@ -423,12 +429,12 @@ db.serialize(() => {
     UNION ALL SELECT 'Rappi', '#00BFB3', 'motorcycle', 0, 30, ''
     UNION ALL SELECT 'Uber Eats', '#06C167', 'carrot', 0, 30, ''`);
 
-  siVacia('promociones', 'nombre, tipo, valor, descripcion', `
+  if (!SIN_EJEMPLOS) siVacia('promociones', 'nombre, tipo, valor, descripcion', `
     SELECT '2x1 en postres', 'porcentaje', 50, '50% de descuento en el segundo postre'
     UNION ALL SELECT 'Combo hamburguesa + gaseosa', 'monto', 1000, 'Descuento de $1000 en el combo'
     UNION ALL SELECT 'Efectivo', 'porcentaje', 10, '10% de descuento pagando en efectivo'`);
 
-  console.log('✅ Mesas, proveedores y promociones creados.');
+  console.log(SIN_EJEMPLOS ? '✅ Base limpia: sin datos de ejemplo.' : '✅ Mesas, proveedores y promociones creados.');
   console.log('');
   console.log('🎉 BASE DE DATOS INICIALIZADA CON ÉXITO');
   console.log('   Archivo: data/morfi.db');
