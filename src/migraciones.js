@@ -390,6 +390,27 @@ async function migrarEsquema() {
     creado_en TEXT DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TEXT
   )`);
+
+  // Carta por momentos del día y destacados (servicios/carta.js)
+  await run(`CREATE TABLE IF NOT EXISTS momentos_carta (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    icono TEXT NOT NULL DEFAULT '',
+    desde TEXT NOT NULL,
+    hasta TEXT NOT NULL,
+    orden INTEGER NOT NULL DEFAULT 0,
+    activo INTEGER NOT NULL DEFAULT 1,
+    traducciones TEXT DEFAULT NULL,
+    creado_en TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS momento_categorias (
+    momento_id INTEGER NOT NULL,
+    categoria_id INTEGER NOT NULL,
+    orden INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (momento_id, categoria_id)
+  )`);
+  await agregarColumna('productos', 'nuevo', 'INTEGER NOT NULL DEFAULT 0');
+  await agregarColumna('productos', 'recomendado', 'INTEGER NOT NULL DEFAULT 0');
 }
 
 // ============ Migración segura (lo que usa server.js) ============

@@ -8,7 +8,7 @@ const PD_API=(location.pathname.match(/^\/l\/[^/]+/)||[""])[0];
 // Carta en español, inglés y portugués. Los platos traen sus traducciones desde el local (si faltan, en español);
 // los textos de la página están acá. Lo que ve cocina y caja sigue en español.
 const PD_TEXTOS={
-  es:{online_sub:"Arma tu pedido y lo recibimos enseguida",ver_sub:"Nuestra carta",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
+  es:{letra:"Letra más grande",toda_carta:"Toda la carta",buscar_ph:"Buscar en la carta",sin_resultados:"No encontramos nada con esa búsqueda.",b_mas:"Lo más pedido",b_nuevo:"Nuevo",b_reco:"Recomendado",online_sub:"Arma tu pedido y lo recibimos enseguida",ver_sub:"Nuestra carta",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
     llamar_mozo:"Llamar al mozo",pedir_cuenta:"Pedir la cuenta",tu_pedido:"Tu pedido",vacio:"Todavía no agregaste nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Tus datos",nombre:"Nombre",nombre_opc:"Tu nombre (opcional)",nombre_ph:"Tu nombre",telefono:"Teléfono",como:"¿Cómo lo querés?",retiro:"Retiro en el local",delivery:"Delivery",
     direccion:"Dirección de entrega",direccion_ph:"Calle, número, piso/dpto",notas:"Notas / aclaraciones",notas_ph:"Sin cebolla, sin sal, etc.",volver:"Volver",enviar:"Enviar pedido",enviar_mozo:"Enviar al mozo",
@@ -25,7 +25,7 @@ const PD_TEXTOS={
     listo_cocina:"¡Listo{n}! Tu pedido ya está en preparación.",espera_mozo:"¡Gracias{n}! El mozo lo confirma en un momento: abajo ves cuándo pasa a cocina.",
     pago_ok:"¡Pago aprobado! Gracias.",cuenta_paga:" La cuenta quedó paga.",falta_resto:" Falta pagar el resto de la mesa.",
     pago_proceso:"Tu pago está en proceso: cuando Mercado Pago lo apruebe, se acredita solo.",pago_no:"El pago no se completó. Podés intentar de nuevo o pedirle la cuenta al mozo."},
-  en:{online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",carta_sub:"Browse the menu and call the waiter when you're ready to order",
+  en:{letra:"Bigger text",toda_carta:"Full menu",buscar_ph:"Search the menu",sin_resultados:"Nothing matches your search.",b_mas:"Most ordered",b_nuevo:"New",b_reco:"Our pick",online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",carta_sub:"Browse the menu and call the waiter when you're ready to order",
     llamar_mozo:"Call the waiter",pedir_cuenta:"Ask for the bill",tu_pedido:"Your order",vacio:"You haven't added anything yet",total_estimado:"Estimated total",confirmar:"Confirm order",
     tus_datos:"Your details",nombre:"Name",nombre_opc:"Your name (optional)",nombre_ph:"Your name",telefono:"Phone",como:"How would you like it?",retiro:"Pick up at the store",delivery:"Delivery",
     direccion:"Delivery address",direccion_ph:"Street, number, floor/apt",notas:"Notes",notas_ph:"No onion, no salt, etc.",volver:"Back",enviar:"Send order",enviar_mozo:"Send to the waiter",
@@ -42,7 +42,7 @@ const PD_TEXTOS={
     listo_cocina:"Done{n}! Your order is being prepared.",espera_mozo:"Thank you{n}! The waiter will confirm it shortly: below you'll see when it goes to the kitchen.",
     pago_ok:"Payment approved! Thank you.",cuenta_paga:" The bill is fully paid.",falta_resto:" The rest of the table still has to pay.",
     pago_proceso:"Your payment is being processed: once Mercado Pago approves it, it will be credited automatically.",pago_no:"The payment wasn't completed. You can try again or ask the waiter for the bill."},
-  pt:{online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
+  pt:{letra:"Letra maior",toda_carta:"Cardápio completo",buscar_ph:"Buscar no cardápio",sin_resultados:"Não encontramos nada com essa busca.",b_mas:"Mais pedido",b_nuevo:"Novo",b_reco:"Recomendado",online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
     llamar_mozo:"Chamar o garçom",pedir_cuenta:"Pedir a conta",tu_pedido:"Seu pedido",vacio:"Você ainda não adicionou nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Seus dados",nombre:"Nome",nombre_opc:"Seu nome (opcional)",nombre_ph:"Seu nome",telefono:"Telefone",como:"Como você prefere?",retiro:"Retirar no local",delivery:"Delivery",
     direccion:"Endereço de entrega",direccion_ph:"Rua, número, andar/apto",notas:"Observações",notas_ph:"Sem cebola, sem sal, etc.",volver:"Voltar",enviar:"Enviar pedido",enviar_mozo:"Enviar ao garçom",
@@ -68,6 +68,7 @@ function pdIdiomaInicial(){
   return PD_TEXTOS[n]?n:"es";
 }
 let PD_IDIOMA=pdIdiomaInicial();
+try{if(localStorage.getItem("morfi_carta_letra")==="1")document.addEventListener("DOMContentLoaded",()=>document.body.classList.add("letra-grande"),{once:true});}catch(e){}
 // Texto de la página en el idioma elegido; {n} y {m} se reemplazan
 function pdT(k,vars){let s=(PD_TEXTOS[PD_IDIOMA]||PD_TEXTOS.es)[k]||PD_TEXTOS.es[k]||k;for(const[a,b]of Object.entries(vars||{}))s=s.replace("{"+a+"}",b);return s;}
 // Nombre o descripción de un plato/categoría en el idioma elegido (si no está traducido, en español)
@@ -75,6 +76,8 @@ function pdTr(x,campo){const t=x&&x.traducciones&&x.traducciones[PD_IDIOMA];retu
 
 const PedidoOnline={
   categorias:[],productos:[],carrito:[],catActiva:"todas",origen:"web",config:{},
+  // Momentos del día (Desayuno, Brunch...): la carta abre en el de la hora; "todo" = toda la carta
+  momentos:[],momentoActivo:"todo",busqueda:"",
   // Desde el QR de una mesa: clave de la mesa y su estado (pedidos enviados, cuenta)
   mesaToken:"",mesa:null,
   // ?ver=1: solo la carta, sin pedir (el QR general de la vidriera y la carta de antes, menu.html)
@@ -99,6 +102,8 @@ const PedidoOnline={
         return;
       }
       this.categorias=m.categorias||[];
+      this.momentos=m.momentos||[];
+      this.momentoActivo=m.momento_actual||"todo";
       this.productos=m.productos||[];
       this.config=info;
       if(info.nombre){document.getElementById("negocioNombre").textContent=info.nombre;document.title="Pedido | "+info.nombre;}
@@ -110,27 +115,35 @@ const PedidoOnline={
         if(wa){wa.href="https://wa.me/"+info.telefono.replace(/\D/g,"");wa.style.display="";}
       }
       this._avisoDatos(info);
-      this.paintCats();this.paintItems();this._initEvents();
+      this.paintMomentos();this.paintCats();this.paintItems();this._initEvents();
     }catch(err){
       document.getElementById("menuItems").innerHTML='<div class="menu-empty"><i class="fas fa-exclamation-triangle"></i><p>'+pdE(pdT("sin_menu"))+'</p></div>';
     }
   },
 
-  // ── Idioma ──
-  // El selector aparece solo si el local tradujo algo de la carta (si no, quedaría todo en español igual)
+  // ── Idioma y letra grande ──
+  // Los idiomas aparecen solo si el local tradujo algo de la carta (si no, quedaría todo en español igual).
+  // "Aa" agranda la letra (para quien ve poco); se recuerda en este celular.
   _selectorIdioma(){
     const hay=[...this.categorias,...this.productos].some(x=>x.traducciones&&Object.keys(x.traducciones).length);
     const el=document.getElementById("selectorIdioma");
-    if(!hay){PD_IDIOMA="es";if(el)el.style.display="none";return;}
+    if(!hay)PD_IDIOMA="es";
     if(!el)return;
-    el.innerHTML=Object.entries(PD_IDIOMAS).map(([k,l])=>`<button type="button" lang="${k}" class="${k===PD_IDIOMA?"activo":""}" aria-pressed="${k===PD_IDIOMA}" onclick="PedidoOnline.setIdioma('${k}')">${l}</button>`).join("");
+    const grande=document.body.classList.contains("letra-grande");
+    el.innerHTML=(hay?Object.entries(PD_IDIOMAS).map(([k,l])=>`<button type="button" lang="${k}" class="${k===PD_IDIOMA?"activo":""}" aria-pressed="${k===PD_IDIOMA}" onclick="PedidoOnline.setIdioma('${k}')">${l}</button>`).join(""):"")+
+      `<button type="button" class="boton-letra ${grande?"activo":""}" aria-pressed="${grande}" aria-label="${pdE(pdT("letra"))}" title="${pdE(pdT("letra"))}" onclick="PedidoOnline.letraGrande()">A<span>A</span></button>`;
     el.style.display="";
+  },
+  letraGrande(){
+    const on=document.body.classList.toggle("letra-grande");
+    try{localStorage.setItem("morfi_carta_letra",on?"1":"0");}catch(e){}
+    this._selectorIdioma();
   },
   setIdioma(k){
     if(!PD_TEXTOS[k])return;
     PD_IDIOMA=k;try{localStorage.setItem("morfi_carta_idioma",k);}catch(e){}
     this._selectorIdioma();this._textos();
-    this.paintCats();this.paintItems();this.paintCarrito();
+    this.paintMomentos();this.paintCats();this.paintItems();this.paintCarrito();
     if(this.mesa)this._pintarMesa(this.mesa);
     if(document.getElementById("pagoModal").style.display!=="none")this._pintarPago();
   },
@@ -373,12 +386,31 @@ const PedidoOnline={
     return"fa-tag";
   },
 
+  // Categorías del momento elegido, en el orden del momento (o todas, en el orden de la carta)
+  catsMomento(){
+    const m=this.momentos.find(x=>x.id===this.momentoActivo);
+    return m?m.categorias.map(id=>this.categorias.find(c=>c.id===id)).filter(Boolean):this.categorias;
+  },
+  paintMomentos(){
+    const el=document.getElementById("momentosCarta");if(!el)return;
+    if(!this.momentos.length){el.style.display="none";return;}
+    const tab=(id,icono,nombre,horario)=>`<button type="button" role="tab" aria-selected="${this.momentoActivo===id}" class="momento-btn ${this.momentoActivo===id?"activo":""}" onclick="PedidoOnline.setMomento(${JSON.stringify(id)})">${icono?`<span class="momento-icono">${pdE(icono)}</span>`:""}<span>${pdE(nombre)}</span>${horario?`<small>${pdE(horario)}</small>`:""}</button>`;
+    el.innerHTML=this.momentos.map(m=>tab(m.id,m.icono,pdTr(m,"nombre"),m.desde+" – "+m.hasta)).join("")+tab("todo","",pdT("toda_carta"),"");
+    el.style.display="";
+  },
+  setMomento(id){this.momentoActivo=id;this.catActiva="todas";this.paintMomentos();this.paintCats();this.paintItems();},
+  buscar(t){this.busqueda=String(t||"");this.paintItems();},
   paintCats(){
     const mk=(id,lbl)=>`<button class="menu-cat-btn ${this.catActiva==id?"active":""}" onclick="PedidoOnline.setCat(${JSON.stringify(id)})">${pdE(lbl)}</button>`;
-    const h=[mk("todas",pdT("todas")),...this.categorias.map(c=>mk(c.id,pdTr(c,"nombre")))].join("");
+    const h=[mk("todas",pdT("todas")),...this.catsMomento().map(c=>mk(c.id,pdTr(c,"nombre")))].join("");
     ["menuCategorias","mobileCatScroll"].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=h;});
   },
 
+  // Destacados: Recomendado de la casa y Nuevo los marca el local; Lo más pedido sale de las ventas
+  _marcas(p){
+    const m=[p.recomendado&&["reco","fa-award","b_reco"],p.mas_pedido&&["mas","fa-star","b_mas"],p.nuevo&&["nuevo","fa-certificate","b_nuevo"]].filter(Boolean);
+    return m.length?`<div class="carta-marcas">${m.map(([c,i,k])=>`<span class="carta-marca ${c}"><i class="fas ${i}"></i> ${pdE(pdT(k))}</span>`).join("")}</div>`:"";
+  },
   setCat(id){this.catActiva=id;this.paintCats();this.paintItems();},
   visible(p){return p.tracking_stock?(p.stock_actual>0||p.es_plato===1):true;},
   itemCard(p){
@@ -395,6 +427,7 @@ const PedidoOnline={
       <span class="carta-puntos" aria-hidden="true"></span>
       <span class="menu-item-precio">${pdM(p.precio_venta)}</span>
     </div>
+    ${this._marcas(p)}
     ${pdTr(p,"descripcion")?`<div class="menu-item-desc">${pdE(pdTr(p,"descripcion"))}</div>`:""}
   </div>
   <div class="item-qty-ctrl">${qc}</div>
@@ -411,8 +444,15 @@ const PedidoOnline={
       return`<div class="menu-section"><div class="menu-section-title"><i class="fas ${this.catIcon(cat.nombre)}"></i> ${pdE(pdTr(cat,"nombre"))}</div>${nota?`<div class="carta-nota">${pdE(nota)}</div>`:""}${prods.map(p=>this.itemCard(p)).join("")}</div>`;
     };
     const vacio=k=>'<div class="menu-empty">'+pdE(pdT(k))+'</div>';
+    // Buscando se mira toda la carta (en el idioma elegido y en español), no solo el momento
+    const q=this.busqueda.trim().toLowerCase();
+    if(q){
+      const coincide=p=>[pdTr(p,"nombre"),pdTr(p,"descripcion"),p.nombre].some(x=>String(x||"").toLowerCase().includes(q));
+      el.innerHTML=this.categorias.map(c=>sec(c,vis.filter(p=>p.categoria_id==c.id&&coincide(p)))).join("")||vacio("sin_resultados");
+      return;
+    }
     if(this.catActiva==="todas"){
-      el.innerHTML=this.categorias.map(c=>sec(c,vis.filter(p=>p.categoria_id==c.id))).join("")||vacio("sin_productos");
+      el.innerHTML=this.catsMomento().map(c=>sec(c,vis.filter(p=>p.categoria_id==c.id))).join("")||vacio("sin_productos");
     }else{
       const cat=this.categorias.find(c=>c.id==this.catActiva);
       const items=vis.filter(p=>p.categoria_id==this.catActiva);

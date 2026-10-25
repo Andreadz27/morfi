@@ -56,6 +56,13 @@
   <!-- Layout principal -->
   <main class="pedido-layout">
     <section class="pedido-carta">
+      <!-- Momentos del día (Desayuno, Brunch...) y buscador de la carta -->
+      <div class="momentos-carta" id="momentosCarta" style="display:none" role="tablist"></div>
+      <div class="buscador-carta">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <input type="search" id="buscarCarta" placeholder="Buscar en la carta" data-i18n-ph="buscar_ph"
+               aria-label="Buscar en la carta" oninput="PedidoOnline.buscar(this.value)">
+      </div>
       <div class="menu-categories" id="menuCategorias" role="tablist"></div>
       <div class="menu-items" id="menuItems" role="tabpanel"></div>
     </section>

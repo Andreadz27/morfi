@@ -1,7 +1,7 @@
 'use strict';
 const {
   rateLimit, urlPublica, urlCartaNube, get, all, errorInterno, crearPedidoOnline, mesaPorToken, estadoMesa, solicitarPedidoMesa, llamarMozo,
-  iniciarPagoMesa, verificarPagoMesa, pedirComprobanteMesa, leerTraducciones, ORDEN_CARTA
+  iniciarPagoMesa, verificarPagoMesa, pedirComprobanteMesa, leerTraducciones, ORDEN_CARTA, cartaPorMomentos
 } = require('../contexto');
 const QRCode = require('qrcode');
 
@@ -29,14 +29,15 @@ app.get('/api/publico/menu', async (req, res) => {
     `);
     const productos = await all(`
       SELECT p.id, p.nombre, p.descripcion, p.precio_venta, p.categoria_id,
-             p.tracking_stock, p.stock_actual, p.es_plato, p.traducciones
+             p.tracking_stock, p.stock_actual, p.es_plato, p.traducciones, p.nuevo, p.recomendado
       FROM productos p
       WHERE p.activo = 1
       ORDER BY ${ORDEN_CARTA}
     `);
     // Traducciones de la carta (inglés y portugués): el navegador elige el idioma
     for (const x of [...categorias, ...productos]) x.traducciones = leerTraducciones(x.traducciones);
-    res.json({ categorias, productos });
+    // Momentos del día (Desayuno, Brunch...), el de ahora y destacados (Nuevo, Recomendado, Lo más pedido)
+    res.json({ categorias, productos, ...await cartaPorMomentos(categorias, productos) });
   } catch (err) {
     errorInterno(res, err);
   }
