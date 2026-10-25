@@ -80,7 +80,7 @@ const Productos = {
     const texto = this.busqueda.trim().toLowerCase();
     const coincide = p => !texto || p.nombre.toLowerCase().includes(texto) || String(p.descripcion || '').toLowerCase().includes(texto);
     const grupos = [
-      ...this.categorias.map(c => ({ id: c.id, nombre: c.nombre, color: c.color, productos: this.productos.filter(p => p.categoria_id === c.id) })),
+      ...this.categorias.map(c => ({ id: c.id, nombre: c.nombre, color: c.color, nota: c.descripcion, productos: this.productos.filter(p => p.categoria_id === c.id) })),
       { id: 'sin', nombre: 'Sin categoría', color: '#94a3b8', productos: this.productos.filter(p => !this.categorias.some(c => c.id === p.categoria_id)) }
     ].filter(g => this.filtroCat === 'todas' || String(g.id) === String(this.filtroCat))
       .map(g => ({ ...g, productos: g.productos.filter(coincide) }))
@@ -108,8 +108,12 @@ const Productos = {
       <div class="card mb-20 prod-grupo" style="--cat-color:${esc(g.color || '#64748b')}">
         <div class="card-header">
           <span class="card-title"><span class="prod-cat-punto"></span> ${esc(g.nombre)}</span>
-          <span class="pos-cat-count">${g.productos.length}</span>
+          <span>
+            ${esAdmin && g.id !== 'sin' ? `<button class="btn btn-outline btn-sm" onclick="Productos.editarCategoria(${Number(g.id)})" title="Editar categoría"><i class="fas fa-edit"></i></button>` : ''}
+            <span class="pos-cat-count">${g.productos.length}</span>
+          </span>
         </div>
+        ${g.nota ? `<div class="prod-nota-categoria"><i class="fas fa-info-circle"></i> ${esc(g.nota)} <small>(se ve en la carta)</small></div>` : ''}
         <div class="table-wrap">
           <table>
             <thead>
@@ -294,45 +298,60 @@ async guardar(e, id) {
   },
 
   nuevaCategoria() {
+    this.formCategoria(null);
+  },
+
+  editarCategoria(id) {
+    const c = this.categorias.find(x => x.id === id);
+    if (c) this.formCategoria(c);
+  },
+
+  // La descripci\u00f3n es una nota que se ve en la carta debajo del t\u00edtulo (opciones de leche, horarios de las promos...)
+  formCategoria(c) {
     App.showModal(`
-      <form onsubmit="Productos.guardarCategoria(event)">
+      <form onsubmit="Productos.guardarCategoria(event, ${c ? Number(c.id) : 'null'})">
         <div class="form-group">
           <label>Nombre</label>
-          <input type="text" id="catNombre" required>
+          <input type="text" id="catNombre" value="${c ? esc(c.nombre) : ''}" required>
         </div>
         <div class="form-group">
-          <label>Descripci\u00f3n</label>
-          <textarea id="catDescripcion"></textarea>
+          <label>Nota en la carta (opcional)</label>
+          <textarea id="catDescripcion" rows="2" placeholder="Ej.: Opciones de leche: entera, descremada, deslactosada. Leche vegetal + $1300">${c ? esc(c.descripcion || '') : ''}</textarea>
+          <small class="form-hint">Se ve en un recuadro debajo del t\u00edtulo de la categor\u00eda, como en una carta impresa.</small>
         </div>
-        <div class="form-group">
-          <label>Color</label>
-          <input type="color" id="catColor" value="#64748b">
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label>Color</label>
+            <input type="color" id="catColor" value="${c ? esc(c.color || '#64748b') : '#64748b'}">
+          </div>
+          <div class="form-group">
+            <label>Orden</label>
+            <input type="number" id="catOrden" value="${c ? Number(c.orden) || 0 : 0}">
+          </div>
         </div>
-        <div class="form-group">
-          <label>Orden</label>
-          <input type="number" id="catOrden" value="0">
-        </div>
-        ${this.htmlTraducciones('cat', null, false)}
+        ${this.htmlTraducciones('cat', c && c.traducciones, true)}
         <div class="modal-footer">
           <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-success">Guardar</button>
         </div>
       </form>
-    `, { title: 'Nueva categor\u00eda' });
+    `, { title: c ? `Editar ${c.nombre}` : 'Nueva categor\u00eda' });
   },
 
-  async guardarCategoria(e) {
+  async guardarCategoria(e, id) {
     e.preventDefault();
+    const data = {
+      nombre: document.getElementById('catNombre').value,
+      descripcion: document.getElementById('catDescripcion').value,
+      color: document.getElementById('catColor').value,
+      orden: parseInt(document.getElementById('catOrden').value) || 0,
+      traducciones: this.leerTraducciones('cat', true)
+    };
     try {
-      await API.createCategoria({
-        nombre: document.getElementById('catNombre').value,
-        descripcion: document.getElementById('catDescripcion').value,
-        color: document.getElementById('catColor').value,
-        orden: parseInt(document.getElementById('catOrden').value),
-        traducciones: this.leerTraducciones('cat', false)
-      });
+      if (id) await API.updateCategoria(id, data);
+      else await API.createCategoria(data);
       App.closeModal();
-      App.showToast('Categor\u00eda creada', 'success');
+      App.showToast(id ? 'Categor\u00eda actualizada' : 'Categor\u00eda creada', 'success');
       this.render();
     } catch (err) {
       App.showToast(err.message, 'error');

@@ -14,9 +14,9 @@ class PaginaCarta {
     await expect(this.items.first()).toBeVisible();
   }
 
-  // En el celular la barra de categorías es la de arriba (mobile-cat-btn)
+  // En el celular la barra de categorías es la de abajo (#mobileCatScroll); /menu.html lleva a pedido.html?ver=1
   async elegirCategoria(nombre) {
-    await this.page.locator('#mobileCatScroll .mobile-cat-btn:visible, #menuCategorias .menu-cat-btn:visible', { hasText: nombre }).first().click();
+    await this.page.locator('#mobileCatScroll .mobile-cat-btn:visible, #mobileCatScroll .menu-cat-btn:visible, #menuCategorias .menu-cat-btn:visible', { hasText: nombre }).first().click();
   }
 
   item(nombre) {

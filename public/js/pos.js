@@ -44,6 +44,12 @@ const POS = {
     }
   },
 
+  // Nota de la categoría elegida (la misma de la carta: opciones de leche, horarios de las promos...)
+  htmlNotaCategoria() {
+    const c = this.categorias.find(x => x.id === this.categoriaActiva);
+    return c && c.descripcion ? `<div class="pos-nota-categoria"><i class="fas fa-info-circle"></i> ${esc(c.descripcion)}</div>` : '';
+  },
+
   paint(view) {
     const catBtns = [
       `<button class="pos-cat-btn ${this.categoriaActiva === 'todas' ? 'active' : ''}" onclick="POS.setCategoria('todas')"><i class="fas fa-th-large"></i> Todas <span class="pos-cat-count">${this.productos.length}</span></button>`
@@ -76,6 +82,7 @@ const POS = {
             <span class="pos-products-count">${filtered.length} disponibles</span>
           </div>
           <div class="pos-categories">${catBtns}</div>
+          ${this.htmlNotaCategoria()}
           <div class="pos-product-grid">
             ${productBtns || '<div class="empty-state"><i class="fas fa-box-open"></i><p>Sin productos en esta categor\u00eda</p></div>'}
           </div>

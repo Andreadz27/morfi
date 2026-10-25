@@ -8,7 +8,7 @@ const PD_API=(location.pathname.match(/^\/l\/[^/]+/)||[""])[0];
 // Carta en español, inglés y portugués. Los platos traen sus traducciones desde el local (si faltan, en español);
 // los textos de la página están acá. Lo que ve cocina y caja sigue en español.
 const PD_TEXTOS={
-  es:{online_sub:"Arma tu pedido y lo recibimos enseguida",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
+  es:{online_sub:"Arma tu pedido y lo recibimos enseguida",ver_sub:"Nuestra carta",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
     llamar_mozo:"Llamar al mozo",pedir_cuenta:"Pedir la cuenta",tu_pedido:"Tu pedido",vacio:"Todavía no agregaste nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Tus datos",nombre:"Nombre",nombre_opc:"Tu nombre (opcional)",nombre_ph:"Tu nombre",telefono:"Teléfono",como:"¿Cómo lo querés?",retiro:"Retiro en el local",delivery:"Delivery",
     direccion:"Dirección de entrega",direccion_ph:"Calle, número, piso/dpto",notas:"Notas / aclaraciones",notas_ph:"Sin cebolla, sin sal, etc.",volver:"Volver",enviar:"Enviar pedido",enviar_mozo:"Enviar al mozo",
@@ -25,7 +25,7 @@ const PD_TEXTOS={
     listo_cocina:"¡Listo{n}! Tu pedido ya está en preparación.",espera_mozo:"¡Gracias{n}! El mozo lo confirma en un momento: abajo ves cuándo pasa a cocina.",
     pago_ok:"¡Pago aprobado! Gracias.",cuenta_paga:" La cuenta quedó paga.",falta_resto:" Falta pagar el resto de la mesa.",
     pago_proceso:"Tu pago está en proceso: cuando Mercado Pago lo apruebe, se acredita solo.",pago_no:"El pago no se completó. Podés intentar de nuevo o pedirle la cuenta al mozo."},
-  en:{online_sub:"Build your order and we'll get it right away",mesa_sub:"Choose, send your order and the waiter confirms it",carta_sub:"Browse the menu and call the waiter when you're ready to order",
+  en:{online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",carta_sub:"Browse the menu and call the waiter when you're ready to order",
     llamar_mozo:"Call the waiter",pedir_cuenta:"Ask for the bill",tu_pedido:"Your order",vacio:"You haven't added anything yet",total_estimado:"Estimated total",confirmar:"Confirm order",
     tus_datos:"Your details",nombre:"Name",nombre_opc:"Your name (optional)",nombre_ph:"Your name",telefono:"Phone",como:"How would you like it?",retiro:"Pick up at the store",delivery:"Delivery",
     direccion:"Delivery address",direccion_ph:"Street, number, floor/apt",notas:"Notes",notas_ph:"No onion, no salt, etc.",volver:"Back",enviar:"Send order",enviar_mozo:"Send to the waiter",
@@ -42,7 +42,7 @@ const PD_TEXTOS={
     listo_cocina:"Done{n}! Your order is being prepared.",espera_mozo:"Thank you{n}! The waiter will confirm it shortly: below you'll see when it goes to the kitchen.",
     pago_ok:"Payment approved! Thank you.",cuenta_paga:" The bill is fully paid.",falta_resto:" The rest of the table still has to pay.",
     pago_proceso:"Your payment is being processed: once Mercado Pago approves it, it will be credited automatically.",pago_no:"The payment wasn't completed. You can try again or ask the waiter for the bill."},
-  pt:{online_sub:"Monte seu pedido e recebemos na hora",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
+  pt:{online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
     llamar_mozo:"Chamar o garçom",pedir_cuenta:"Pedir a conta",tu_pedido:"Seu pedido",vacio:"Você ainda não adicionou nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Seus dados",nombre:"Nome",nombre_opc:"Seu nome (opcional)",nombre_ph:"Seu nome",telefono:"Telefone",como:"Como você prefere?",retiro:"Retirar no local",delivery:"Delivery",
     direccion:"Endereço de entrega",direccion_ph:"Rua, número, andar/apto",notas:"Observações",notas_ph:"Sem cebola, sem sal, etc.",volver:"Voltar",enviar:"Enviar pedido",enviar_mozo:"Enviar ao garçom",
@@ -77,13 +77,17 @@ const PedidoOnline={
   categorias:[],productos:[],carrito:[],catActiva:"todas",origen:"web",config:{},
   // Desde el QR de una mesa: clave de la mesa y su estado (pedidos enviados, cuenta)
   mesaToken:"",mesa:null,
+  // ?ver=1: solo la carta, sin pedir (el QR general de la vidriera y la carta de antes, menu.html)
+  soloVer:false,
 
   async init(){
     const p=new URLSearchParams(location.search);
     const o=p.get("origen")||"web";
     this.origen=["whatsapp","instagram","web"].includes(o)?o:"web";
     this.mesaToken=/^[a-f0-9]{24}$/.test(p.get("mesa")||"")?p.get("mesa"):"";
-    if(!this.mesaToken)this._badge();
+    this.soloVer=!this.mesaToken&&p.get("ver")==="1";
+    if(this.soloVer)["carritoSidebar","carritoFlotante"].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display="none";});
+    else if(!this.mesaToken)this._badge();
     try{
       const[m,info,mesa]=await Promise.all([
         fetch(PD_API+"/api/publico/menu").then(r=>r.json()),
@@ -137,7 +141,7 @@ const PedidoOnline={
     document.querySelectorAll("[data-i18n-ph]").forEach(e=>{e.placeholder=pdT(e.dataset.i18nPh);});
     const sub=document.getElementById("negocioSub");
     if(this.mesa)sub.textContent=pdT(this.mesa.modo==="solo_carta"?"carta_sub":"mesa_sub");
-    else sub.textContent=this.config.descripcion||pdT("online_sub");
+    else sub.textContent=this.soloVer?pdT("ver_sub"):(this.config.descripcion||pdT("online_sub"));
     const lbl=document.getElementById("labelNombre");
     if(this.mesaToken)lbl.textContent=pdT("nombre_opc");
     else lbl.innerHTML=pdE(pdT("nombre"))+' <span aria-hidden="true">*</span>';
@@ -379,7 +383,7 @@ const PedidoOnline={
   visible(p){return p.tracking_stock?(p.stock_actual>0||p.es_plato===1):true;},
   itemCard(p){
     const q=(this.carrito.find(i=>i.producto_id===p.id)||{cantidad:0}).cantidad;
-    const qc=this.mesa&&this.mesa.modo==="solo_carta"?""
+    const qc=this.soloVer||(this.mesa&&this.mesa.modo==="solo_carta")?""
       :q===0
       ?`<button class="btn-agregar" onclick="PedidoOnline.agregar(${p.id})" aria-label="${pdE(pdT("agregar"))}"><i class="fas fa-plus"></i> ${pdE(pdT("agregar"))}</button>`
       :`<button class="btn-qty btn-qty-minus" onclick="PedidoOnline.quitar(${p.id})" aria-label="Quitar">&#8722;</button><span class="qty-num">${q}</span><button class="btn-qty btn-qty-plus" onclick="PedidoOnline.agregar(${p.id})" aria-label="Sumar">+</button>`;
@@ -402,7 +406,9 @@ const PedidoOnline={
     const vis=this.productos.filter(p=>this.visible(p));
     const sec=(cat,prods)=>{
       if(!prods.length)return"";
-      return`<div class="menu-section"><div class="menu-section-title"><i class="fas ${this.catIcon(cat.nombre)}"></i> ${pdE(pdTr(cat,"nombre"))}</div>${prods.map(p=>this.itemCard(p)).join("")}</div>`;
+      // La descripción de la categoría es una nota de la carta (opciones de leche, horarios de las promos...)
+      const nota=pdTr(cat,"descripcion");
+      return`<div class="menu-section"><div class="menu-section-title"><i class="fas ${this.catIcon(cat.nombre)}"></i> ${pdE(pdTr(cat,"nombre"))}</div>${nota?`<div class="carta-nota">${pdE(nota)}</div>`:""}${prods.map(p=>this.itemCard(p)).join("")}</div>`;
     };
     const vacio=k=>'<div class="menu-empty">'+pdE(pdT(k))+'</div>';
     if(this.catActiva==="todas"){

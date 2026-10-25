@@ -60,3 +60,18 @@ test('normalizar: recorta, descarta campos y idiomas vacíos; leer tolera basura
   assert.deepEqual(leerTraducciones('[1]'), {});
   assert.deepEqual(leerTraducciones(null), {});
 });
+
+test('la nota de una categoría (opciones de leche, horarios de promos) llega a la carta, traducida', async () => {
+  const [, c] = await s.llamar('POST', '/api/categorias', {
+    nombre: 'Cafetería caliente', descripcion: 'Opciones de leche: entera, descremada, deslactosada. Leche vegetal + $1300',
+    traducciones: { en: { nombre: 'Hot coffee', descripcion: 'Milk options: whole, skimmed, lactose-free. Plant-based milk + $1300' } }
+  }, s.tokenAdmin);
+  await s.llamar('POST', '/api/productos', { nombre: 'Cortado', precio_venta: 5200, categoria_id: c.id }, s.tokenAdmin);
+  const cat = async () => (await s.llamar('GET', '/api/publico/menu'))[1].categorias.find(x => x.id === c.id);
+  assert.match((await cat()).descripcion, /Leche vegetal \+ \$1300/);
+  assert.equal((await cat()).traducciones.en.descripcion, 'Milk options: whole, skimmed, lactose-free. Plant-based milk + $1300');
+  // Editar la categoría (nota y traducción) desde el sistema
+  await s.llamar('PUT', `/api/categorias/${c.id}`, { descripcion: 'Leche vegetal + $1500', traducciones: { pt: { descripcion: 'Leite vegetal + $1500' } } }, s.tokenAdmin);
+  assert.equal((await cat()).descripcion, 'Leche vegetal + $1500');
+  assert.deepEqual((await cat()).traducciones, { pt: { descripcion: 'Leite vegetal + $1500' } });
+});
