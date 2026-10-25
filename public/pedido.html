@@ -21,6 +21,7 @@
       <h1 id="negocioNombre">Pedido Online</h1>
       <p id="negocioSub">Arma tu pedido y lo recibimos enseguida</p>
       <div class="origen-badge-hero" id="origenBadge" style="display:none"></div>
+      <div class="selector-idioma" id="selectorIdioma" style="display:none" role="group" aria-label="Idioma / Language / Idioma"></div>
     </div>
   </header>
 
@@ -28,8 +29,8 @@
   <section class="mesa-panel" id="mesaPanel" style="display:none" aria-live="polite">
     <div class="mesa-aviso" id="mesaAviso" style="display:none"></div>
     <div class="mesa-acciones">
-      <button class="btn btn-outline" id="btnLlamarMozo" onclick="PedidoOnline.llamar('mozo')"><i class="fas fa-hand-paper"></i> Llamar al mozo</button>
-      <button class="btn btn-outline" id="btnPedirCuenta" onclick="PedidoOnline.abrirCuenta()"><i class="fas fa-receipt"></i> Pedir la cuenta</button>
+      <button class="btn btn-outline" id="btnLlamarMozo" onclick="PedidoOnline.llamar('mozo')"><i class="fas fa-hand-paper"></i> <span data-i18n="llamar_mozo">Llamar al mozo</span></button>
+      <button class="btn btn-outline" id="btnPedirCuenta" onclick="PedidoOnline.abrirCuenta()"><i class="fas fa-receipt"></i> <span data-i18n="pedir_cuenta">Pedir la cuenta</span></button>
     </div>
     <div id="mesaComprobante"></div>
     <div id="mesaEstado"></div>
@@ -39,7 +40,7 @@
   <div id="pagoModal" class="pedido-form-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Pagar la cuenta">
     <div class="pedido-form-modal">
       <div class="pedido-form-header">
-        <h3><i class="fas fa-receipt"></i> La cuenta</h3>
+        <h3><i class="fas fa-receipt"></i> <span data-i18n="la_cuenta">La cuenta</span></h3>
         <button onclick="PedidoOnline.cerrarCuenta()" class="btn-cerrar" aria-label="Cerrar">&times;</button>
       </div>
       <div id="pagoContenido"></div>
@@ -59,21 +60,21 @@
     </section>
     <aside class="pedido-carrito-sidebar" id="carritoSidebar">
       <div class="carrito-header">
-        <h3><i class="fas fa-shopping-bag"></i> Tu pedido</h3>
+        <h3><i class="fas fa-shopping-bag"></i> <span data-i18n="tu_pedido">Tu pedido</span></h3>
         <span class="carrito-count" id="carritoCount">0 items</span>
       </div>
       <div class="carrito-items" id="carritoItems">
         <div class="carrito-vacio">
           <i class="fas fa-shopping-bag"></i>
-          <p>Todavia no agregaste nada</p>
+          <p data-i18n="vacio">Todavía no agregaste nada</p>
         </div>
       </div>
       <div class="carrito-total-row" id="carritoTotalRow" style="display:none">
-        <span>Total estimado</span><strong id="carritoTotal">$0</strong>
+        <span data-i18n="total_estimado">Total estimado</span><strong id="carritoTotal">$0</strong>
       </div>
       <button class="btn btn-primary btn-block" id="btnConfirmar"
               onclick="PedidoOnline.abrirFormulario()" style="display:none">
-        <i class="fas fa-check-circle"></i> Confirmar pedido
+        <i class="fas fa-check-circle"></i> <span data-i18n="confirmar">Confirmar pedido</span>
       </button>
     </aside>
   </main>
@@ -92,17 +93,17 @@
     <div class="carrito-mobile-sheet">
       <div class="carrito-mobile-handle"></div>
       <div class="carrito-header">
-        <h3><i class="fas fa-shopping-bag"></i> Tu pedido</h3>
+        <h3><i class="fas fa-shopping-bag"></i> <span data-i18n="tu_pedido">Tu pedido</span></h3>
         <button onclick="PedidoOnline.toggleCarritoMobile()" class="btn-cerrar"
                 aria-label="Cerrar carrito">&times;</button>
       </div>
       <div class="carrito-items" id="carritoItemsMobile"></div>
       <div class="carrito-total-row" id="carritoTotalRowMobile" style="display:none">
-        <span>Total estimado</span><strong id="carritoTotalMobile">$0</strong>
+        <span data-i18n="total_estimado">Total estimado</span><strong id="carritoTotalMobile">$0</strong>
       </div>
       <button class="btn btn-primary btn-block mt-10" id="btnConfirmarMobile"
               onclick="PedidoOnline.abrirFormulario()" style="display:none">
-        <i class="fas fa-check-circle"></i> Confirmar pedido
+        <i class="fas fa-check-circle"></i> <span data-i18n="confirmar">Confirmar pedido</span>
       </button>
     </div>
   </div>
@@ -111,53 +112,53 @@
        role="dialog" aria-modal="true" aria-label="Datos del pedido">
     <div class="pedido-form-modal">
       <div class="pedido-form-header">
-        <h3><i class="fas fa-user"></i> Tus datos</h3>
+        <h3><i class="fas fa-user"></i> <span data-i18n="tus_datos">Tus datos</span></h3>
         <button onclick="PedidoOnline.cerrarFormulario()" class="btn-cerrar"
                 aria-label="Cerrar">&times;</button>
       </div>
       <form id="pedidoForm" onsubmit="PedidoOnline.enviarPedido(event)" novalidate>
         <div class="form-group">
           <label for="clienteNombre" id="labelNombre">Nombre <span aria-hidden="true">*</span></label>
-          <input type="text" id="clienteNombre" placeholder="Tu nombre"
+          <input type="text" id="clienteNombre" placeholder="Tu nombre" data-i18n-ph="nombre_ph"
                  required autocomplete="name">
         </div>
         <div class="form-group" id="grupoTelefono">
-          <label for="clienteTelefono">Telefono <span aria-hidden="true">*</span></label>
+          <label for="clienteTelefono"><span data-i18n="telefono">Teléfono</span> <span aria-hidden="true">*</span></label>
           <input type="tel" id="clienteTelefono" placeholder="11 1234-5678"
                  required autocomplete="tel">
         </div>
         <div class="form-group" id="grupoTipo">
-          <label>Como lo queres?</label>
+          <label data-i18n="como">¿Cómo lo querés?</label>
           <div class="tipo-opciones">
             <label class="tipo-opcion">
               <input type="radio" name="tipoPedido" value="takeaway" checked
                      onchange="PedidoOnline.onTipoChange(this.value)">
-              <span><i class="fas fa-shopping-bag"></i> Retiro en el local</span>
+              <span><i class="fas fa-shopping-bag"></i> <span data-i18n="retiro">Retiro en el local</span></span>
             </label>
             <label class="tipo-opcion">
               <input type="radio" name="tipoPedido" value="delivery"
                      onchange="PedidoOnline.onTipoChange(this.value)">
-              <span><i class="fas fa-motorcycle"></i> Delivery</span>
+              <span><i class="fas fa-motorcycle"></i> <span data-i18n="delivery">Delivery</span></span>
             </label>
           </div>
         </div>
         <div class="form-group" id="grupoDireccion" style="display:none">
-          <label for="clienteDireccion">Direccion de entrega <span aria-hidden="true">*</span></label>
+          <label for="clienteDireccion"><span data-i18n="direccion">Dirección de entrega</span> <span aria-hidden="true">*</span></label>
           <input type="text" id="clienteDireccion"
-                 placeholder="Calle, numero, piso/dpto" autocomplete="street-address">
+                 placeholder="Calle, número, piso/dpto" data-i18n-ph="direccion_ph" autocomplete="street-address">
         </div>
         <div class="form-group">
-          <label for="clienteNotas">Notas / aclaraciones</label>
+          <label for="clienteNotas" data-i18n="notas">Notas / aclaraciones</label>
           <textarea id="clienteNotas" rows="2"
-                    placeholder="Sin cebolla, sin sal, etc."></textarea>
+                    placeholder="Sin cebolla, sin sal, etc." data-i18n-ph="notas_ph"></textarea>
         </div>
         <div class="form-resumen" id="formResumen"></div>
         <p class="aviso-datos" id="avisoDatos"></p>
         <div class="form-actions">
           <button type="button" class="btn btn-outline"
-                  onclick="PedidoOnline.cerrarFormulario()">Volver</button>
+                  onclick="PedidoOnline.cerrarFormulario()" data-i18n="volver">Volver</button>
           <button type="submit" class="btn btn-success" id="btnEnviar">
-            <i class="fas fa-paper-plane"></i> Enviar pedido
+            <i class="fas fa-paper-plane"></i> <span data-i18n="enviar">Enviar pedido</span>
           </button>
         </div>
       </form>
@@ -173,10 +174,10 @@
       <div class="confirmacion-numero" id="confirmacionNumero"></div>
       <a id="confirmacionWA" href="#" class="btn btn-whatsapp mt-10"
          style="display:none" target="_blank" rel="noopener">
-        <i class="fab fa-whatsapp"></i> Consultar por WhatsApp
+        <i class="fab fa-whatsapp"></i> <span data-i18n="consultar_wa">Consultar por WhatsApp</span>
       </a>
       <button class="btn btn-outline mt-10" onclick="PedidoOnline.nuevoPedido()">
-        <i class="fas fa-redo"></i> Hacer otro pedido
+        <i class="fas fa-redo"></i> <span data-i18n="otro_pedido">Hacer otro pedido</span>
       </button>
     </div>
   </div>

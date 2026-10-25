@@ -183,6 +183,7 @@ nuevo() {
           <label>Stock inicial</label>
           <input type="number" id="prodStockInicial" min="0" value="${p ? p.stock_actual : '0'}">
         </div>
+        ${this.htmlTraducciones('prod', p && p.traducciones, true)}
         <div class="modal-footer">
           <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-success">Guardar</button>
@@ -205,7 +206,8 @@ async guardar(e, id) {
       costo: parseFloat(document.getElementById('prodCosto').value || 0),
       unidad: document.getElementById('prodUnidad').value,
       stock_minimo: parseInt(document.getElementById('prodStockMin').value || 0),
-      tracking_stock: document.getElementById('prodTracking').checked ? 1 : 0
+      tracking_stock: document.getElementById('prodTracking').checked ? 1 : 0,
+      traducciones: this.leerTraducciones('prod', true)
     };
     if (data.tracking_stock && !id) {
       data.stock_actual = parseInt(document.getElementById('prodStockInicial').value || 0);
@@ -223,6 +225,37 @@ async guardar(e, id) {
     } catch (err) {
       App.showToast(err.message, 'error');
     }
+  },
+
+  // Carta QR en ingl\u00e9s y portugu\u00e9s (src/traducciones.js). Lo que se deja vac\u00edo se muestra en espa\u00f1ol.
+  IDIOMAS: { en: 'Ingl\u00e9s', pt: 'Portugu\u00e9s' },
+  htmlTraducciones(prefijo, guardadas, conDescripcion) {
+    let t = {};
+    try { t = typeof guardadas === 'string' ? JSON.parse(guardadas) || {} : guardadas || {}; } catch (e) { t = {}; }
+    const algo = Object.keys(t).length > 0;
+    const filas = Object.entries(this.IDIOMAS).map(([k, nombre]) => `
+      <div class="form-group">
+        <label>${nombre}: nombre</label>
+        <input type="text" id="${prefijo}Tr_${k}_nombre" maxlength="120" value="${esc((t[k] && t[k].nombre) || '')}">
+      </div>
+      ${conDescripcion ? `<div class="form-group">
+        <label>${nombre}: descripci\u00f3n</label>
+        <textarea id="${prefijo}Tr_${k}_descripcion" maxlength="500">${esc((t[k] && t[k].descripcion) || '')}</textarea>
+      </div>` : ''}`).join('');
+    return `<details class="form-group" ${algo ? 'open' : ''}>
+        <summary><i class="fas fa-language"></i> Carta QR en otros idiomas (opcional)</summary>
+        <small class="form-hint">Los clientes eligen ES / EN / PT en la carta del QR. Lo que dejes vac\u00edo se ve en espa\u00f1ol.</small>
+        ${filas}
+      </details>`;
+  },
+  leerTraducciones(prefijo, conDescripcion) {
+    const t = {};
+    for (const k of Object.keys(this.IDIOMAS)) {
+      const valor = campo => { const el = document.getElementById(`${prefijo}Tr_${k}_${campo}`); return el ? el.value.trim() : ''; };
+      t[k] = { nombre: valor('nombre') };
+      if (conDescripcion) t[k].descripcion = valor('descripcion');
+    }
+    return t;
   },
 
   async eliminar(id) {
@@ -255,6 +288,7 @@ async guardar(e, id) {
           <label>Orden</label>
           <input type="number" id="catOrden" value="0">
         </div>
+        ${this.htmlTraducciones('cat', null, false)}
         <div class="modal-footer">
           <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-success">Guardar</button>
@@ -270,7 +304,8 @@ async guardar(e, id) {
         nombre: document.getElementById('catNombre').value,
         descripcion: document.getElementById('catDescripcion').value,
         color: document.getElementById('catColor').value,
-        orden: parseInt(document.getElementById('catOrden').value)
+        orden: parseInt(document.getElementById('catOrden').value),
+        traducciones: this.leerTraducciones('cat', false)
       });
       App.closeModal();
       App.showToast('Categor\u00eda creada', 'success');
