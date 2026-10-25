@@ -90,6 +90,19 @@ Siempre con el motivo.
 **Caja → Cerrar caja** y contar el efectivo. Si el local usa **Arqueo ciego**, el cajero escribe lo que contó sin
 ver cuánto debería haber, y la diferencia la ve el encargado. Los cierres anteriores están en **Historial de cajas**.
 
+### Cierre del día (encargado y administrador)
+En **Caja → Cierre del día** está todo lo que pasó en el día: ventas (por medio de pago, por tipo de pedido y por
+persona, ticket promedio y comparación con el mismo día de la semana anterior), la caja, compras y gastos, propinas y
+su reparto, quién fichó, descuentos y cancelaciones, stock para reponer, lo que quedó pendiente y la copia de
+seguridad. **Ver cómo va hoy** lo muestra en el momento; **Cerrar el día ahora** lo guarda (se puede repetir si
+después hubo más ventas). Cada cierre se puede abrir e **imprimir** desde la lista.
+- **Automático:** en **Configurar** se elige la hora (por defecto 22:00) y los días que abre el local. 15 minutos
+  antes aparece el aviso para contar el efectivo.
+- **Si a esa hora la caja sigue abierta**, se cierra **sin contar** (nunca se inventa lo contado). Arriba de Caja
+  aparece el aviso y el encargado toca **Cargar lo contado**: ahí se ve si faltó o sobró plata.
+- **Propinas:** en Configurar se eligen las personas entre las que se reparten, en partes iguales. Si no se elige a
+  nadie, se reparten entre los que ficharon ese día.
+
 ---
 
 ## Cocina
