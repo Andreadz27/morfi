@@ -1,0 +1,309 @@
+/* =============================================
+   MORFI - Carta del QR, estilo elegante (pedido.html, body.carta-elegante)
+   Como una carta impresa: tinta oscura sobre papel claro, títulos en mayúsculas espaciadas,
+   líneas finas y puntos guía entre el plato y el precio. Se carga después de menu.css y pedido.css.
+   ============================================= */
+
+.carta-elegante {
+  --tinta: #1f2a37;
+  --tinta-suave: #4b5563;
+  --gris: #6b7280;
+  --linea: #d6d3cd;
+  --papel: #faf8f4;
+  --blanco: #ffffff;
+  --fuente: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+/* body.menu-body (menu.css) pone fondo de colores y otra letra: se pisa con la misma especificidad + 1 */
+body.menu-body.carta-elegante {
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--fuente);
+}
+body.menu-body.carta-elegante::before { display: none; }
+
+/* ---- Encabezado: nombre del local como en la carta impresa ---- */
+.carta-elegante .menu-hero {
+  background: var(--papel);
+  color: var(--tinta);
+  padding: 36px 16px 8px;
+}
+.carta-elegante .menu-hero::before,
+.carta-elegante .menu-hero::after { display: none; }
+.carta-elegante .menu-hero-content {
+  max-width: 760px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--tinta);
+}
+.carta-elegante .menu-hero-logo {
+  width: 52px; height: 52px;
+  margin-bottom: 12px;
+  background: none;
+  border: 1.5px solid var(--tinta);
+  color: var(--tinta);
+  font-size: 20px;
+  box-shadow: none;
+  animation: none;
+}
+.carta-elegante .menu-hero h1 {
+  color: var(--tinta);
+  text-shadow: none;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: clamp(28px, 8vw, 46px);
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.carta-elegante .menu-hero p {
+  color: var(--gris);
+  text-transform: uppercase;
+  letter-spacing: .28em;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 1;
+}
+.carta-elegante .origen-badge-hero,
+.carta-elegante .origen-badge-hero.badge-web {
+  background: transparent;
+  color: var(--tinta);
+  border: 1px solid var(--tinta);
+  border-radius: 2px;
+  padding: 4px 12px;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  font-size: 11px;
+}
+
+/* Idiomas: texto con subrayado, sin botones de colores */
+.carta-elegante .selector-idioma { gap: 14px; margin-top: 14px; }
+.carta-elegante .selector-idioma button {
+  min-width: 36px; min-height: 32px;
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--gris);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  letter-spacing: .2em;
+  font-size: 12px;
+}
+.carta-elegante .selector-idioma button.activo {
+  background: transparent;
+  color: var(--tinta);
+  border-bottom-color: var(--tinta);
+}
+.carta-elegante .selector-idioma button:focus-visible { outline: 2px solid var(--tinta); outline-offset: 3px; }
+
+/* ---- Categorías: palabras en mayúsculas, la elegida subrayada ---- */
+.carta-elegante .menu-categories { gap: 6px 18px; margin-bottom: 26px; }
+.carta-elegante .menu-cat-btn,
+.carta-elegante .mobile-cat-btn {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 8px 2px;
+  color: var(--gris);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-size: 12px;
+  font-weight: 700;
+}
+.carta-elegante .menu-cat-btn:hover,
+.carta-elegante .mobile-cat-btn:hover {
+  background: transparent;
+  color: var(--tinta);
+  transform: none;
+  box-shadow: none;
+}
+.carta-elegante .menu-cat-btn.active,
+.carta-elegante .mobile-cat-btn.active {
+  background: transparent;
+  color: var(--tinta);
+  border-bottom-color: var(--tinta);
+  box-shadow: none;
+}
+.carta-elegante .mobile-cat-nav {
+  background: var(--papel);
+  border-top: 1px solid var(--linea);
+  padding-top: 4px;
+}
+.carta-elegante .mobile-cat-scroll { gap: 18px; scrollbar-width: none; }
+.carta-elegante .mobile-cat-scroll::-webkit-scrollbar { display: none; }
+
+/* ---- Secciones: título con raya debajo, como la carta impresa ---- */
+.carta-elegante .menu-section { margin-bottom: 34px; }
+.carta-elegante .menu-section-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .2em;
+  color: var(--tinta);
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 2px solid var(--tinta);
+}
+.carta-elegante .menu-section-title::after { display: none; }
+.carta-elegante .menu-section-title i { display: none; }
+
+/* ---- Platos: nombre ........ precio, descripción debajo ---- */
+.carta-elegante .pedido-item-card,
+.carta-elegante .menu-item-card {
+  display: block;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--linea);
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 14px 0 12px;
+  margin: 0;
+}
+.carta-elegante .menu-item-card::before { display: none; }
+.carta-elegante .pedido-item-card:hover,
+.carta-elegante .menu-item-card:hover { background: transparent; box-shadow: none; transform: none; }
+.carta-elegante .carta-linea { display: flex; align-items: baseline; gap: 0; }
+.carta-elegante .menu-item-nombre {
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--tinta);
+  line-height: 1.35;
+}
+.carta-elegante .carta-puntos {
+  flex: 1;
+  min-width: 18px;
+  margin: 0 8px;
+  border-bottom: 2px dotted #b8b3aa;
+  transform: translateY(-4px);
+}
+.carta-elegante .menu-item-precio {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--tinta);
+  background: none;
+  -webkit-text-fill-color: var(--tinta);
+  white-space: nowrap;
+}
+.carta-elegante .menu-item-desc {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  color: var(--gris);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-top: 4px;
+  max-width: 92%;
+}
+.carta-elegante .item-qty-ctrl {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+
+/* ---- Botones: contorno de tinta ---- */
+.carta-elegante .btn-agregar {
+  background: transparent;
+  color: var(--tinta);
+  border: 1.5px solid var(--tinta);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+}
+.carta-elegante .btn-agregar:hover { background: var(--tinta); color: var(--blanco); }
+.carta-elegante .btn-qty { border-radius: 50%; }
+.carta-elegante .btn-qty-minus,
+.carta-elegante .btn-qty-plus {
+  background: transparent;
+  color: var(--tinta);
+  border: 1.5px solid var(--tinta);
+}
+.carta-elegante .btn-qty-minus:hover,
+.carta-elegante .btn-qty-plus:hover { background: var(--tinta); color: var(--blanco); }
+.carta-elegante .qty-num { color: var(--tinta); }
+
+.carta-elegante .btn-primary,
+.carta-elegante .btn-success {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--blanco);
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: 13px;
+}
+.carta-elegante .btn-primary:hover,
+.carta-elegante .btn-success:hover { background: #111827; border-color: #111827; }
+.carta-elegante .btn-outline {
+  background: transparent;
+  color: var(--tinta);
+  border: 1.5px solid var(--tinta);
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 12px;
+}
+.carta-elegante .btn-outline:hover { background: var(--tinta); color: var(--blanco); }
+
+/* ---- Pedido (carrito), mesa y pago ---- */
+.carta-elegante .pedido-carrito-sidebar {
+  background: var(--blanco);
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  box-shadow: none;
+}
+.carta-elegante .carrito-header { border-bottom: 2px solid var(--tinta); }
+.carta-elegante .carrito-header h3 { text-transform: uppercase; letter-spacing: .14em; font-size: .9rem; color: var(--tinta); }
+.carta-elegante .carrito-item-sub,
+.carta-elegante .carrito-total-row strong,
+.carta-elegante .resumen-total strong { color: var(--tinta); }
+.carta-elegante .carrito-flotante {
+  background: var(--tinta);
+  box-shadow: 0 6px 20px rgba(31, 42, 55, .35);
+}
+.carta-elegante .carrito-flotante-count {
+  background: var(--blanco);
+  color: var(--tinta);
+  border: 2px solid var(--tinta);
+}
+.carta-elegante .carrito-mobile-sheet,
+.carta-elegante .pedido-form-modal { border-radius: 8px 8px 0 0; }
+.carta-elegante .pedido-form-modal { border-radius: 6px; }
+.carta-elegante .pedido-form-header h3 { text-transform: uppercase; letter-spacing: .12em; font-size: .95rem; }
+.carta-elegante .form-group input:focus,
+.carta-elegante .form-group textarea:focus { border-color: var(--tinta); box-shadow: 0 0 0 3px rgba(31, 42, 55, .12); }
+.carta-elegante .tipo-opcion:has(input:checked) { border-color: var(--tinta); background: #f3f1ec; color: var(--tinta); }
+.carta-elegante .form-resumen { background: var(--papel); border-color: var(--linea); border-radius: 4px; }
+
+.carta-elegante .mesa-panel { max-width: 760px; }
+.carta-elegante .mesa-seguimiento {
+  background: var(--blanco);
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  box-shadow: none;
+}
+.carta-elegante .mesa-seguimiento h4 { text-transform: uppercase; letter-spacing: .14em; font-size: .8rem; color: var(--tinta); }
+.carta-elegante .mesa-cuenta-total { border-top-color: var(--tinta); }
+.carta-elegante .mesa-aviso { background: #eef2ea; color: #2f4a2a; border-radius: 4px; }
+.carta-elegante .pago-chip.activo { background: var(--tinta); border-color: var(--tinta); }
+.carta-elegante .pago-seccion h4 { text-transform: uppercase; letter-spacing: .12em; font-size: .8rem; }
+
+.carta-elegante .confirmacion-screen { background: var(--papel); }
+.carta-elegante .confirmacion-card { border-radius: 6px; border: 1px solid var(--linea); box-shadow: none; }
+.carta-elegante .confirmacion-icon { color: var(--tinta); }
+.carta-elegante .confirmacion-card h2 { text-transform: uppercase; letter-spacing: .1em; font-size: 1.2rem; }
+
+/* La carta ocupa el centro como una hoja; en computadora el pedido queda al costado */
+.carta-elegante .pedido-layout { max-width: 1080px; }
+@media (min-width: 769px) {
+  .carta-elegante .pedido-carta { max-width: 720px; }
+}
