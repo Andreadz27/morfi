@@ -1,7 +1,7 @@
 'use strict';
 const {
   rateLimit, urlPublica, urlCartaNube, get, all, errorInterno, crearPedidoOnline, mesaPorToken, estadoMesa, solicitarPedidoMesa, llamarMozo,
-  iniciarPagoMesa, verificarPagoMesa, pedirComprobanteMesa, leerTraducciones, ORDEN_CARTA, cartaPorMomentos
+  iniciarPagoMesa, verificarPagoMesa, pedirComprobanteMesa, leerTraducciones, ORDEN_CARTA, cartaPorMomentos, listarGrupos, gruposPorProducto
 } = require('../contexto');
 const QRCode = require('qrcode');
 
@@ -36,8 +36,14 @@ app.get('/api/publico/menu', async (req, res) => {
     `);
     // Traducciones de la carta (inglés y portugués): el navegador elige el idioma
     for (const x of [...categorias, ...productos]) x.traducciones = leerTraducciones(x.traducciones);
+    // Opciones y adicionales: los grupos (con precios) y cuáles tiene cada producto
+    const porProducto = await gruposPorProducto();
+    for (const p of productos) p.grupos = porProducto[p.id] || [];
+    const usados = new Set(Object.values(porProducto).flat());
+    const grupos = (await listarGrupos({ soloActivos: true })).filter(g => usados.has(g.id) && g.opciones.length)
+      .map(({ id, nombre, tipo, obligatorio, maximo, traducciones, opciones }) => ({ id, nombre, tipo, obligatorio, maximo, traducciones, opciones }));
     // Momentos del día (Desayuno, Brunch...), el de ahora y destacados (Nuevo, Recomendado, Lo más pedido)
-    res.json({ categorias, productos, ...await cartaPorMomentos(categorias, productos) });
+    res.json({ categorias, productos, grupos, ...await cartaPorMomentos(categorias, productos) });
   } catch (err) {
     errorInterno(res, err);
   }

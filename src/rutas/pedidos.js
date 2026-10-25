@@ -1,6 +1,6 @@
 'use strict';
 const {
-  run, get, all, transaccion, LOCAL, errorHttp, errorInterno, autenticar, emitEvento, generarNumeroPedido, resolverItems, importe, recalcularTotales, registrarPagoTx, METODOS_PAGO, comandaAutomatica, ticketAlCobrar, requiere,
+  run, get, all, transaccion, LOCAL, errorHttp, errorInterno, autenticar, emitEvento, generarNumeroPedido, resolverItems, insertarItemTx, importe, recalcularTotales, registrarPagoTx, METODOS_PAGO, comandaAutomatica, ticketAlCobrar, requiere,
   registrarCobroTx, saldoPedido, requiereCobro, facturarOEncolar, validarDatosFactura, avisarEstadoPedido,
   autorizar, requiereAutorizacion, facturaVigente, datosTicketFiscalConQR, getIntCfg, revertirFidelizacionTx
 } = require('../contexto');
@@ -43,11 +43,7 @@ app.post('/api/pedidos', autenticar, requiere('pedidos.tomar'), idempotente, asy
         if (abierto && req.body.sumar_si_mesa_abierta === true) {
           const itemIds = [];
           for (const item of items) {
-            const r = await run(
-              `INSERT INTO pedido_items (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal, notas)
-               VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              [abierto.id, item.producto_id || null, item.nombre, item.cantidad, item.precio, item.subtotal, item.notas || '']);
-            itemIds.push(r.id);
+            itemIds.push(await insertarItemTx(abierto.id, item));
           }
           const { subtotal, total } = await recalcularTotales(abierto.id);
           await run('UPDATE pedidos SET listo_en = NULL WHERE id = ?', [abierto.id]);
@@ -66,11 +62,7 @@ app.post('/api/pedidos', autenticar, requiere('pedidos.tomar'), idempotente, asy
       const pedidoId = result.id;
 
       for (const item of items) {
-        await run(
-          `INSERT INTO pedido_items (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal, notas)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [pedidoId, item.producto_id || null, item.nombre, item.cantidad, item.precio, item.subtotal, item.notas || '']
-        );
+        await insertarItemTx(pedidoId, item);
       }
 
       const { subtotal, total } = await recalcularTotales(pedidoId);
@@ -221,17 +213,13 @@ app.post('/api/pedidos/:id/items', autenticar, requiere('pedidos.tomar'), idempo
       if (!pedido) throw errorHttp(404, 'Pedido no encontrado');
       if (pedido.estado !== 'abierto') throw errorHttp(400, 'El pedido no está abierto');
       const [item] = await resolverItems([req.body]);
-      const result = await run(
-        `INSERT INTO pedido_items (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal, notas)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [pedido.id, item.producto_id, item.nombre, item.cantidad, item.precio, item.subtotal, item.notas]
-      );
+      const nuevoId = await insertarItemTx(pedido.id, item);
       await recalcularTotales(pedido.id);
       // Si cocina ya lo había marcado listo, vuelve a la pantalla con lo nuevo
       await run('UPDATE pedidos SET listo_en = NULL WHERE id = ?', [pedido.id]);
       emitEvento('cocina:actualizar', { pedido_id: pedido.id, accion: 'item_agregado' });
       emitEvento('dashboard:actualizar', { motivo: 'pedido_actualizado' });
-      return result.id;
+      return nuevoId;
     });
     await comandaAutomatica(Number(req.params.id), { itemIds: [itemId], titulo: 'AGREGADO' }).catch(() => false);
     res.status(201).json({ id: itemId, message: 'Item agregado' });

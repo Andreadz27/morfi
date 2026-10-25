@@ -1,7 +1,7 @@
 'use strict';
 const {
   run, get, all, errorHttp, actualizarParcial, errorInterno, autenticar, requiere, transaccion, obtenerReceta, guardarRecetaTx, recalcularCostosConIngrediente, costoReceta,
-  normalizarTraducciones, ORDEN_CARTA, listarMomentos, guardarMomento, borrarMomento
+  normalizarTraducciones, ORDEN_CARTA, listarMomentos, guardarMomento, borrarMomento, listarGrupos, guardarGrupo, borrarGrupo, gruposPorProducto
 } = require('../contexto');
 
 module.exports = function registrarRutas(app) {
@@ -69,6 +69,25 @@ app.delete('/api/carta/momentos/:id', autenticar, requiere('catalogo'), async (r
   try { await borrarMomento(Number(req.params.id)); res.json({ message: 'Momento borrado' }); } catch (err) { errorInterno(res, err); }
 });
 
+// ============ OPCIONES Y ADICIONALES (servicios/opciones.js) ============
+// Grupos ("¿Qué leche?", "Adicionales") con sus opciones y precios, y los productos que los usan
+
+app.get('/api/opciones/grupos', autenticar, async (req, res) => {
+  try { res.json(await listarGrupos()); } catch (err) { errorInterno(res, err); }
+});
+
+app.post('/api/opciones/grupos', autenticar, requiere('catalogo'), async (req, res) => {
+  try { res.status(201).json(await guardarGrupo(req.body)); } catch (err) { errorInterno(res, err); }
+});
+
+app.put('/api/opciones/grupos/:id', autenticar, requiere('catalogo'), async (req, res) => {
+  try { res.json(await guardarGrupo(req.body, Number(req.params.id))); } catch (err) { errorInterno(res, err); }
+});
+
+app.delete('/api/opciones/grupos/:id', autenticar, requiere('catalogo'), async (req, res) => {
+  try { await borrarGrupo(Number(req.params.id)); res.json({ message: 'Grupo borrado' }); } catch (err) { errorInterno(res, err); }
+});
+
 // ============ PRODUCTOS ============
 
 app.get('/api/productos', autenticar, async (req, res) => {
@@ -81,6 +100,9 @@ app.get('/api/productos', autenticar, async (req, res) => {
       WHERE p.activo = 1
       ORDER BY c.orden, ${ORDEN_CARTA}
     `);
+    // Grupos de opciones de cada producto (el punto de venta pregunta "¿Qué leche?" al tocarlo)
+    const grupos = await gruposPorProducto();
+    for (const p of productos) p.grupos = grupos[p.id] || [];
     res.json(productos);
   } catch (err) {
     errorInterno(res, err);

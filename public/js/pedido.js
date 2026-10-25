@@ -8,7 +8,7 @@ const PD_API=(location.pathname.match(/^\/l\/[^/]+/)||[""])[0];
 // Carta en español, inglés y portugués. Los platos traen sus traducciones desde el local (si faltan, en español);
 // los textos de la página están acá. Lo que ve cocina y caja sigue en español.
 const PD_TEXTOS={
-  es:{letra:"Letra más grande",toda_carta:"Toda la carta",buscar_ph:"Buscar en la carta",sin_resultados:"No encontramos nada con esa búsqueda.",b_mas:"Lo más pedido",b_nuevo:"Nuevo",b_reco:"Recomendado",online_sub:"Arma tu pedido y lo recibimos enseguida",ver_sub:"Nuestra carta",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
+  es:{op_una:"Elegí una",op_opcional:"Opcional",op_hasta:"Hasta {n}",op_varias:"Elegí las que quieras",op_falta:"Elegí: {g}",op_agregar:"Agregar {m}",cancelar:"Cancelar",letra:"Letra más grande",toda_carta:"Toda la carta",buscar_ph:"Buscar en la carta",sin_resultados:"No encontramos nada con esa búsqueda.",b_mas:"Lo más pedido",b_nuevo:"Nuevo",b_reco:"Recomendado",online_sub:"Arma tu pedido y lo recibimos enseguida",ver_sub:"Nuestra carta",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
     llamar_mozo:"Llamar al mozo",pedir_cuenta:"Pedir la cuenta",tu_pedido:"Tu pedido",vacio:"Todavía no agregaste nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Tus datos",nombre:"Nombre",nombre_opc:"Tu nombre (opcional)",nombre_ph:"Tu nombre",telefono:"Teléfono",como:"¿Cómo lo querés?",retiro:"Retiro en el local",delivery:"Delivery",
     direccion:"Dirección de entrega",direccion_ph:"Calle, número, piso/dpto",notas:"Notas / aclaraciones",notas_ph:"Sin cebolla, sin sal, etc.",volver:"Volver",enviar:"Enviar pedido",enviar_mozo:"Enviar al mozo",
@@ -25,7 +25,7 @@ const PD_TEXTOS={
     listo_cocina:"¡Listo{n}! Tu pedido ya está en preparación.",espera_mozo:"¡Gracias{n}! El mozo lo confirma en un momento: abajo ves cuándo pasa a cocina.",
     pago_ok:"¡Pago aprobado! Gracias.",cuenta_paga:" La cuenta quedó paga.",falta_resto:" Falta pagar el resto de la mesa.",
     pago_proceso:"Tu pago está en proceso: cuando Mercado Pago lo apruebe, se acredita solo.",pago_no:"El pago no se completó. Podés intentar de nuevo o pedirle la cuenta al mozo."},
-  en:{letra:"Bigger text",toda_carta:"Full menu",buscar_ph:"Search the menu",sin_resultados:"Nothing matches your search.",b_mas:"Most ordered",b_nuevo:"New",b_reco:"Our pick",online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",carta_sub:"Browse the menu and call the waiter when you're ready to order",
+  en:{op_una:"Choose one",op_opcional:"Optional",op_hasta:"Up to {n}",op_varias:"Choose any",op_falta:"Please choose: {g}",op_agregar:"Add {m}",cancelar:"Cancel",letra:"Bigger text",toda_carta:"Full menu",buscar_ph:"Search the menu",sin_resultados:"Nothing matches your search.",b_mas:"Most ordered",b_nuevo:"New",b_reco:"Our pick",online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",carta_sub:"Browse the menu and call the waiter when you're ready to order",
     llamar_mozo:"Call the waiter",pedir_cuenta:"Ask for the bill",tu_pedido:"Your order",vacio:"You haven't added anything yet",total_estimado:"Estimated total",confirmar:"Confirm order",
     tus_datos:"Your details",nombre:"Name",nombre_opc:"Your name (optional)",nombre_ph:"Your name",telefono:"Phone",como:"How would you like it?",retiro:"Pick up at the store",delivery:"Delivery",
     direccion:"Delivery address",direccion_ph:"Street, number, floor/apt",notas:"Notes",notas_ph:"No onion, no salt, etc.",volver:"Back",enviar:"Send order",enviar_mozo:"Send to the waiter",
@@ -42,7 +42,7 @@ const PD_TEXTOS={
     listo_cocina:"Done{n}! Your order is being prepared.",espera_mozo:"Thank you{n}! The waiter will confirm it shortly: below you'll see when it goes to the kitchen.",
     pago_ok:"Payment approved! Thank you.",cuenta_paga:" The bill is fully paid.",falta_resto:" The rest of the table still has to pay.",
     pago_proceso:"Your payment is being processed: once Mercado Pago approves it, it will be credited automatically.",pago_no:"The payment wasn't completed. You can try again or ask the waiter for the bill."},
-  pt:{letra:"Letra maior",toda_carta:"Cardápio completo",buscar_ph:"Buscar no cardápio",sin_resultados:"Não encontramos nada com essa busca.",b_mas:"Mais pedido",b_nuevo:"Novo",b_reco:"Recomendado",online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
+  pt:{op_una:"Escolha uma",op_opcional:"Opcional",op_hasta:"Até {n}",op_varias:"Escolha as que quiser",op_falta:"Escolha: {g}",op_agregar:"Adicionar {m}",cancelar:"Cancelar",letra:"Letra maior",toda_carta:"Cardápio completo",buscar_ph:"Buscar no cardápio",sin_resultados:"Não encontramos nada com essa busca.",b_mas:"Mais pedido",b_nuevo:"Novo",b_reco:"Recomendado",online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
     llamar_mozo:"Chamar o garçom",pedir_cuenta:"Pedir a conta",tu_pedido:"Seu pedido",vacio:"Você ainda não adicionou nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Seus dados",nombre:"Nome",nombre_opc:"Seu nome (opcional)",nombre_ph:"Seu nome",telefono:"Telefone",como:"Como você prefere?",retiro:"Retirar no local",delivery:"Delivery",
     direccion:"Endereço de entrega",direccion_ph:"Rua, número, andar/apto",notas:"Observações",notas_ph:"Sem cebola, sem sal, etc.",volver:"Voltar",enviar:"Enviar pedido",enviar_mozo:"Enviar ao garçom",
@@ -103,6 +103,7 @@ const PedidoOnline={
       }
       this.categorias=m.categorias||[];
       this.momentos=m.momentos||[];
+      this.grupos=m.grupos||[];
       this.momentoActivo=m.momento_actual||"todo";
       this.productos=m.productos||[];
       this.config=info;
@@ -163,7 +164,11 @@ const PedidoOnline={
   },
   _btnEnviar(){const b=document.getElementById("btnEnviar");if(b){b.disabled=false;b.innerHTML='<i class="fas fa-paper-plane"></i> '+pdE(pdT("enviar"));}},
   // Nombre a mostrar de un producto del carrito (el carrito guarda el id; el nombre sale de la carta)
-  _nombreItem(i){return pdTr(this.productos.find(p=>p.id===i.producto_id)||i,"nombre");},
+  _nombreItem(i){
+    const base=pdTr(this.productos.find(p=>p.id===i.producto_id)||i,"nombre");
+    const ops=(i.opciones||[]).map(id=>{for(const g of this.grupos){const o=g.opciones.find(x=>x.id===id);if(o)return pdTr(o,"nombre");}return"";}).filter(Boolean);
+    return ops.length?base+" · "+ops.join(", "):base;
+  },
 
   // Aviso de privacidad (Ley 25.326, art. 6): quién guarda los datos, para qué y cómo pedir verlos o borrarlos.
   // El responsable es el local; por la nube los datos solo pasan hasta que el local recibe el pedido.
@@ -414,7 +419,8 @@ const PedidoOnline={
   setCat(id){this.catActiva=id;this.paintCats();this.paintItems();},
   visible(p){return p.tracking_stock?(p.stock_actual>0||p.es_plato===1):true;},
   itemCard(p){
-    const q=(this.carrito.find(i=>i.producto_id===p.id)||{cantidad:0}).cantidad;
+    const conOpciones=this._gruposDe(p).length;
+    const q=conOpciones?0:(this.carrito.find(i=>i.producto_id===p.id)||{cantidad:0}).cantidad;
     const qc=this.soloVer||(this.mesa&&this.mesa.modo==="solo_carta")?""
       :q===0
       ?`<button class="btn-agregar" onclick="PedidoOnline.agregar(${p.id})" aria-label="${pdE(pdT("agregar"))}"><i class="fas fa-plus"></i> ${pdE(pdT("agregar"))}</button>`
@@ -460,35 +466,83 @@ const PedidoOnline={
     }
   },
 
+  // ── Opciones y adicionales ("¿Qué leche?", "Adicionales"): se eligen al agregar ──
+  grupos:[],
+  _gruposDe(p){return(p&&p.grupos||[]).map(id=>this.grupos.find(g=>g.id===id)).filter(g=>g&&g.opciones.length);},
   agregar(id){
     const prod=this.productos.find(p=>p.id===id);if(!prod)return;
-    const item=this.carrito.find(i=>i.producto_id===id);
+    if(this._gruposDe(prod).length)return this._elegirOpciones(prod);
+    this._sumar(prod,[],0);
+  },
+  // Cada combinación de opciones es una línea del carrito (el precio lo vuelve a calcular el local)
+  _sumar(prod,opciones,extra){
+    const clave=prod.id+":"+opciones.slice().sort((a,b)=>a-b).join(",");
+    const item=this.carrito.find(i=>(i.clave||i.producto_id+":")===clave);
     if(item)item.cantidad++;
-    else this.carrito.push({producto_id:id,nombre:prod.nombre,precio:prod.precio_venta,cantidad:1,notas:""});
+    else this.carrito.push({producto_id:prod.id,nombre:prod.nombre,precio:prod.precio_venta+extra,cantidad:1,notas:"",opciones,clave});
     this.paintItems();this.paintCarrito();
   },
+  _elegirOpciones(prod){
+    const grupos=this._gruposDe(prod);
+    this._eligiendo={prod,grupos};
+    const html=grupos.map(g=>{
+      const una=g.tipo==="una";
+      const pista=una?pdT(g.obligatorio?"op_una":"op_opcional"):(g.maximo?pdT("op_hasta",{n:g.maximo}):pdT("op_varias"));
+      return`<div class="opciones-grupo" data-grupo="${g.id}" data-maximo="${Number(g.maximo)||0}"><h4>${pdE(pdTr(g,"nombre"))} <small>${pdE(pista)}</small></h4>
+        <div class="opciones-lista">${g.opciones.map((o,i)=>`<label class="opcion-chip"><input type="${una?"radio":"checkbox"}" name="og${g.id}" value="${o.id}" data-precio="${Number(o.precio)||0}"
+          ${una&&g.obligatorio&&i===0?"checked":""} onchange="PedidoOnline._opcionCambio(this)"><span>${pdE(pdTr(o,"nombre"))}${o.precio?` <b>+${pdM(o.precio)}</b>`:""}</span></label>`).join("")}</div></div>`;
+    }).join("");
+    document.getElementById("opcionesTitulo").textContent=pdTr(prod,"nombre");
+    document.getElementById("opcionesContenido").innerHTML=html;
+    document.getElementById("opcionesCancelar").textContent=pdT("cancelar");
+    document.getElementById("opcionesModal").style.display="";document.body.style.overflow="hidden";
+    this._opcionCambio();
+  },
+  _opcionCambio(input){
+    if(input&&input.type==="checkbox"){
+      const caja=input.closest(".opciones-grupo");const max=Number(caja.dataset.maximo)||0;
+      if(max&&caja.querySelectorAll("input:checked").length>max)input.checked=false;
+    }
+    const extra=[...document.querySelectorAll("#opcionesContenido input:checked")].reduce((s,i)=>s+(Number(i.dataset.precio)||0),0);
+    document.getElementById("opcionesOk").innerHTML='<i class="fas fa-plus"></i> '+pdE(pdT("op_agregar",{m:pdM(this._eligiendo.prod.precio_venta+extra)}));
+  },
+  confirmarOpciones(){
+    const{prod,grupos}=this._eligiendo;
+    const faltan=grupos.filter(g=>g.tipo==="una"&&g.obligatorio&&!document.querySelector(`#opcionesContenido .opciones-grupo[data-grupo="${g.id}"] input:checked`));
+    if(faltan.length){alert(pdT("op_falta",{g:faltan.map(g=>pdTr(g,"nombre")).join(", ")}));return;}
+    const elegidas=[...document.querySelectorAll("#opcionesContenido input:checked")];
+    this.cerrarOpciones();
+    this._sumar(prod,elegidas.map(i=>Number(i.value)),elegidas.reduce((s,i)=>s+(Number(i.dataset.precio)||0),0));
+  },
+  cerrarOpciones(){document.getElementById("opcionesModal").style.display="none";document.body.style.overflow="";},
 
+  // Desde la tarjeta (productos sin opciones): una línea por producto
   quitar(id){
-    const idx=this.carrito.findIndex(i=>i.producto_id===id);if(idx===-1)return;
-    this.carrito[idx].cantidad--;
-    if(this.carrito[idx].cantidad<=0)this.carrito.splice(idx,1);
-    this.paintItems();this.paintCarrito();
+    const idx=this.carrito.findIndex(i=>(i.clave||i.producto_id+":")===id+":");if(idx===-1)return;
+    this.quitarLinea(idx);
   },
-
   eliminar(id){
     this.carrito=this.carrito.filter(i=>i.producto_id!==id);
     this.paintItems();this.paintCarrito();
   },
+  // Desde el carrito: por línea (cada combinación de opciones)
+  sumarLinea(idx){const i=this.carrito[idx];if(!i)return;i.cantidad++;this.paintItems();this.paintCarrito();},
+  quitarLinea(idx){
+    const i=this.carrito[idx];if(!i)return;
+    i.cantidad--;if(i.cantidad<=0)this.carrito.splice(idx,1);
+    this.paintItems();this.paintCarrito();
+  },
+  borrarLinea(idx){this.carrito.splice(idx,1);this.paintItems();this.paintCarrito();},
 
   _carritoHTML(){
     if(!this.carrito.length)return'<div class="carrito-vacio"><i class="fas fa-shopping-bag"></i><p>'+pdE(pdT("vacio"))+'</p></div>';
-    return this.carrito.map(i=>`<div class="carrito-item">
+    return this.carrito.map((i,idx)=>`<div class="carrito-item">
   <div class="carrito-item-info"><span class="carrito-item-nombre">${pdE(this._nombreItem(i))}</span><span class="carrito-item-precio">${pdM(i.precio)}</span></div>
   <div class="carrito-item-qty">
-    <button class="btn-qty btn-qty-minus" onclick="PedidoOnline.quitar(${i.producto_id})" aria-label="Quitar">&#8722;</button>
+    <button class="btn-qty btn-qty-minus" onclick="PedidoOnline.quitarLinea(${idx})" aria-label="Quitar">&#8722;</button>
     <span>${i.cantidad}</span>
-    <button class="btn-qty btn-qty-plus" onclick="PedidoOnline.agregar(${i.producto_id})" aria-label="Sumar">+</button>
-    <button class="btn-qty btn-qty-remove" onclick="PedidoOnline.eliminar(${i.producto_id})" aria-label="Eliminar"><i class="fas fa-trash-alt"></i></button>
+    <button class="btn-qty btn-qty-plus" onclick="PedidoOnline.sumarLinea(${idx})" aria-label="Sumar">+</button>
+    <button class="btn-qty btn-qty-remove" onclick="PedidoOnline.borrarLinea(${idx})" aria-label="Eliminar"><i class="fas fa-trash-alt"></i></button>
   </div>
   <div class="carrito-item-sub">${pdM(i.precio*i.cantidad)}</div>
 </div>`).join("");
@@ -555,7 +609,7 @@ const PedidoOnline={
       const r=await fetch(PD_API+"/api/publico/pedido",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({cliente:nombre,telefono:tel,tipo,direccion:dir,notas,origen:this.origen,
-          items:this.carrito.map(i=>({producto_id:i.producto_id,nombre:i.nombre,cantidad:i.cantidad,notas:i.notas||""}))})
+          items:this.carrito.map(i=>({producto_id:i.producto_id,nombre:i.nombre,cantidad:i.cantidad,notas:i.notas||"",opciones:i.opciones||[]}))})
       });
       const data=await r.json();
       if(!r.ok)throw new Error(data.error||"Error al enviar");
@@ -597,7 +651,7 @@ const PedidoOnline={
     try{
       const r=await fetch(PD_API+"/api/publico/mesa/"+this.mesaToken+"/pedido",{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({cliente:nombre,notas,items:this.carrito.map(i=>({producto_id:i.producto_id,cantidad:i.cantidad,notas:i.notas||""}))})
+        body:JSON.stringify({cliente:nombre,notas,items:this.carrito.map(i=>({producto_id:i.producto_id,cantidad:i.cantidad,notas:i.notas||"",opciones:i.opciones||[]}))})
       });
       const data=await r.json();
       if(!r.ok)throw new Error(data.error||"Error al enviar");
@@ -648,12 +702,13 @@ const PedidoOnline={
     this.paintItems();this.paintCarrito();
   },
   _initEvents(){
-    ["carritoMobileModal","formModal","pagoModal"].forEach(id=>{
+    ["carritoMobileModal","formModal","pagoModal","opcionesModal"].forEach(id=>{
       const el=document.getElementById(id);
       if(el)el.addEventListener("click",e=>{
         if(e.target===el){
           if(id==="carritoMobileModal")this.toggleCarritoMobile();
           else if(id==="pagoModal")this.cerrarCuenta();
+          else if(id==="opcionesModal")this.cerrarOpciones();
           else this.cerrarFormulario();
         }
       });
@@ -661,6 +716,7 @@ const PedidoOnline={
     document.addEventListener("keydown",e=>{
       if(e.key!=="Escape")return;
       this.cerrarFormulario();
+      this.cerrarOpciones();
       if(this.mesaToken)this.cerrarCuenta();
       const mm=document.getElementById("carritoMobileModal");
       if(mm&&mm.style.display!=="none")this.toggleCarritoMobile();

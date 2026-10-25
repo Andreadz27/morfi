@@ -11,7 +11,9 @@ const Productos = {
     const view = document.getElementById('view-productos');
     view.innerHTML = '<div class="text-center mt-20"><i class="fas fa-spinner fa-spin fa-3x"></i></div>';
     try {
-      const [productos, categorias, momentos] = await Promise.all([API.getProductos(), API.getCategorias(), API.getMomentos().catch(() => [])]);
+      const [productos, categorias, momentos, grupos] = await Promise.all([API.getProductos(), API.getCategorias(), API.getMomentos().catch(() => []),
+        API.getGruposOpciones().catch(() => [])]);
+      this.gruposOpciones = grupos;
       this.momentos = momentos;
       this.productos = productos;
       this.categorias = categorias;
@@ -72,6 +74,7 @@ const Productos = {
       </div>
 
       ${esAdmin ? this.htmlMomentos() : ''}
+      ${esAdmin ? this.htmlGruposOpciones() : ''}
 
       <div id="prodListado">${this.htmlListado(esAdmin)}</div>
     `;
@@ -306,6 +309,128 @@ async guardar(e, id) {
     } catch (err) {
       App.showToast(err.message, 'error');
     }
+  },
+
+  // ===== Opciones y adicionales ("¿Qué leche?", "Adicionales") =====
+  gruposOpciones: [],
+  htmlGruposOpciones() {
+    const botones = this.gruposOpciones.map(g => `
+      <button class="pos-cat-btn" onclick="Productos.formGrupo(${Number(g.id)})" title="Editar">
+        <i class="fas ${g.tipo === 'una' ? 'fa-dot-circle' : 'fa-plus-square'}"></i> ${esc(g.nombre)}
+        <span class="pos-cat-count">${g.opciones.length} opc. · ${g.productos.length} prod.</span>${g.activo ? '' : ' (apagado)'}
+      </button>`).join('');
+    return `
+      <div class="card mb-20">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-sliders-h"></i> Opciones y adicionales</span>
+          <button class="btn btn-outline btn-sm" onclick="Productos.formGrupo(null)"><i class="fas fa-plus"></i> Grupo</button>
+        </div>
+        <p class="text-muted">Lo que se pregunta al agregar un producto: "¿Qué leche?" (se elige una) o "Adicionales" (se eligen varios, cada uno con su precio).</p>
+        <div class="pos-categories">${botones || '<span class="text-muted">Todavía no hay opciones.</span>'}</div>
+      </div>`;
+  },
+
+  filaOpcion(o = {}) {
+    const t = o.traducciones || {};
+    return `
+      <div class="opcion-fila" data-id="${o.id ? Number(o.id) : ''}">
+        <input type="text" class="opNombre" maxlength="60" placeholder="Ej.: Leche vegetal" value="${esc(o.nombre || '')}" required>
+        <input type="number" class="opPrecio" min="0" step="0.01" placeholder="+ $" value="${o.precio ? Number(o.precio) : ''}" title="Recargo (vacío = sin cargo)">
+        <input type="text" class="opEn" maxlength="60" placeholder="Inglés" value="${esc((t.en && t.en.nombre) || '')}">
+        <input type="text" class="opPt" maxlength="60" placeholder="Portugués" value="${esc((t.pt && t.pt.nombre) || '')}">
+        <button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.opcion-fila').remove()" title="Quitar"><i class="fas fa-times"></i></button>
+      </div>`;
+  },
+
+  formGrupo(id) {
+    const g = this.gruposOpciones.find(x => x.id === id) || null;
+    const t = (g && g.traducciones) || {};
+    const elegidos = new Set(g ? g.productos : []);
+    const porCategoria = [...this.categorias.map(c => ({ id: c.id, nombre: c.nombre, productos: this.productos.filter(p => p.categoria_id === c.id) })),
+      { id: 0, nombre: 'Sin categoría', productos: this.productos.filter(p => !this.categorias.some(c => c.id === p.categoria_id)) }]
+      .filter(c => c.productos.length);
+    App.showModal(`
+      <form onsubmit="Productos.guardarGrupo(event, ${g ? Number(g.id) : 'null'})">
+        <div class="form-group"><label>Nombre (lo que se pregunta)</label>
+          <input type="text" id="grNombre" maxlength="60" value="${g ? esc(g.nombre) : ''}" placeholder="Ej.: ¿Qué leche?" required></div>
+        <div class="grid grid-2">
+          <div class="form-group"><label>Tipo</label>
+            <select id="grTipo" onchange="Productos.tipoGrupo()">
+              <option value="una" ${!g || g.tipo === 'una' ? 'selected' : ''}>Se elige una (tipo de leche, sabor)</option>
+              <option value="varias" ${g && g.tipo === 'varias' ? 'selected' : ''}>Adicionales (se pueden elegir varios)</option>
+            </select></div>
+          <div class="form-group" id="grUnaOpc"><label class="checkbox-label"><input type="checkbox" id="grObligatorio" ${!g || g.obligatorio ? 'checked' : ''}> Siempre hay que elegir (la primera va por defecto)</label></div>
+          <div class="form-group" id="grVariasOpc"><label>Máximo (0 = sin tope)</label><input type="number" id="grMaximo" min="0" value="${g ? Number(g.maximo) || 0 : 0}"></div>
+        </div>
+        <div class="form-group">
+          <label>Opciones (nombre, recargo y traducciones)</label>
+          <div id="grOpciones">${(g ? g.opciones : [{}]).map(o => this.filaOpcion(o)).join('')}</div>
+          <button type="button" class="btn btn-outline btn-sm mt-10" onclick="document.getElementById('grOpciones').insertAdjacentHTML('beforeend', Productos.filaOpcion())"><i class="fas fa-plus"></i> Agregar opción</button>
+        </div>
+        <div class="form-group">
+          <label>Productos que lo usan</label>
+          <div class="grupo-productos">${porCategoria.map(c => `
+            <div class="grupo-cat">
+              <label class="checkbox-label font-bold"><input type="checkbox" onchange="this.closest('.grupo-cat').querySelectorAll('.grProd').forEach(x => { x.checked = this.checked; })"> ${esc(c.nombre)} (toda)</label>
+              <div class="cierre-dias">${c.productos.map(p => `<label class="checkbox-label"><input type="checkbox" class="grProd" value="${Number(p.id)}" ${elegidos.has(p.id) ? 'checked' : ''}> ${esc(p.nombre)}</label>`).join('')}</div>
+            </div>`).join('')}</div>
+        </div>
+        <div class="grid grid-2">
+          <div class="form-group"><label>Inglés: pregunta</label><input type="text" id="grEn" maxlength="60" value="${esc((t.en && t.en.nombre) || '')}" placeholder="Which milk?"></div>
+          <div class="form-group"><label>Portugués: pregunta</label><input type="text" id="grPt" maxlength="60" value="${esc((t.pt && t.pt.nombre) || '')}" placeholder="Qual leite?"></div>
+        </div>
+        <div class="form-group"><label class="checkbox-label"><input type="checkbox" id="grActivo" ${!g || g.activo ? 'checked' : ''}> Activo</label></div>
+        <div class="modal-footer">
+          ${g ? `<button type="button" class="btn btn-danger" onclick="Productos.borrarGrupo(${Number(g.id)})"><i class="fas fa-trash"></i> Borrar</button>` : ''}
+          <button type="button" class="btn btn-outline" onclick="App.closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-success">Guardar</button>
+        </div>
+      </form>`, { title: g ? `Opciones: ${g.nombre}` : 'Nuevo grupo de opciones', large: true });
+    this.tipoGrupo();
+  },
+
+  tipoGrupo() {
+    const una = document.getElementById('grTipo').value === 'una';
+    document.getElementById('grUnaOpc').style.display = una ? '' : 'none';
+    document.getElementById('grVariasOpc').style.display = una ? 'none' : '';
+  },
+
+  async guardarGrupo(e, id) {
+    e.preventDefault();
+    const opciones = [...document.querySelectorAll('#grOpciones .opcion-fila')].map(f => ({
+      id: Number(f.dataset.id) || undefined,
+      nombre: f.querySelector('.opNombre').value,
+      precio: f.querySelector('.opPrecio').value || 0,
+      traducciones: { en: { nombre: f.querySelector('.opEn').value }, pt: { nombre: f.querySelector('.opPt').value } }
+    }));
+    const data = {
+      nombre: document.getElementById('grNombre').value,
+      tipo: document.getElementById('grTipo').value,
+      obligatorio: document.getElementById('grObligatorio').checked,
+      maximo: Number(document.getElementById('grMaximo').value) || 0,
+      activo: document.getElementById('grActivo').checked ? 1 : 0,
+      opciones,
+      productos: [...document.querySelectorAll('.grProd')].filter(x => x.checked).map(x => Number(x.value)),
+      orden: id ? (this.gruposOpciones.find(x => x.id === id) || {}).orden : this.gruposOpciones.length,
+      traducciones: { en: { nombre: document.getElementById('grEn').value }, pt: { nombre: document.getElementById('grPt').value } }
+    };
+    try {
+      if (id) await API.actualizarGrupoOpciones(id, data);
+      else await API.crearGrupoOpciones(data);
+      App.closeModal();
+      App.showToast('Opciones guardadas', 'success');
+      this.render();
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  async borrarGrupo(id) {
+    if (!confirm('¿Borrar este grupo de opciones? Los pedidos ya hechos no cambian.')) return;
+    try {
+      await API.borrarGrupoOpciones(id);
+      App.closeModal();
+      App.showToast('Grupo borrado', 'success');
+      this.render();
+    } catch (err) { App.showToast(err.message, 'error'); }
   },
 
   // ===== Momentos de la carta (Desayuno, Brunch, Almuerzo, Merienda) =====

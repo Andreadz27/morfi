@@ -100,6 +100,11 @@ const API = {
   getCategorias() { return this.request('GET', '/categorias'); },
   createCategoria(data) { return this.request('POST', '/categorias', data); },
   updateCategoria(id, data) { return this.request('PUT', `/categorias/${id}`, data); },
+  // Opciones y adicionales de los productos ("¿Qué leche?", "Adicionales")
+  getGruposOpciones() { return this.request('GET', '/opciones/grupos'); },
+  crearGrupoOpciones(data) { return this.request('POST', '/opciones/grupos', data); },
+  actualizarGrupoOpciones(id, data) { return this.request('PUT', `/opciones/grupos/${id}`, data); },
+  borrarGrupoOpciones(id) { return this.request('DELETE', `/opciones/grupos/${id}`); },
   // Momentos de la carta (Desayuno, Brunch...)
   getMomentos() { return this.request('GET', '/carta/momentos'); },
   crearMomento(data) { return this.request('POST', '/carta/momentos', data); },

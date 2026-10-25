@@ -411,6 +411,37 @@ async function migrarEsquema() {
   )`);
   await agregarColumna('productos', 'nuevo', 'INTEGER NOT NULL DEFAULT 0');
   await agregarColumna('productos', 'recomendado', 'INTEGER NOT NULL DEFAULT 0');
+
+  // Opciones y adicionales de los productos (servicios/opciones.js): grupos con opciones y precios, asignados a
+  // productos. El ítem del pedido guarda lo elegido (JSON) y el nombre ya lo lleva ("Latte · Leche vegetal").
+  await run(`CREATE TABLE IF NOT EXISTS grupos_opciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL DEFAULT 'una',
+    obligatorio INTEGER NOT NULL DEFAULT 0,
+    maximo INTEGER NOT NULL DEFAULT 0,
+    orden INTEGER NOT NULL DEFAULT 0,
+    activo INTEGER NOT NULL DEFAULT 1,
+    traducciones TEXT DEFAULT NULL,
+    creado_en TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS opciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    grupo_id INTEGER NOT NULL,
+    nombre TEXT NOT NULL,
+    precio REAL NOT NULL DEFAULT 0,
+    orden INTEGER NOT NULL DEFAULT 0,
+    activo INTEGER NOT NULL DEFAULT 1,
+    traducciones TEXT DEFAULT NULL
+  )`);
+  await run('CREATE INDEX IF NOT EXISTS idx_opciones_grupo ON opciones(grupo_id)');
+  await run(`CREATE TABLE IF NOT EXISTS producto_grupos (
+    producto_id INTEGER NOT NULL,
+    grupo_id INTEGER NOT NULL,
+    orden INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (producto_id, grupo_id)
+  )`);
+  await agregarColumna('pedido_items', 'opciones', "TEXT DEFAULT ''");
 }
 
 // ============ Migración segura (lo que usa server.js) ============

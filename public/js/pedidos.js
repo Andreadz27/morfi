@@ -261,7 +261,8 @@ async abrirPedidoDeMesa(mesaId) {
 
   agregarItem(pedidoId) {
     const self = this;
-    API.getProductos().then(productos => {
+    Promise.all([API.getProductos(), Opciones.cargar()]).then(([productos]) => {
+      self._productosItem = productos;
       const options = productos.map(p => `<option value="${p.id}" data-nombre="${esc(p.nombre)}" data-precio="${p.precio_venta}">${esc(p.nombre)} - ${fmtMoneda(p.precio_venta)}</option>`).join('');
       App.showModal(`
         <form onsubmit="Pedidos.guardarItem(event, ${pedidoId})">
@@ -302,6 +303,17 @@ async abrirPedidoDeMesa(mesaId) {
       precio: parseFloat(opt.getAttribute('data-precio')),
       notas: document.getElementById('itemNotas').value
     };
+    // Con opciones ("¿Qué leche?", adicionales) se eligen antes de agregar
+    const prod = (this._productosItem || []).find(p => p.id === data.producto_id);
+    if (prod && Opciones.gruposDe(prod).length) {
+      return Opciones.elegir(prod, async ({ opciones }) => {
+        try {
+          await API.addItemToPedido(pedidoId, { ...data, opciones });
+          App.showToast('Item agregado', 'success');
+          this.verDetalle(pedidoId);
+        } catch (err) { App.showToast(err.message, 'error'); }
+      });
+    }
     try {
       await API.addItemToPedido(pedidoId, data);
       App.closeModal();

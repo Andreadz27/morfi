@@ -401,3 +401,15 @@ body.carta-elegante.letra-grande .mesa-sol,
 body.carta-elegante.letra-grande .form-group label,
 body.carta-elegante.letra-grande .form-group input,
 body.carta-elegante.letra-grande .form-group textarea { font-size: 16px; }
+
+/* ---- Opciones y adicionales al agregar ("¿Qué leche?") ---- */
+.carta-elegante .opciones-elegir { display: flex; flex-direction: column; gap: 16px; padding: 14px 24px 4px; }
+.carta-elegante .opciones-grupo h4 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .1em; color: var(--tinta); }
+.carta-elegante .opciones-grupo h4 small { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--gris); margin-left: 6px; }
+.carta-elegante .opciones-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+.carta-elegante .opcion-chip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; min-height: 42px; cursor: pointer;
+  border: 1.5px solid var(--linea); border-radius: 999px; background: var(--blanco); color: var(--tinta); font-size: 14px; }
+.carta-elegante .opcion-chip:has(input:checked) { border-color: var(--tinta); background: #f3e6d4; font-weight: 700; }
+.carta-elegante .opcion-chip input { accent-color: var(--acento); width: 17px; height: 17px; margin: 0; }
+.carta-elegante .opcion-chip b { color: var(--acento); }
+.carta-elegante .opciones-acciones { padding: 8px 24px 22px; }
