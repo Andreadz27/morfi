@@ -22,7 +22,7 @@ app.post('/api/categorias', autenticar, requiere('catalogo'), async (req, res) =
     const { nombre, descripcion, color, orden, traducciones } = req.body;
     const result = await run(
       'INSERT INTO categorias (nombre, descripcion, color, orden, traducciones) VALUES (?, ?, ?, ?, ?)',
-      [nombre, descripcion || '', color || '#4CAF50', orden || 0, normalizarTraducciones(traducciones, ['nombre'])]
+      [nombre, descripcion || '', color || '#4CAF50', orden || 0, normalizarTraducciones(traducciones)]
     );
     res.status(201).json({ id: result.id, message: 'Categoría creada' });
   } catch (err) {
@@ -33,7 +33,7 @@ app.post('/api/categorias', autenticar, requiere('catalogo'), async (req, res) =
 app.put('/api/categorias/:id', autenticar, requiere('catalogo'), async (req, res) => {
   try {
     const body = { ...(req.body || {}) };
-    if (body.traducciones !== undefined) body.traducciones = normalizarTraducciones(body.traducciones, ['nombre']);
+    if (body.traducciones !== undefined) body.traducciones = normalizarTraducciones(body.traducciones);
     await actualizarParcial('categorias', req.params.id, body, ['nombre', 'descripcion', 'color', 'orden', 'activo', 'traducciones']);
     res.json({ message: 'Categoría actualizada' });
   } catch (err) {

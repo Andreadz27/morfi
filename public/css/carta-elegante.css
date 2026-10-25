@@ -2,20 +2,25 @@
    MORFI - Carta del QR, estilo elegante (pedido.html, body.carta-elegante)
    Como una carta impresa: tinta oscura sobre papel claro, títulos en mayúsculas espaciadas,
    líneas finas y puntos guía entre el plato y el precio. Se carga después de menu.css y pedido.css.
+   Colores tierra: fondo en degradé de beige a arena, texto marrón café y detalles en terracota.
    ============================================= */
 
 .carta-elegante {
-  --tinta: #1f2a37;
-  --tinta-suave: #4b5563;
-  --gris: #6b7280;
-  --linea: #d6d3cd;
-  --papel: #faf8f4;
-  --blanco: #ffffff;
+  --tinta: #4a3326;        /* marrón café */
+  --tinta-suave: #6b4f3c;
+  --gris: #85705f;         /* gris tostado */
+  --linea: #dcc9b0;
+  --papel: #f6eee2;        /* beige */
+  --blanco: #fffaf3;       /* crema */
+  --acento: #a65f37;       /* terracota */
+  --puntos: #c4a98a;
+  --fondo: linear-gradient(180deg, #f8f1e6 0%, #f0e3d0 45%, #e7d4ba 100%);
   --fuente: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 /* body.menu-body (menu.css) pone fondo de colores y otra letra: se pisa con la misma especificidad + 1 */
 body.menu-body.carta-elegante {
-  background: var(--papel);
+  background: var(--fondo) fixed;
+  background-color: var(--papel);
   color: var(--tinta);
   font-family: var(--fuente);
 }
@@ -23,7 +28,7 @@ body.menu-body.carta-elegante::before { display: none; }
 
 /* ---- Encabezado: nombre del local como en la carta impresa ---- */
 .carta-elegante .menu-hero {
-  background: var(--papel);
+  background: linear-gradient(170deg, #f4e6d2 0%, #ead3b4 60%, #dfc29c 100%);
   color: var(--tinta);
   padding: 36px 16px 8px;
 }
@@ -90,7 +95,7 @@ body.menu-body.carta-elegante::before { display: none; }
 .carta-elegante .selector-idioma button.activo {
   background: transparent;
   color: var(--tinta);
-  border-bottom-color: var(--tinta);
+  border-bottom-color: var(--acento);
 }
 .carta-elegante .selector-idioma button:focus-visible { outline: 2px solid var(--tinta); outline-offset: 3px; }
 
@@ -123,11 +128,11 @@ body.menu-body.carta-elegante::before { display: none; }
 .carta-elegante .mobile-cat-btn.active {
   background: transparent;
   color: var(--tinta);
-  border-bottom-color: var(--tinta);
+  border-bottom-color: var(--acento);
   box-shadow: none;
 }
 .carta-elegante .mobile-cat-nav {
-  background: var(--papel);
+  background: rgba(236, 222, 200, .97);
   border-top: 1px solid var(--linea);
   padding-top: 4px;
 }
@@ -178,7 +183,7 @@ body.menu-body.carta-elegante::before { display: none; }
   flex: 1;
   min-width: 18px;
   margin: 0 8px;
-  border-bottom: 2px dotted #b8b3aa;
+  border-bottom: 2px dotted var(--puntos);
   transform: translateY(-4px);
 }
 .carta-elegante .menu-item-precio {
@@ -219,7 +224,7 @@ body.menu-body.carta-elegante::before { display: none; }
   text-transform: uppercase;
   letter-spacing: .14em;
 }
-.carta-elegante .btn-agregar:hover { background: var(--tinta); color: var(--blanco); }
+.carta-elegante .btn-agregar:hover { background: var(--acento); border-color: var(--acento); color: var(--blanco); }
 .carta-elegante .btn-qty { border-radius: 50%; }
 .carta-elegante .btn-qty-minus,
 .carta-elegante .btn-qty-plus {
@@ -242,7 +247,7 @@ body.menu-body.carta-elegante::before { display: none; }
   font-size: 13px;
 }
 .carta-elegante .btn-primary:hover,
-.carta-elegante .btn-success:hover { background: #111827; border-color: #111827; }
+.carta-elegante .btn-success:hover { background: var(--acento); border-color: var(--acento); }
 .carta-elegante .btn-outline {
   background: transparent;
   color: var(--tinta);
@@ -268,7 +273,7 @@ body.menu-body.carta-elegante::before { display: none; }
 .carta-elegante .resumen-total strong { color: var(--tinta); }
 .carta-elegante .carrito-flotante {
   background: var(--tinta);
-  box-shadow: 0 6px 20px rgba(31, 42, 55, .35);
+  box-shadow: 0 6px 20px rgba(74, 51, 38, .35);
 }
 .carta-elegante .carrito-flotante-count {
   background: var(--blanco);
@@ -280,8 +285,8 @@ body.menu-body.carta-elegante::before { display: none; }
 .carta-elegante .pedido-form-modal { border-radius: 6px; }
 .carta-elegante .pedido-form-header h3 { text-transform: uppercase; letter-spacing: .12em; font-size: .95rem; }
 .carta-elegante .form-group input:focus,
-.carta-elegante .form-group textarea:focus { border-color: var(--tinta); box-shadow: 0 0 0 3px rgba(31, 42, 55, .12); }
-.carta-elegante .tipo-opcion:has(input:checked) { border-color: var(--tinta); background: #f3f1ec; color: var(--tinta); }
+.carta-elegante .form-group textarea:focus { border-color: var(--tinta); box-shadow: 0 0 0 3px rgba(166, 95, 55, .18); }
+.carta-elegante .tipo-opcion:has(input:checked) { border-color: var(--tinta); background: #f3e6d4; color: var(--tinta); }
 .carta-elegante .form-resumen { background: var(--papel); border-color: var(--linea); border-radius: 4px; }
 
 .carta-elegante .mesa-panel { max-width: 760px; }
@@ -293,7 +298,7 @@ body.menu-body.carta-elegante::before { display: none; }
 }
 .carta-elegante .mesa-seguimiento h4 { text-transform: uppercase; letter-spacing: .14em; font-size: .8rem; color: var(--tinta); }
 .carta-elegante .mesa-cuenta-total { border-top-color: var(--tinta); }
-.carta-elegante .mesa-aviso { background: #eef2ea; color: #2f4a2a; border-radius: 4px; }
+.carta-elegante .mesa-aviso { background: #efe3c9; color: #5a3d1e; border-radius: 4px; }
 .carta-elegante .pago-chip.activo { background: var(--tinta); border-color: var(--tinta); }
 .carta-elegante .pago-seccion h4 { text-transform: uppercase; letter-spacing: .12em; font-size: .8rem; }
 
@@ -307,3 +312,20 @@ body.menu-body.carta-elegante::before { display: none; }
 @media (min-width: 769px) {
   .carta-elegante .pedido-carta { max-width: 720px; }
 }
+
+/* Nota de la categoría (como el recuadro de la carta impresa: opciones de leche, horarios de las promos) */
+.carta-elegante .carta-nota {
+  margin: 12px 0 4px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--tinta);
+  border-radius: 2px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tinta-suave);
+  background: rgba(255, 250, 243, .55);
+  white-space: pre-line;
+}
+
+/* Sin carrito (carta solo para ver, ?ver=1): la carta va centrada */
+.carta-elegante .pedido-layout { justify-content: center; }

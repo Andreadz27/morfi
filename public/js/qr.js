@@ -21,10 +21,10 @@ const QRView = {
     try {
       const info = await fetch('/api/publico/info').then(r => r.json()).catch(() => ({}));
       const links = (info && info.links) || {};
-      this._qrUrl = links.carta || (this._base + '/menu.html');
+      this._qrUrl = links.carta || (this._base + '/pedido.html?ver=1');
       this._paint(view, info || {});
     } catch (err) {
-      this._qrUrl = this._base + '/menu.html';
+      this._qrUrl = this._base + '/pedido.html?ver=1';
       this._paint(view, {});
     }
   },
@@ -219,7 +219,7 @@ const QRView = {
   _generarQR() {
     const cont = document.getElementById('qrCanvas');
     if (!cont) return;
-    const url  = this._qrUrl || (window.location.origin + '/menu.html');
+    const url  = this._qrUrl || (window.location.origin + '/pedido.html?ver=1');
     const size = parseInt((document.getElementById('qrSizeSelect') || {}).value || '220');
     this._qrApiUrl = urlQr(url); // generado por el sistema: funciona sin internet
     cont.innerHTML = '<img id="qrImg" src="' + this._qrApiUrl + '" width="' + size +

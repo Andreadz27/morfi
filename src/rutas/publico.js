@@ -23,7 +23,7 @@ app.get('/api/publico/qr.svg', async (req, res) => {
 app.get('/api/publico/menu', async (req, res) => {
   try {
     const categorias = await all(`
-      SELECT c.id, c.nombre, c.traducciones FROM categorias c
+      SELECT c.id, c.nombre, c.descripcion, c.traducciones FROM categorias c
       WHERE c.activo = 1 AND EXISTS (SELECT 1 FROM productos p WHERE p.categoria_id = c.id AND p.activo = 1)
       ORDER BY c.orden, c.nombre
     `);
@@ -62,7 +62,7 @@ app.get('/api/publico/info', async (req, res) => {
         whatsapp:  `${nube}/pedido.html?origen=whatsapp`,
         instagram: `${nube}/pedido.html?origen=instagram`
       } : base ? {
-        carta:     `${base}/menu.html`,
+        carta:     `${base}/pedido.html?ver=1`,
         whatsapp:  `${base}/pedido.html?origen=whatsapp`,
         instagram: `${base}/pedido.html?origen=instagram`
       } : {}

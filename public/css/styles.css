@@ -2314,3 +2314,7 @@ tr:hover td {
 .prod-grupo .card-title { display: inline-flex; align-items: center; gap: 8px; }
 .prod-desc { display: block; max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .prod-acciones { white-space: nowrap; }
+
+/* Nota de la categoría en el punto de venta y en Productos (la misma que se ve en la carta) */
+.pos-nota-categoria, .prod-nota-categoria { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
+  background: #fff8ec; border: 1px solid #f3dcb5; color: #7a5236; }
