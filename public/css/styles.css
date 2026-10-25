@@ -2314,3 +2314,13 @@ tr:hover td {
 .prod-grupo .card-title { display: inline-flex; align-items: center; gap: 8px; }
 .prod-desc { display: block; max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .prod-acciones { white-space: nowrap; }
+
+/* Cierre del día (js/caja.js) */
+.cierre-dia .grid-2 { align-items: start; }
+.cierre-dia .grid-4 { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.cierre-bloque { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.cierre-bloque h4 { margin: 0 0 8px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.cierre-bloque table td { padding: 5px 4px; font-size: 13px; }
+.cierre-dias { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.caja-sin-contar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.caja-sin-contar > div { flex: 1; min-width: 220px; }

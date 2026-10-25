@@ -371,6 +371,25 @@ async function migrarEsquema() {
 
   // Posición del producto en la carta (como la impresa); 0 = sin posición, va por nombre (util.js, ORDEN_CARTA)
   await agregarColumna('productos', 'orden', 'INTEGER NOT NULL DEFAULT 0');
+
+  // Cierre del día (servicios/cierre-dia.js): automático a la hora elegida los días que abre el local.
+  // Si la caja sigue abierta se cierra "pendiente de arqueo" y el encargado carga después lo contado.
+  await agregarColumna('configuracion', 'cierre_auto_activo', 'INTEGER DEFAULT 0');
+  await agregarColumna('configuracion', 'cierre_hora', "TEXT DEFAULT '22:00'");
+  await agregarColumna('configuracion', 'cierre_dias', "TEXT DEFAULT '0,1,2,3,4,5,6'");
+  await agregarColumna('configuracion', 'cierre_propinas_usuarios', "TEXT DEFAULT ''");
+  await agregarColumna('caja', 'pendiente_arqueo', 'INTEGER NOT NULL DEFAULT 0');
+  await agregarColumna('caja', 'arqueo_por', 'INTEGER');
+  await agregarColumna('caja', 'arqueo_en', 'TEXT');
+  await run(`CREATE TABLE IF NOT EXISTS cierres_dia (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT NOT NULL UNIQUE,
+    automatico INTEGER NOT NULL DEFAULT 0,
+    usuario_id INTEGER,
+    resumen TEXT NOT NULL,
+    creado_en TEXT DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TEXT
+  )`);
 }
 
 // ============ Migración segura (lo que usa server.js) ============
