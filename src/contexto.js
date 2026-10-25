@@ -12,6 +12,7 @@ module.exports = {
   ...require('./db'),
   ...require('./tiempo'),
   ...require('./util'),
+  ...require('./traducciones'),
   ...require('./auth'),
   ...require('./permisos'),
   ...require('./licencia'),

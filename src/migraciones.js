@@ -364,6 +364,10 @@ async function migrarEsquema() {
 
   // Cuenta dividida por plato: cuánto de cada ítem ya pagó alguien (servicios/pedidos.js, marcarItemsPagadosTx)
   await agregarColumna('pedido_items', 'cantidad_pagada', 'REAL NOT NULL DEFAULT 0');
+
+  // Carta en inglés y portugués (src/traducciones.js): JSON { en: { nombre, descripcion }, pt: {...} }
+  await agregarColumna('productos', 'traducciones', 'TEXT DEFAULT NULL');
+  await agregarColumna('categorias', 'traducciones', 'TEXT DEFAULT NULL');
 }
 
 // ============ Migración segura (lo que usa server.js) ============

@@ -1,6 +1,7 @@
 'use strict';
 const {
-  run, get, all, errorHttp, actualizarParcial, errorInterno, autenticar, requiere, transaccion, obtenerReceta, guardarRecetaTx, recalcularCostosConIngrediente, costoReceta
+  run, get, all, errorHttp, actualizarParcial, errorInterno, autenticar, requiere, transaccion, obtenerReceta, guardarRecetaTx, recalcularCostosConIngrediente, costoReceta,
+  normalizarTraducciones
 } = require('../contexto');
 
 module.exports = function registrarRutas(app) {
@@ -18,10 +19,10 @@ app.get('/api/categorias', autenticar, async (req, res) => {
 
 app.post('/api/categorias', autenticar, requiere('catalogo'), async (req, res) => {
   try {
-    const { nombre, descripcion, color, orden } = req.body;
+    const { nombre, descripcion, color, orden, traducciones } = req.body;
     const result = await run(
-      'INSERT INTO categorias (nombre, descripcion, color, orden) VALUES (?, ?, ?, ?)',
-      [nombre, descripcion || '', color || '#4CAF50', orden || 0]
+      'INSERT INTO categorias (nombre, descripcion, color, orden, traducciones) VALUES (?, ?, ?, ?, ?)',
+      [nombre, descripcion || '', color || '#4CAF50', orden || 0, normalizarTraducciones(traducciones, ['nombre'])]
     );
     res.status(201).json({ id: result.id, message: 'Categoría creada' });
   } catch (err) {
@@ -31,7 +32,9 @@ app.post('/api/categorias', autenticar, requiere('catalogo'), async (req, res) =
 
 app.put('/api/categorias/:id', autenticar, requiere('catalogo'), async (req, res) => {
   try {
-    await actualizarParcial('categorias', req.params.id, req.body || {}, ['nombre', 'descripcion', 'color', 'orden', 'activo']);
+    const body = { ...(req.body || {}) };
+    if (body.traducciones !== undefined) body.traducciones = normalizarTraducciones(body.traducciones, ['nombre']);
+    await actualizarParcial('categorias', req.params.id, body, ['nombre', 'descripcion', 'color', 'orden', 'activo', 'traducciones']);
     res.json({ message: 'Categoría actualizada' });
   } catch (err) {
     errorInterno(res, err);
@@ -101,7 +104,9 @@ async function datosProducto(body, actual = {}) {
     stock_actual: Number(valor('stock_actual', 0)) || 0, // puede quedar negativo por ventas
     stock_minimo: numero('stock_minimo', 0),
     unidad: String(valor('unidad', 'unidad') || 'unidad'),
-    activo: bandera('activo', 1)
+    activo: bandera('activo', 1),
+    // Sin "traducciones" en el body, la edición conserva las que tenía
+    traducciones: body.traducciones !== undefined ? normalizarTraducciones(body.traducciones) : (actual.traducciones || null)
   };
 }
 
@@ -109,9 +114,9 @@ app.post('/api/productos', autenticar, requiere('catalogo'), async (req, res) =>
   try {
     const p = await datosProducto(req.body || {});
     const result = await run(
-      `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo]
+      `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo, traducciones)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones]
     );
     res.status(201).json({ id: result.id, message: 'Producto creado' });
   } catch (err) {
@@ -131,9 +136,9 @@ app.put('/api/productos/:id', autenticar, requiere('catalogo'), async (req, res)
       await run(
         `UPDATE productos SET
          nombre = ?, descripcion = ?, categoria_id = ?, precio_venta = ?, costo = ?,
-         es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?
+         es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?, traducciones = ?
          WHERE id = ?`,
-        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, actual.id]
+        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, actual.id]
       );
       // Si es ingrediente y cambió su costo, se actualiza el costo de los platos que lo usan
       if (Number(p.costo) !== Number(actual.costo)) await recalcularCostosConIngrediente(actual.id);

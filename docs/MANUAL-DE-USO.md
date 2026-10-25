@@ -112,6 +112,10 @@ ver cuánto debería haber, y la diferencia la ve el encargado. Los cierres ante
 ### Carta y precios
 - **Productos**: alta de productos, precios y categorías. Lo que se cambia acá se ve al instante en el
   sistema, en la carta QR y en la carta online.
+- **Carta en inglés y portugués**: al editar un producto o crear una categoría, abrir **Carta QR en otros idiomas**
+  y escribir el nombre (y la descripción) en inglés y portugués. En la carta del QR aparecen los botones
+  **ES / EN / PT**; si el celular del cliente está en inglés o portugués, la carta abre en ese idioma. Lo que se deja
+  vacío se ve en español. Cocina, caja y tickets siguen siempre en español.
 - **Menú QR / Display**: el QR de la carta (para las mesas o la vidriera), **QR de cada mesa: pedir desde la mesa**,
   **Imprimir QR de las mesas** y los **Links para compartir** en WhatsApp e Instagram.
 
