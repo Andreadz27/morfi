@@ -1,10 +1,13 @@
-// Graba un video del recorrido por el sistema (con subtítulos) y toma capturas de cada pantalla.
+// Graba un video del recorrido por el sistema (con subtítulos y voz) y toma capturas de cada pantalla.
 // Usa un navegador real (Edge o Chrome instalado) sobre un entorno de demo nuevo.
+// Voz: cada subtítulo se lee con edge-tts (pip install edge-tts; voz GM_DEMO_VOZ, por defecto es-AR-ElenaNeural)
+// y se mezcla en el MP4. Sin edge-tts (o con --sin-voz) el video sale mudo, como antes.
 //
 // Uso: npm run demo:video
-// Salida: demo/salida/recorrido.webm y demo/salida/capturas/*.png
+// Salida: demo/salida/recorrido.webm (mudo), recorrido.mp4 (con voz) y demo/salida/capturas/*.png
 'use strict';
-const { spawn, execFileSync } = require('child_process');
+const { spawn, execFileSync, spawnSync } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const net = require('net');
 const path = require('path');
@@ -88,6 +91,25 @@ function buscarFfmpeg() {
   return null;
 }
 
+// edge-tts: variable EDGE_TTS o en el PATH
+function buscarEdgeTts() {
+  if (process.argv.includes('--sin-voz')) return null;
+  for (const c of [process.env.EDGE_TTS, 'edge-tts'].filter(Boolean)) {
+    if (spawnSync(c, ['--help'], { stdio: 'ignore' }).status === 0) return c;
+  }
+  return null;
+}
+const VOZ = process.env.GM_DEMO_VOZ || 'es-AR-ElenaNeural';
+// Las frases ya leídas se guardan: volver a grabar no las pide de nuevo
+const CACHE_VOZ = path.join(SALIDA, '.voz');
+
+// Duración de un audio en ms (de la línea "Duration:" de ffmpeg)
+function duracionMs(ffmpeg, archivo) {
+  const salida = spawnSync(ffmpeg, ['-hide_banner', '-i', archivo], { encoding: 'utf8' }).stderr;
+  const m = /Duration: (\d+):(\d+):([\d.]+)/.exec(salida);
+  return m ? Math.round(((+m[1] * 60 + +m[2]) * 60 + +m[3]) * 1000) : 0;
+}
+
 const puertoLibre = () => new Promise((ok, mal) => {
   const s = net.createServer();
   s.listen(0, () => { const { port } = s.address(); s.close(() => ok(port)); });
@@ -100,6 +122,10 @@ const puertoLibre = () => new Promise((ok, mal) => {
   fs.rmSync(CAPTURAS, { recursive: true, force: true });
   fs.rmSync(DATOS, { recursive: true, force: true });
   fs.mkdirSync(CAPTURAS, { recursive: true });
+  const ffmpeg = buscarFfmpeg();
+  const edgeTts = ffmpeg && buscarEdgeTts();
+  if (!edgeTts) console.log('   (sin edge-tts o sin ffmpeg: el video sale sin voz)');
+  fs.mkdirSync(CACHE_VOZ, { recursive: true });
   console.log('1/3 Generando datos de la demo...');
   execFileSync(process.execPath, [path.join(__dirname, 'generar-datos.js'), DATOS], { stdio: 'ignore' });
 
@@ -123,12 +149,46 @@ const puertoLibre = () => new Promise((ok, mal) => {
   const capitulos = [];
   const capitulo = titulo => capitulos.push({ segundo: Math.max(0, Math.round((Date.now() - inicioVideo) / 1000) - 1), titulo });
 
+  // ---------- Voz ----------
+  // Cada frase arranca cuando aparece su subtítulo; la siguiente espera a que termine la anterior.
+  const voces = []; // { archivo, ms } ms = desde el inicio del video
+  let finVoz = 0;
+  const callarse = async () => { const falta = finVoz - Date.now(); if (falta > 0) await esperar(falta); };
+  // Prepara el audio (antes de mostrar el subtítulo) y devuelve la función que lo larga
+  const prepararVoz = texto => {
+    if (!edgeTts) return () => 0;
+    const archivo = path.join(CACHE_VOZ, crypto.createHash('sha1').update(VOZ + '|' + texto).digest('hex').slice(0, 16) + '.mp3');
+    // edge-tts usa un servicio en línea: si se corta (o quedó un audio a medias de otra vez), se pide de nuevo
+    let dur = fs.existsSync(archivo) ? duracionMs(ffmpeg, archivo) : 0;
+    for (let i = 1; !dur; i++) {
+      fs.rmSync(archivo, { force: true });
+      try {
+        execFileSync(edgeTts, ['--voice', VOZ, '--rate=+5%', '--text', texto, '--write-media', archivo], { stdio: 'ignore' });
+        dur = duracionMs(ffmpeg, archivo);
+      } catch (e) {
+        if (i === 4) throw e;
+      }
+      if (!dur && i === 4) throw new Error(`edge-tts no generó el audio de: ${texto}`);
+    }
+    return () => { voces.push({ archivo, ms: Date.now() - inicioVideo }); finVoz = Date.now() + dur + 350; return dur + 350; };
+  };
+
   // ---------- Helpers de la puesta en escena ----------
+  // ms: cuánto se queda quieta la escena; la voz sigue mientras pasan las acciones de después
   const rotulo = async (titulo, texto, ms = 3800) => {
+    await callarse();
+    const hablar = prepararVoz(`${titulo}. ${texto}`);
     await page.evaluate(([t, x]) => window.__gm.rotulo(t, x), [titulo, texto]);
+    hablar();
     await esperar(ms);
   };
-  const sinRotulo = () => page.evaluate(() => window.__gm.ocultarRotulo());
+  // El subtítulo no se va mientras se lo está leyendo
+  const sinRotulo = async () => { await callarse(); await page.evaluate(() => window.__gm.ocultarRotulo()); };
+  const placa = async (titulo, texto, chips, ms) => {
+    const hablar = prepararVoz(`${titulo}. ${texto}`);
+    await page.evaluate(([t, x, c]) => window.__gm.placa(t, x, c), [titulo, texto, chips]);
+    await esperar(Math.max(ms, hablar()));
+  };
   const captura = async nombre => {
     await page.evaluate(() => window.__gm.ocultarTodo(true));
     await page.screenshot({ path: path.join(CAPTURAS, `${nombre}.png`) });
@@ -166,9 +226,8 @@ const puertoLibre = () => new Promise((ok, mal) => {
 
   // ---------- Recorrido ----------
   await page.goto(base + '/');
-  await page.evaluate(() => window.__gm.placa('Morfi', 'El sistema de gestión para restaurantes, bares y cafeterías',
-    ['Punto de venta', 'Mesas y comandas', 'Delivery', 'Caja y arqueo', 'Contabilidad', 'Facturación AFIP']));
-  await esperar(4200);
+  await placa('Morfi', 'El sistema de gestión para restaurantes, bares y cafeterías',
+    ['Punto de venta', 'Mesas y comandas', 'Delivery', 'Caja y arqueo', 'Contabilidad', 'Facturación ARCA'], 4200);
   await page.evaluate(() => window.__gm.ocultarPlaca());
   await esperar(700);
   await captura('01-ingreso');
@@ -238,14 +297,20 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await clic(`button[onclick="Pedidos.abrirPedidoDeMesa('3')"]`, 1400);
   await rotulo('Cobrar es igual de simple', 'Efectivo, tarjeta, Mercado Pago o transferencia, con el vuelto calculado.', 1800);
   await captura('06-detalle-pedido');
-  await clic('button[onclick^="Pedidos.mostrarPagar("]', 1000);
-  const total = Number(await page.inputValue('#pagoMonto'));
-  await page.selectOption('#pagoMetodo', 'efectivo');
-  await clic('#pagoMonto', 200);
-  await page.fill('#pagoMonto', '');
-  await page.type('#pagoMonto', String(Math.ceil((total + 1) / 10000) * 10000), { delay: 90 });
-  await esperar(700);
-  await clic('#modalContainer form[onsubmit^="Pedidos.confirmarPago"] button[type=submit]', 2600);
+  await clic('button[onclick^="Cobro.abrir("]', 1200);
+  await rotulo('Propina y cuenta dividida', 'Sumás la propina con un toque y dividís la cuenta en partes iguales o por plato.', 1200);
+  await clic('#cobroCuerpo .cobro-chips button:has-text("10%")', 900);
+  await clic('#cobroCuerpo button[aria-label="Más personas"]', 600);
+  await clic('#cobroCuerpo button[aria-label="Más personas"]', 1600);
+  await captura('06b-cobro');
+  await clic('#cobroCuerpo button[aria-label="Menos personas"]', 500);
+  await clic('#cobroCuerpo button[aria-label="Menos personas"]', 900);
+  const total = Number(await page.inputValue('#cobroCuerpo input[aria-label="Monto"]'));
+  await clic('#cobroCuerpo input[aria-label="Efectivo recibido"]', 200);
+  await page.keyboard.type(String(Math.ceil((total + 1) / 10000) * 10000), { delay: 90 });
+  await esperar(1200);
+  await clic('#cobroBtn', 2600);
+  await page.evaluate(() => App.closeModal());
 
   // 7. Delivery
   capitulo("Delivery y apps");
@@ -328,9 +393,9 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await esperar(900);
 
   // Cierre
-  await page.evaluate(() => { window.__gm.ocultarRotulo(); window.__gm.placa('Morfi', 'Todo tu restaurante en un solo sistema. Sin instalaciones complicadas.',
-    ['Pedidos', 'Cocina', 'Delivery', 'Caja', 'Contabilidad', 'Stock', 'Reportes', 'AFIP']); });
-  await esperar(4500);
+  await sinRotulo();
+  await placa('Morfi', 'Todo tu restaurante en un solo sistema. Sin instalaciones complicadas.',
+    ['Pedidos', 'Cocina', 'Delivery', 'Caja', 'Contabilidad', 'Stock', 'Reportes', 'ARCA'], 4500);
 
   fs.writeFileSync(path.join(SALIDA, 'capitulos.json'), JSON.stringify(capitulos, null, 2));
 
@@ -360,16 +425,22 @@ const puertoLibre = () => new Promise((ok, mal) => {
   fs.rmSync(DATOS, { recursive: true, force: true });
 
   // MP4 (H.264): se ve en cualquier celular y se puede mandar por WhatsApp. Requiere ffmpeg.
-  const ffmpeg = buscarFfmpeg();
   if (ffmpeg) {
     const webm = path.join(SALIDA, 'recorrido.webm');
-    execFileSync(ffmpeg, ['-v', 'error', '-y', '-i', webm, '-c:v', 'libx264', '-preset', 'slow', '-crf', '26',
-      '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', path.join(SALIDA, 'recorrido.mp4')]);
+    // Cada frase entra en su momento (adelay) y se suman todas en una sola pista
+    const audio = voces.length ? [
+      ...voces.flatMap(v => ['-i', v.archivo]),
+      '-filter_complex', voces.map((v, i) => `[${i + 1}:a]adelay=${v.ms}:all=1[v${i}]`).join(';') + ';' +
+        voces.map((v, i) => `[v${i}]`).join('') + `amix=inputs=${voces.length}:normalize=0:duration=longest[voz]`,
+      '-map', '0:v', '-map', '[voz]', '-c:a', 'aac', '-b:a', '128k', '-shortest'
+    ] : ['-an'];
+    execFileSync(ffmpeg, ['-v', 'error', '-y', '-i', webm, ...audio, '-c:v', 'libx264', '-preset', 'slow', '-crf', '26',
+      '-pix_fmt', 'yuv420p', '-movflags', '+faststart', path.join(SALIDA, 'recorrido.mp4')]);
     execFileSync(ffmpeg, ['-v', 'error', '-y', '-ss', '2', '-i', webm, '-frames:v', '1', '-q:v', '3', path.join(SALIDA, 'portada.jpg')]);
   } else {
     console.log('   (sin ffmpeg: solo se generó el video .webm)');
   }
   const mb = f => (fs.statSync(path.join(SALIDA, f)).size / 1048576).toFixed(1) + ' MB';
   console.log(`3/3 Listo en demo/salida: recorrido.webm (${mb('recorrido.webm')})` +
-    (ffmpeg ? `, recorrido.mp4 (${mb('recorrido.mp4')}), portada.jpg` : '') + ` y ${fs.readdirSync(CAPTURAS).length} capturas`);
+    (ffmpeg ? `, recorrido.mp4 (${mb('recorrido.mp4')}${voces.length ? `, ${voces.length} frases con voz` : ''}), portada.jpg` : '') + ` y ${fs.readdirSync(CAPTURAS).length} capturas`);
 })().catch(e => { console.error('Error grabando la demo:', e); process.exit(1); });
