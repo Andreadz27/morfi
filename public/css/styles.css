@@ -2302,3 +2302,15 @@ tr:hover td {
   gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 10px; background: #fef3c7; color: #78350f;
   border: 1px solid #f59e0b; box-shadow: 0 6px 20px rgba(0,0,0,.15); font-size: .9rem; }
 @media (min-width: 900px) { .cola-pedidos { left: auto; right: 20px; bottom: 20px; max-width: 460px; } }
+
+/* Productos agrupados por categoría (js/productos.js) */
+.prod-buscador { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--white); }
+.prod-buscador i { color: var(--text-light); }
+.prod-buscador input { flex: 1; border: 0; outline: 0; font-size: 15px; background: transparent; min-width: 0; }
+.prod-cat-punto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  background: var(--cat-color, #64748b); }
+.prod-grupo { border-left: 5px solid var(--cat-color, #64748b); }
+.prod-grupo .card-title { display: inline-flex; align-items: center; gap: 8px; }
+.prod-desc { display: block; max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prod-acciones { white-space: nowrap; }
