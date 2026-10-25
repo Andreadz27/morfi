@@ -1,7 +1,7 @@
 'use strict';
 const {
   rateLimit, urlPublica, urlCartaNube, get, all, errorInterno, crearPedidoOnline, mesaPorToken, estadoMesa, solicitarPedidoMesa, llamarMozo,
-  iniciarPagoMesa, verificarPagoMesa, pedirComprobanteMesa, leerTraducciones
+  iniciarPagoMesa, verificarPagoMesa, pedirComprobanteMesa, leerTraducciones, ORDEN_CARTA
 } = require('../contexto');
 const QRCode = require('qrcode');
 
@@ -32,7 +32,7 @@ app.get('/api/publico/menu', async (req, res) => {
              p.tracking_stock, p.stock_actual, p.es_plato, p.traducciones
       FROM productos p
       WHERE p.activo = 1
-      ORDER BY p.nombre ASC
+      ORDER BY ${ORDEN_CARTA}
     `);
     // Traducciones de la carta (inglés y portugués): el navegador elige el idioma
     for (const x of [...categorias, ...productos]) x.traducciones = leerTraducciones(x.traducciones);

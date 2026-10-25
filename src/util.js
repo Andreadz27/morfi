@@ -5,6 +5,10 @@ const { run } = require('./db');
 // Error de validación con código HTTP (se responde tal cual y revierte la transacción)
 const errorHttp = (status, mensaje) => Object.assign(new Error(mensaje), { status });
 
+// Orden de los productos dentro de su categoría (tabla con alias p): primero los que tienen posición en la carta
+// (orden > 0, como en la carta impresa), después los demás por nombre. Sin posiciones cargadas: alfabético.
+const ORDEN_CARTA = 'CASE WHEN p.orden > 0 THEN 0 ELSE 1 END, p.orden, p.nombre';
+
 // UPDATE parcial: solo modifica los campos que vienen en el body (lista blanca "campos").
 // Antes los PUT asignaban NULL a lo que el formulario no enviaba; por ejemplo, editar un
 // proveedor lo dejaba con activo = NULL y desaparecía de la lista.
@@ -50,4 +54,4 @@ function errorInterno(res, err) {
   res.status(500).json({ error: 'Error interno del servidor' });
 }
 
-module.exports = { errorHttp, actualizarParcial, slugificar, parseCfgPlataforma, errorInterno };
+module.exports = { errorHttp, ORDEN_CARTA, actualizarParcial, slugificar, parseCfgPlataforma, errorInterno };

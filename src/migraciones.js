@@ -368,6 +368,9 @@ async function migrarEsquema() {
   // Carta en inglés y portugués (src/traducciones.js): JSON { en: { nombre, descripcion }, pt: {...} }
   await agregarColumna('productos', 'traducciones', 'TEXT DEFAULT NULL');
   await agregarColumna('categorias', 'traducciones', 'TEXT DEFAULT NULL');
+
+  // Posición del producto en la carta (como la impresa); 0 = sin posición, va por nombre (util.js, ORDEN_CARTA)
+  await agregarColumna('productos', 'orden', 'INTEGER NOT NULL DEFAULT 0');
 }
 
 // ============ Migración segura (lo que usa server.js) ============

@@ -152,6 +152,11 @@ nuevo() {
             </select>
           </div>
         </div>
+        <div class="form-group">
+          <label>Orden en la carta</label>
+          <input type="number" id="prodOrden" min="0" step="1" value="${p && p.orden ? p.orden : ''}" placeholder="Ej: 1 = primero de su categoría">
+          <small class="form-hint">Posición dentro de su categoría, como en la carta impresa. Vacío: va después, por nombre.</small>
+        </div>
         <div class="grid grid-2">
           <div class="form-group">
             <label>Precio de venta ($)</label>
@@ -207,6 +212,7 @@ async guardar(e, id) {
       unidad: document.getElementById('prodUnidad').value,
       stock_minimo: parseInt(document.getElementById('prodStockMin').value || 0),
       tracking_stock: document.getElementById('prodTracking').checked ? 1 : 0,
+      orden: parseInt(document.getElementById('prodOrden').value || 0),
       traducciones: this.leerTraducciones('prod', true)
     };
     if (data.tracking_stock && !id) {
