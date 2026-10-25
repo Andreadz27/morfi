@@ -1,7 +1,7 @@
 'use strict';
 const {
   run, get, all, errorHttp, actualizarParcial, errorInterno, autenticar, requiere, transaccion, obtenerReceta, guardarRecetaTx, recalcularCostosConIngrediente, costoReceta,
-  normalizarTraducciones
+  normalizarTraducciones, ORDEN_CARTA
 } = require('../contexto');
 
 module.exports = function registrarRutas(app) {
@@ -60,7 +60,7 @@ app.get('/api/productos', autenticar, async (req, res) => {
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
       WHERE p.activo = 1
-      ORDER BY c.orden, p.nombre
+      ORDER BY c.orden, ${ORDEN_CARTA}
     `);
     res.json(productos);
   } catch (err) {
@@ -105,6 +105,7 @@ async function datosProducto(body, actual = {}) {
     stock_minimo: numero('stock_minimo', 0),
     unidad: String(valor('unidad', 'unidad') || 'unidad'),
     activo: bandera('activo', 1),
+    orden: Math.trunc(numero('orden', 0)),
     // Sin "traducciones" en el body, la edición conserva las que tenía
     traducciones: body.traducciones !== undefined ? normalizarTraducciones(body.traducciones) : (actual.traducciones || null)
   };
@@ -114,9 +115,9 @@ app.post('/api/productos', autenticar, requiere('catalogo'), async (req, res) =>
   try {
     const p = await datosProducto(req.body || {});
     const result = await run(
-      `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo, traducciones)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones]
+      `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo, traducciones, orden)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden]
     );
     res.status(201).json({ id: result.id, message: 'Producto creado' });
   } catch (err) {
@@ -136,9 +137,9 @@ app.put('/api/productos/:id', autenticar, requiere('catalogo'), async (req, res)
       await run(
         `UPDATE productos SET
          nombre = ?, descripcion = ?, categoria_id = ?, precio_venta = ?, costo = ?,
-         es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?, traducciones = ?
+         es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?, traducciones = ?, orden = ?
          WHERE id = ?`,
-        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, actual.id]
+        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, actual.id]
       );
       // Si es ingrediente y cambió su costo, se actualiza el costo de los platos que lo usan
       if (Number(p.costo) !== Number(actual.costo)) await recalcularCostosConIngrediente(actual.id);
