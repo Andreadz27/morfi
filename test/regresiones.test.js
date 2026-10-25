@@ -80,6 +80,31 @@ const mesaLibre = async () => {
   return r[0].id;
 };
 
+// Un pedido de mostrador cobrado en el momento desaparecía de cocina antes de que lo prepararan
+// (una mesa cobrada sí sale de cocina, como siempre: lo prueba flujos.test.js)
+test('cocina: un pedido de mostrador cobrado sigue en la pantalla hasta que cocina lo marca listo', async () => {
+  const prod = await productoA();
+  const [, p] = await s.llamar('POST', '/api/pedidos', { tipo: 'mostrador', items: [{ producto_id: prod, cantidad: 1 }] }, s.tokenAdmin);
+  const enCocina = async ruta => (await s.llamar('GET', ruta, undefined, s.tokenAdmin))[1].some(c => c.id === p.id);
+  const [st, cobro] = await s.llamar('POST', `/api/pedidos/${p.id}/cobro`, { pagos: [{ metodo: 'efectivo', monto: p.total }] }, s.tokenAdmin);
+  assert.equal(st, 200);
+  assert.equal(cobro.cerrado, true);
+  assert.equal(await enCocina('/api/cocina'), true, 'cobrado pero sin preparar: cocina lo tiene que ver');
+  assert.equal(await enCocina('/api/cocina/display'), true);
+  assert.equal((await s.llamar('POST', `/api/cocina/display/${p.id}/listo`, {}, s.tokenAdmin))[0], 200);
+  assert.equal(await enCocina('/api/cocina'), false);
+  assert.equal((await s.q('SELECT estado FROM pedidos WHERE id = ?', [p.id]))[0].estado, 'pagado', 'marcarlo listo no lo reabre');
+  // Uno cobrado de hace más de 6 horas (de antes del arreglo, nunca marcado listo) no reaparece
+  const [, viejo] = await s.llamar('POST', '/api/pedidos', { tipo: 'mostrador', items: [{ producto_id: prod, cantidad: 1 }] }, s.tokenAdmin);
+  await s.llamar('POST', `/api/pedidos/${viejo.id}/cobro`, { pagos: [{ metodo: 'efectivo', monto: viejo.total }] }, s.tokenAdmin);
+  await s.q("UPDATE pedidos SET creado_en = datetime('now', '-7 hours') WHERE id = ?", [viejo.id]);
+  assert.equal((await s.llamar('GET', '/api/cocina', undefined, s.tokenAdmin))[1].some(c => c.id === viejo.id), false);
+  // Uno cancelado no va a cocina
+  const [, cancelado] = await s.llamar('POST', '/api/pedidos', { tipo: 'mostrador', items: [{ producto_id: prod, cantidad: 1 }] }, s.tokenAdmin);
+  await s.q("UPDATE pedidos SET estado = 'cancelado' WHERE id = ?", [cancelado.id]);
+  assert.equal((await s.llamar('GET', '/api/cocina', undefined, s.tokenAdmin))[1].some(c => c.id === cancelado.id), false);
+});
+
 // "LISTO" en cocina solo avisaba: la comanda volvía a aparecer y la pantalla nunca se vaciaba
 test('cocina: LISTO saca la comanda de la pantalla y vuelve si se agregan ítems', async () => {
   const prod = await productoA();

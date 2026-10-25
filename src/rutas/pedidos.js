@@ -140,7 +140,10 @@ app.get('/api/pedidos', autenticar, requiere('pedidos.ver'), async (req, res) =>
 });
 
 // ===== COCINA =====
-// Comandas en curso: pedidos abiertos que cocina todavía no marcó listos
+// Comandas en curso: lo que cocina todavía no marcó listo. En el mostrador, para llevar y delivery el pedido se
+// suele cobrar antes de cocinarse: antes desaparecía de la pantalla al cobrarlo. Una mesa paga al final (ya comió),
+// así que al cobrarla sale de cocina como siempre. Los cobrados cuentan solo si son de las últimas 6 horas: los de
+// antes de este cambio nunca se marcaron listos.
 async function comandasEnCurso() {
   const pedidos = await all(`
     SELECT p.id, p.numero_pedido, p.tipo, p.mesa_id, m.nombre as mesa_nombre, p.notas,
@@ -148,7 +151,9 @@ async function comandasEnCurso() {
            CAST((julianday('now') - julianday(p.creado_en)) * 24 * 60 AS INTEGER) as minutos_transcurridos
     FROM pedidos p
     LEFT JOIN mesas m ON p.mesa_id = m.id
-    WHERE p.estado = 'abierto' AND p.listo_en IS NULL
+    WHERE p.listo_en IS NULL
+      AND (p.estado = 'abierto'
+        OR (p.estado = 'pagado' AND p.tipo != 'salon' AND p.creado_en >= datetime('now', '-6 hours')))
     ORDER BY p.creado_en ASC
   `);
   return Promise.all(pedidos.map(async ped => {
@@ -157,10 +162,10 @@ async function comandasEnCurso() {
   }));
 }
 
-// Marca listo: sale de la pantalla de cocina (el pedido sigue abierto para que el mozo lo cobre)
+// Marca listo: sale de la pantalla de cocina (si no estaba cobrado, sigue abierto para que el mozo lo cobre)
 async function marcarListo(req, res) {
   try {
-    const pedido = await get('SELECT id, numero_pedido FROM pedidos WHERE id = ? AND estado = ?', [req.params.id, 'abierto']);
+    const pedido = await get("SELECT id, numero_pedido FROM pedidos WHERE id = ? AND estado IN ('abierto', 'pagado')", [req.params.id]);
     if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado o ya cerrado' });
     await run('UPDATE pedidos SET listo_en = CURRENT_TIMESTAMP WHERE id = ?', [pedido.id]);
     emitEvento('cocina:actualizar', { pedido_id: pedido.id, numero_pedido: pedido.numero_pedido, accion: 'listo' });
