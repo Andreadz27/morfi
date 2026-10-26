@@ -1,5 +1,6 @@
 // Ganancias: ventas sin propina, costo de lo vendido, comisiones (medio de pago y app de delivery), gastos,
-// por plato, canal y mozo, fugas, punto de equilibrio y "cuánto gané hoy". Números hechos para verificarse a mano.
+// por plato, canal, momento del día y mozo, fugas, punto de equilibrio, "cuánto gané hoy" y costos de la carta.
+// Números hechos para verificarse a mano.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
@@ -88,9 +89,14 @@ test('por plato: ganancia, margen, clase de menú y aviso de productos sin costo
   const r = await ver(`/api/ganancias/productos?desde=${hoy}&hasta=${hoy}`);
   const a = r.productos.find(p => p.producto_id === A.id), b = r.productos.find(p => p.producto_id === B.id);
   assert.deepEqual([a.unidades, a.ventas, a.costo, a.ganancia, a.margen_pct, a.ganancia_unidad], [4, 4000, 1600, 2400, 60, 600]);
-  assert.equal(a.clase, 'caballo', 'se vende más pero deja menos por unidad que el promedio');
-  assert.equal(b.clase, 'rompecabezas');
+  // B no tiene costo: va aparte y no entra en el promedio (si no, con su "ganancia" de $2000 hundiría a A)
+  assert.equal(b.clase, 'sin_costo');
   assert.equal(b.sin_costo, true);
+  assert.equal(b.popular, false);
+  assert.equal(r.referencias.ganancia_media_unidad, 600, 'promedio solo de los que tienen costo');
+  assert.equal(r.referencias.productos_sin_costo, 1);
+  assert.equal(a.clase, 'estrella', 'se vende mucho y deja el promedio de los que tienen costo');
+  assert.ok(r.clases.sin_costo.consejo);
   assert.ok(r.clases.estrella.consejo);
   const res = await ver(`/api/ganancias/resumen?desde=${hoy}&hasta=${hoy}`);
   assert.equal(res.sin_costo[0].producto_id, undefined);
@@ -108,6 +114,31 @@ test('por canal, medio de pago, hora y mozo', async () => {
   assert.equal(r.mozos[0].nombre, 'Vendedor Test');
   assert.equal(r.mozos[0].propinas, 100);
   assert.equal(r.dias_semana.length, 1);
+});
+
+test('por momento del día: cada pedido en el momento en que se hizo, el más nuevo si se superponen', async () => {
+  const ins = 'INSERT INTO momentos_carta (nombre, icono, desde, hasta, orden, activo) VALUES (?, ?, ?, ?, ?, ?)';
+  await s.q(ins, ['Desayuno', '☕', '08:00', '12:00', 1, 1]);
+  await s.q(ins, ['Brunch', '🥑', '11:00', '16:00', 2, 1]);
+  await s.q(ins, ['Cena', '', '19:00', '23:59', 3, 0]); // apagado: no cuenta
+  // Horas en UTC; el local está en UTC-3: 09:30, 11:30 y 20:00
+  const pedidos = await s.q("SELECT id FROM pedidos WHERE estado = 'pagado' ORDER BY id");
+  assert.equal(pedidos.length, 4);
+  const hora = (id, h) => s.q('UPDATE pedidos SET creado_en = ? WHERE id = ?', [`${hoy} ${h}`, id]);
+  await hora(pedidos[0].id, '12:30:00'); // 2 × A, $2000
+  await hora(pedidos[1].id, '14:30:00'); // 1 × A con tarjeta, $1000 + propina
+  await hora(pedidos[2].id, '23:00:00'); // PedidosYa, $1000
+  await hora(pedidos[3].id, '23:00:00'); // 1 × B, $2000
+
+  const r = await ver(`/api/ganancias/canales?desde=${hoy}&hasta=${hoy}`);
+  assert.deepEqual(r.momentos.map(m => m.nombre), ['Desayuno', 'Brunch', 'Fuera de los horarios de la carta']);
+  const [des, bru, fuera] = r.momentos;
+  assert.deepEqual([des.tickets, des.ventas, des.ticket_promedio, des.icono, des.horario], [1, 2000, 2000, '☕', '08:00 a 12:00']);
+  assert.deepEqual(des.mas_vendidos.map(x => [x.unidades, x.ventas]), [[2, 2000]]);
+  assert.deepEqual([bru.tickets, bru.ventas, bru.propinas], [1, 1000, 100], '11:30 es Brunch: empezó después que el Desayuno');
+  assert.deepEqual([fuera.momento_id, fuera.tickets, fuera.ventas, fuera.ticket_promedio, fuera.participacion_pct], [null, 2, 3000, 1500, 50]);
+  assert.equal(fuera.mas_vendidos.length, 2);
+  assert.equal(r.momentos.reduce((a, m) => a + m.ventas, 0), r.total.ventas);
 });
 
 test('fugas: comisiones, descuentos, mermas valuadas al costo y cancelados aparte', async () => {
@@ -152,6 +183,43 @@ test('IVA: con IVA discriminado la ganancia se calcula sobre la venta neta', asy
   assert.equal(t.ventas, 6000);
   assert.equal(t.ventas_netas, Math.round(4000 / 1.21 * 100) / 100 + Math.round(2000 / 1.21 * 100) / 100);
   await s.q('UPDATE configuracion SET tasa_iva = 0');
+});
+
+test('costos de la carta: primero los que no tienen costo; se guardan de una vez y los de receta no se tocan', async () => {
+  const [C] = await s.q('SELECT id FROM productos WHERE activo = 1 AND id NOT IN (?, ?) ORDER BY id LIMIT 1', [A.id, B.id]);
+  await s.q('DELETE FROM recetas WHERE plato_id = ?', [C.id]);
+  await s.q("INSERT INTO recetas (plato_id, ingrediente_id, cantidad, unidad) VALUES (?, ?, 2, 'unidad')", [C.id, A.id]);
+  await s.q('UPDATE productos SET costo = 800 WHERE id = ?', [C.id]);
+
+  const r = await ver('/api/ganancias/costos');
+  const pos = id => r.productos.findIndex(p => p.id === id);
+  const b = r.productos[pos(B.id)], c = r.productos[pos(C.id)];
+  assert.ok(pos(B.id) < pos(A.id), 'sin costo, arriba');
+  assert.deepEqual([b.costo, b.vendidos, b.margen_pct, b.con_receta], [0, 1, null, false]);
+  assert.equal(r.productos[pos(A.id)].margen_pct, 60);
+  assert.equal(c.con_receta, true);
+  assert.equal(r.sin_costo, r.productos.filter(p => !(p.costo > 0)).length);
+
+  assert.equal((await s.llamar('PUT', '/api/ganancias/costos', { costos: [{ id: B.id, costo: 500 }] }, s.tokenVendedor))[0], 403, 'el cajero no');
+  assert.equal((await s.llamar('PUT', '/api/ganancias/costos', { costos: [{ id: B.id, costo: -1 }] }, s.tokenAdmin))[0], 400);
+  assert.equal((await s.llamar('PUT', '/api/ganancias/costos', { costos: [] }, s.tokenAdmin))[0], 400);
+  assert.equal((await s.llamar('PUT', '/api/ganancias/costos', { costos: [{ id: 999999, costo: 1 }] }, s.tokenAdmin))[0], 400);
+
+  const [st, g] = await s.llamar('PUT', '/api/ganancias/costos', { costos: [{ id: B.id, costo: 500 }, { id: A.id, costo: 450 }, { id: C.id, costo: 1 }] }, s.tokenAdmin);
+  assert.equal(st, 200, JSON.stringify(g));
+  assert.equal(g.actualizados, 2);
+  assert.equal(g.omitidos.length, 1, 'el de receta no se pisa');
+  const costo = async id => (await s.q('SELECT costo FROM productos WHERE id = ?', [id]))[0].costo;
+  assert.deepEqual([await costo(B.id), await costo(A.id)], [500, 450]);
+  assert.equal(await costo(C.id), 900, 'la receta de C usa 2 × A: se recalcula con el costo nuevo de A');
+  assert.equal((await s.q("SELECT COUNT(*) AS n FROM auditoria WHERE accion = 'editar_costos'"))[0].n, 1);
+  // Mismo costo otra vez: nada que actualizar
+  assert.equal((await s.llamar('PUT', '/api/ganancias/costos', { costos: [{ id: B.id, costo: 500 }] }, s.tokenAdmin))[1].actualizados, 0);
+
+  const p = await ver(`/api/ganancias/productos?desde=${hoy}&hasta=${hoy}`);
+  assert.equal(p.productos.find(x => x.producto_id === B.id).clase !== 'sin_costo', true, 'con costo ya entra en la clasificación');
+  await s.q('UPDATE productos SET costo = 400 WHERE id = ?', [A.id]);
+  await s.q('UPDATE productos SET costo = 0 WHERE id = ?', [B.id]);
 });
 
 test('plan Esencial: "cuánto gané hoy" sí, el detalle no; sin permiso de costos tampoco', async () => {

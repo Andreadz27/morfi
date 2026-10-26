@@ -451,7 +451,9 @@ tr:hover td {
 .form-group select,
 .form-group textarea,
 .receta-linea input,
-.receta-linea select {
+.receta-linea select,
+.gan-costos-filtros input[type="search"],
+.gan-costo-input {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -465,6 +467,8 @@ tr:hover td {
 .form-group select:focus,
 .receta-linea input:focus,
 .receta-linea select:focus,
+.gan-costos-filtros input:focus,
+.gan-costo-input:focus,
 .form-group textarea:focus {
   outline: none;
   border-color: var(--info);
@@ -2296,6 +2300,25 @@ tr:hover td {
 .gan-clase-caballo { border-left-color: #0ea5e9; color: #0c4a6e; }
 .gan-clase-rompecabezas { border-left-color: #f59e0b; color: #78350f; }
 .gan-clase-perro { border-left-color: #dc2626; color: #7f1d1d; }
+.gan-clase-sin_costo { border-left-color: #94a3b8; color: #475569; }
+/* Por momento del día y costos de la carta */
+.gan-momentos { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.gan-momento { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.gan-momento-titulo { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 16px; }
+.gan-momento-datos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gan-momento-datos div { display: flex; flex-direction: column; }
+.gan-momento-datos span { font-size: 12px; color: var(--text-light); }
+.gan-momento-datos strong { font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gan-momento-top ol { margin: 4px 0 0; padding-left: 20px; font-size: 14px; }
+.gan-momento-top li > * { vertical-align: baseline; }
+.gan-momento-top li small { color: var(--text-light); margin-left: 6px; white-space: nowrap; }
+.gan-costos-filtros { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+.gan-costos-filtros input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.gan-costos-filtros label { display: flex; align-items: center; gap: 6px; }
+#view-ganancias .gan-costo-input { width: 120px; padding: 6px 8px; text-align: right; }
+.gan-costos-guardar { position: sticky; bottom: 0; display: flex; justify-content: flex-end; align-items: center; gap: 12px;
+  padding: 12px 0 4px; background: var(--white); border-top: 1px solid var(--border); margin-top: 8px; }
+@media (max-width: 600px) { #view-ganancias .gan-costo-input { width: 88px; } .gan-costos th:nth-child(2), .gan-costos td:nth-child(2) { display: none; } }
 .gan-badge { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .gan-horas .cont-barra { flex-basis: 22px; }
 .gan-progreso { background: var(--bg); border-radius: 999px; height: 18px; overflow: hidden; margin: 6px 0 12px; }

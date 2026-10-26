@@ -163,6 +163,14 @@ tarde y ausencias, y **Repartir propinas** por horas trabajadas o en partes igua
 - **Reportes**: ventas del período, lo más vendido y en qué horarios se vende más.
 - **Ganancias** (plan Pro): cuánto queda después de costos, comisiones y gastos fijos; qué platos conviene empujar o
   revisar; punto de equilibrio.
+  - **Costos de la carta:** todos los productos en una lista para cargar lo que cuesta hacer cada uno (mercadería,
+    envase…). Arriba aparecen los que no tienen costo, los más vendidos primero; el margen se calcula al escribir.
+    Los que tienen receta toman el costo de sus ingredientes. Sin costo, un producto no se puede evaluar.
+  - **Por plato:** separa la carta en *Estrella* (se vende mucho y deja buena ganancia), *Caballo de batalla* (se vende
+    mucho pero deja poco: revisar precio o receta), *Rompecabezas* (deja bien pero se vende poco: recomendarlo) y
+    *Perro* (poco y poco). Los productos sin costo van al grupo *Sin costo* y no se comparan con los demás.
+  - **Canales y horarios → Por momento del día:** ticket promedio, ventas, tickets y lo más vendido en cada momento de
+    la carta (Desayuno, Brunch, Almuerzo, Merienda…), según la hora en que se hizo cada pedido.
 - **Contabilidad** (plan Pro): gastos, cuentas a pagar, IVA, estado de resultados y libro diario.
   - **Factura de cada compra:** en **Cargar gasto**, tocar **Sacar foto o subir la factura** (foto con el celular o
     PDF). Queda guardada con el gasto y se ve con **Ver factura** en la lista y en el IVA compras. Si está cargada la
