@@ -1,0 +1,448 @@
+/* =============================================
+   MORFI - Carta del QR, estilo elegante (pedido.html, body.carta-elegante)
+   Como una carta impresa: tinta oscura sobre papel claro, títulos en mayúsculas espaciadas,
+   líneas finas y puntos guía entre el plato y el precio. Se carga después de menu.css y pedido.css.
+   Colores tierra: fondo en degradé de beige a arena, texto marrón café y detalles en terracota.
+   ============================================= */
+
+.carta-elegante {
+  --tinta: #4a3326;        /* marrón café */
+  --tinta-suave: #6b4f3c;
+  --gris: #85705f;         /* gris tostado */
+  --linea: #dcc9b0;
+  --papel: #f6eee2;        /* beige */
+  --blanco: #fffaf3;       /* crema */
+  --acento: #a65f37;       /* terracota */
+  --puntos: #c4a98a;
+  --fondo: linear-gradient(180deg, #f8f1e6 0%, #f0e3d0 45%, #e7d4ba 100%);
+  --fuente: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+/* body.menu-body (menu.css) pone fondo de colores y otra letra: se pisa con la misma especificidad + 1 */
+body.menu-body.carta-elegante {
+  background: var(--fondo) fixed;
+  background-color: var(--papel);
+  color: var(--tinta);
+  font-family: var(--fuente);
+}
+body.menu-body.carta-elegante::before { display: none; }
+
+/* ---- Encabezado: nombre del local como en la carta impresa ---- */
+.carta-elegante .menu-hero {
+  background: linear-gradient(170deg, #f4e6d2 0%, #ead3b4 60%, #dfc29c 100%);
+  color: var(--tinta);
+  padding: 36px 16px 8px;
+}
+.carta-elegante .menu-hero::before,
+.carta-elegante .menu-hero::after { display: none; }
+.carta-elegante .menu-hero-content {
+  max-width: 760px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--tinta);
+}
+.carta-elegante .menu-hero-logo {
+  width: 52px; height: 52px;
+  margin-bottom: 12px;
+  background: none;
+  border: 1.5px solid var(--tinta);
+  color: var(--tinta);
+  font-size: 20px;
+  box-shadow: none;
+  animation: none;
+}
+.carta-elegante .menu-hero h1 {
+  color: var(--tinta);
+  text-shadow: none;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: clamp(28px, 8vw, 46px);
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.carta-elegante .menu-hero p {
+  color: var(--gris);
+  text-transform: uppercase;
+  letter-spacing: .28em;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 1;
+}
+.carta-elegante .origen-badge-hero,
+.carta-elegante .origen-badge-hero.badge-web {
+  background: transparent;
+  color: var(--tinta);
+  border: 1px solid var(--tinta);
+  border-radius: 2px;
+  padding: 4px 12px;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  font-size: 11px;
+}
+
+/* Idiomas: texto con subrayado, sin botones de colores */
+.carta-elegante .selector-idioma { gap: 14px; margin-top: 14px; }
+.carta-elegante .selector-idioma button {
+  min-width: 36px; min-height: 32px;
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--gris);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  letter-spacing: .2em;
+  font-size: 12px;
+}
+.carta-elegante .selector-idioma button.activo {
+  background: transparent;
+  color: var(--tinta);
+  border-bottom-color: var(--acento);
+}
+.carta-elegante .selector-idioma button:focus-visible { outline: 2px solid var(--tinta); outline-offset: 3px; }
+
+/* ---- Categorías: palabras en mayúsculas, la elegida subrayada ---- */
+.carta-elegante .menu-categories { gap: 6px 18px; margin-bottom: 26px; }
+.carta-elegante .menu-cat-btn,
+.carta-elegante .mobile-cat-btn {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 8px 2px;
+  color: var(--gris);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-size: 12px;
+  font-weight: 700;
+}
+.carta-elegante .menu-cat-btn:hover,
+.carta-elegante .mobile-cat-btn:hover {
+  background: transparent;
+  color: var(--tinta);
+  transform: none;
+  box-shadow: none;
+}
+.carta-elegante .menu-cat-btn.active,
+.carta-elegante .mobile-cat-btn.active {
+  background: transparent;
+  color: var(--tinta);
+  border-bottom-color: var(--acento);
+  box-shadow: none;
+}
+.carta-elegante .mobile-cat-nav {
+  background: rgba(236, 222, 200, .97);
+  border-top: 1px solid var(--linea);
+  padding-top: 4px;
+}
+.carta-elegante .mobile-cat-scroll { gap: 18px; scrollbar-width: none; }
+.carta-elegante .mobile-cat-scroll::-webkit-scrollbar { display: none; }
+
+/* ---- Secciones: título con raya debajo, como la carta impresa ---- */
+.carta-elegante .menu-section { margin-bottom: 34px; }
+.carta-elegante .menu-section-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .2em;
+  color: var(--tinta);
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 2px solid var(--tinta);
+}
+.carta-elegante .menu-section-title::after { display: none; }
+.carta-elegante .menu-section-title i { display: none; }
+
+/* ---- Platos: nombre ........ precio, descripción debajo ---- */
+.carta-elegante .pedido-item-card,
+.carta-elegante .menu-item-card {
+  display: block;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--linea);
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 14px 0 12px;
+  margin: 0;
+}
+.carta-elegante .menu-item-card::before { display: none; }
+.carta-elegante .pedido-item-card:hover,
+.carta-elegante .menu-item-card:hover { background: transparent; box-shadow: none; transform: none; }
+.carta-elegante .carta-linea { display: flex; align-items: baseline; gap: 0; }
+.carta-elegante .menu-item-nombre {
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--tinta);
+  line-height: 1.35;
+}
+.carta-elegante .carta-puntos {
+  flex: 1;
+  min-width: 18px;
+  margin: 0 8px;
+  border-bottom: 2px dotted var(--puntos);
+  transform: translateY(-4px);
+}
+.carta-elegante .menu-item-precio {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--tinta);
+  background: none;
+  -webkit-text-fill-color: var(--tinta);
+  white-space: nowrap;
+}
+.carta-elegante .menu-item-desc {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  color: var(--gris);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-top: 4px;
+  max-width: 92%;
+}
+.carta-elegante .item-qty-ctrl {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+
+/* ---- Botones: contorno de tinta ---- */
+.carta-elegante .btn-agregar {
+  background: transparent;
+  color: var(--tinta);
+  border: 1.5px solid var(--tinta);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+}
+.carta-elegante .btn-agregar:hover { background: var(--acento); border-color: var(--acento); color: var(--blanco); }
+.carta-elegante .btn-qty { border-radius: 50%; }
+.carta-elegante .btn-qty-minus,
+.carta-elegante .btn-qty-plus {
+  background: transparent;
+  color: var(--tinta);
+  border: 1.5px solid var(--tinta);
+}
+.carta-elegante .btn-qty-minus:hover,
+.carta-elegante .btn-qty-plus:hover { background: var(--tinta); color: var(--blanco); }
+.carta-elegante .qty-num { color: var(--tinta); }
+
+.carta-elegante .btn-primary,
+.carta-elegante .btn-success {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--blanco);
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: 13px;
+}
+.carta-elegante .btn-primary:hover,
+.carta-elegante .btn-success:hover { background: var(--acento); border-color: var(--acento); }
+.carta-elegante .btn-outline {
+  background: transparent;
+  color: var(--tinta);
+  border: 1.5px solid var(--tinta);
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 12px;
+}
+.carta-elegante .btn-outline:hover { background: var(--tinta); color: var(--blanco); }
+
+/* ---- Pedido (carrito), mesa y pago ---- */
+.carta-elegante .pedido-carrito-sidebar {
+  background: var(--blanco);
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  box-shadow: none;
+}
+.carta-elegante .carrito-header { border-bottom: 2px solid var(--tinta); }
+.carta-elegante .carrito-header h3 { text-transform: uppercase; letter-spacing: .14em; font-size: .9rem; color: var(--tinta); }
+.carta-elegante .carrito-item-sub,
+.carta-elegante .carrito-total-row strong,
+.carta-elegante .resumen-total strong { color: var(--tinta); }
+.carta-elegante .carrito-flotante {
+  background: var(--tinta);
+  box-shadow: 0 6px 20px rgba(74, 51, 38, .35);
+}
+.carta-elegante .carrito-flotante-count {
+  background: var(--blanco);
+  color: var(--tinta);
+  border: 2px solid var(--tinta);
+}
+.carta-elegante .carrito-mobile-sheet,
+.carta-elegante .pedido-form-modal { border-radius: 8px 8px 0 0; }
+.carta-elegante .pedido-form-modal { border-radius: 6px; }
+.carta-elegante .pedido-form-header h3 { text-transform: uppercase; letter-spacing: .12em; font-size: .95rem; }
+.carta-elegante .form-group input:focus,
+.carta-elegante .form-group textarea:focus { border-color: var(--tinta); box-shadow: 0 0 0 3px rgba(166, 95, 55, .18); }
+.carta-elegante .tipo-opcion:has(input:checked) { border-color: var(--tinta); background: #f3e6d4; color: var(--tinta); }
+.carta-elegante .form-resumen { background: var(--papel); border-color: var(--linea); border-radius: 4px; }
+
+.carta-elegante .mesa-panel { max-width: 760px; }
+.carta-elegante .mesa-seguimiento {
+  background: var(--blanco);
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  box-shadow: none;
+}
+.carta-elegante .mesa-seguimiento h4 { text-transform: uppercase; letter-spacing: .14em; font-size: .8rem; color: var(--tinta); }
+.carta-elegante .mesa-cuenta-total { border-top-color: var(--tinta); }
+.carta-elegante .mesa-aviso { background: #efe3c9; color: #5a3d1e; border-radius: 4px; }
+.carta-elegante .pago-chip.activo { background: var(--tinta); border-color: var(--tinta); }
+.carta-elegante .pago-seccion h4 { text-transform: uppercase; letter-spacing: .12em; font-size: .8rem; }
+
+.carta-elegante .confirmacion-screen { background: var(--papel); }
+.carta-elegante .confirmacion-card { border-radius: 6px; border: 1px solid var(--linea); box-shadow: none; }
+.carta-elegante .confirmacion-icon { color: var(--tinta); }
+.carta-elegante .confirmacion-card h2 { text-transform: uppercase; letter-spacing: .1em; font-size: 1.2rem; }
+
+/* La carta ocupa el centro como una hoja; en computadora el pedido queda al costado */
+.carta-elegante .pedido-layout { max-width: 1080px; }
+@media (min-width: 769px) {
+  .carta-elegante .pedido-carta { max-width: 720px; }
+}
+
+/* Nota de la categoría (como el recuadro de la carta impresa: opciones de leche, horarios de las promos) */
+.carta-elegante .carta-nota {
+  margin: 12px 0 4px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--tinta);
+  border-radius: 2px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tinta-suave);
+  background: rgba(255, 250, 243, .55);
+  white-space: pre-line;
+}
+
+/* Sin carrito (carta solo para ver, ?ver=1): la carta va centrada */
+.carta-elegante .pedido-layout { justify-content: center; }
+
+/* ---- Momentos del día (Desayuno, Brunch...): pestañas con su horario ---- */
+.carta-elegante .momentos-carta {
+  display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 6px;
+  scrollbar-width: none;
+}
+.carta-elegante .momentos-carta::-webkit-scrollbar { display: none; }
+.carta-elegante .momento-btn {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 96px; padding: 10px 14px; cursor: pointer;
+  background: rgba(255, 250, 243, .6); color: var(--tinta);
+  border: 1.5px solid var(--linea); border-radius: 12px;
+  font-family: var(--fuente); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+}
+.carta-elegante .momento-btn small { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: var(--gris); text-transform: none; }
+.carta-elegante .momento-icono { font-size: 20px; line-height: 1; }
+.carta-elegante .momento-btn.activo { background: var(--tinta); border-color: var(--tinta); color: var(--blanco); }
+.carta-elegante .momento-btn.activo small { color: #e9d8c2; }
+.carta-elegante .momento-btn:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* ---- Buscador de la carta ---- */
+.carta-elegante .buscador-carta {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 10px 14px;
+  background: rgba(255, 250, 243, .75); border: 1.5px solid var(--linea); border-radius: 999px;
+}
+.carta-elegante .buscador-carta i { color: var(--gris); }
+.carta-elegante .buscador-carta input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; color: var(--tinta); font-family: var(--fuente);
+}
+
+/* ---- Destacados: Recomendado, Lo más pedido, Nuevo ---- */
+.carta-elegante .carta-marcas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.carta-elegante .carta-marca {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.carta-elegante .carta-marca.reco { background: var(--tinta); color: var(--blanco); }
+.carta-elegante .carta-marca.mas { background: #f3dcc4; color: #7a3f1d; }
+.carta-elegante .carta-marca.nuevo { background: transparent; color: var(--acento); border: 1.5px solid var(--acento); }
+
+/* La carta ocupa el ancho de la pantalla: con align-items:flex-start (pedido.css) tomaba el ancho de su
+   contenido y las pestañas de momentos la ensanchaban más que el celular */
+.carta-elegante .pedido-carta { width: 100%; min-width: 0; }
+.carta-elegante .momentos-carta { max-width: 100%; }
+
+/* ---- Para todas las edades: letra legible y botones fáciles de tocar ---- */
+.carta-elegante .menu-item-nombre { font-size: 15px; }
+.carta-elegante .menu-item-precio { font-size: 16px; }
+.carta-elegante .menu-item-desc { font-size: 14px; color: var(--tinta-suave); }
+.carta-elegante .btn-agregar { min-height: 36px; padding: 6px 16px; font-size: 11px; }
+.carta-elegante .btn-qty { width: 36px; height: 36px; font-size: 1.05rem; }
+.carta-elegante .menu-cat-btn, .carta-elegante .mobile-cat-btn { min-height: 40px; }
+.carta-elegante .mesa-acciones .btn { min-height: 44px; }
+
+/* Botón "Aa": agranda toda la carta (se recuerda en el celular) */
+.carta-elegante .selector-idioma .boton-letra { letter-spacing: 0; font-size: 13px; margin-left: 6px; border: 1.5px solid var(--linea); border-radius: 8px; min-width: 44px; }
+.carta-elegante .selector-idioma .boton-letra span { font-size: 18px; margin-left: 1px; }
+.carta-elegante .selector-idioma .boton-letra.activo { background: var(--tinta); color: var(--blanco); border-color: var(--tinta); }
+body.carta-elegante.letra-grande .menu-item-nombre { font-size: 17px; }
+body.carta-elegante.letra-grande .menu-item-precio { font-size: 18px; }
+body.carta-elegante.letra-grande .menu-item-desc { font-size: 15.5px; line-height: 1.55; }
+body.carta-elegante.letra-grande .menu-section-title { font-size: 16px; }
+body.carta-elegante.letra-grande .carta-nota { font-size: 14.5px; }
+body.carta-elegante.letra-grande .carta-marca { font-size: 11.5px; }
+body.carta-elegante.letra-grande .menu-cat-btn,
+body.carta-elegante.letra-grande .mobile-cat-btn,
+body.carta-elegante.letra-grande .momento-btn { font-size: 13px; }
+body.carta-elegante.letra-grande .btn-agregar { font-size: 12.5px; min-height: 40px; }
+body.carta-elegante.letra-grande .mesa-sol,
+body.carta-elegante.letra-grande .form-group label,
+body.carta-elegante.letra-grande .form-group input,
+body.carta-elegante.letra-grande .form-group textarea { font-size: 16px; }
+
+/* ---- Opciones y adicionales al agregar ("¿Qué leche?") ---- */
+.carta-elegante .opciones-elegir { display: flex; flex-direction: column; gap: 16px; padding: 14px 24px 4px; }
+.carta-elegante .opciones-grupo h4 { margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .1em; color: var(--tinta); }
+.carta-elegante .opciones-grupo h4 small { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--gris); margin-left: 6px; }
+.carta-elegante .opciones-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+.carta-elegante .opcion-chip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; min-height: 42px; cursor: pointer;
+  border: 1.5px solid var(--linea); border-radius: 999px; background: var(--blanco); color: var(--tinta); font-size: 14px; }
+.carta-elegante .opcion-chip:has(input:checked) { border-color: var(--tinta); background: #f3e6d4; font-weight: 700; }
+.carta-elegante .opcion-chip input { accent-color: var(--acento); width: 17px; height: 17px; margin: 0; }
+.carta-elegante .opcion-chip b { color: var(--acento); }
+.carta-elegante .opciones-acciones { padding: 8px 24px 22px; }
+
+/* ---- Venta cruzada: sugerencias después de agregar, promo que conviene, horario de los combos ---- */
+.carta-elegante .sugerencias-carta {
+  position: fixed; left: 12px; right: 12px; bottom: 96px; z-index: 950; max-width: 560px; margin: 0 auto;
+  background: var(--blanco); border: 1.5px solid var(--linea); border-radius: 16px; padding: 14px 16px 12px;
+  box-shadow: 0 10px 30px rgba(74, 51, 38, .22); animation: slideUp .25s ease-out;
+}
+@media (min-width: 769px) { .carta-elegante .sugerencias-carta { bottom: 24px; } }
+.carta-elegante .sugerencias-cerrar { position: absolute; top: 6px; right: 10px; border: 0; background: none; font-size: 1.4rem; color: var(--gris); cursor: pointer; }
+.carta-elegante .sugerencias-titulo { font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--gris); margin: 2px 0 8px; }
+.carta-elegante .sugerencias-lista { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.carta-elegante .sugerencias-lista button {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; max-width: 170px;
+  padding: 9px 12px; border: 1.5px solid var(--linea); border-radius: 12px; background: var(--papel); color: var(--tinta);
+  font-family: var(--fuente); font-size: 13px; font-weight: 600; text-align: left; cursor: pointer;
+}
+.carta-elegante .sugerencias-lista button b { color: var(--acento); font-size: 13px; }
+.carta-elegante .sugerencia-grande {
+  display: block; width: calc(100% - 28px); margin-bottom: 10px; padding: 10px 12px; border: 0; border-radius: 10px; cursor: pointer;
+  background: var(--tinta); color: var(--blanco); font-family: var(--fuente); font-size: 13px; font-weight: 700; letter-spacing: .04em;
+}
+.carta-elegante .combo-conviene {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; padding: 10px 12px;
+  border-radius: 10px; background: #f3e1c7; color: #6b3a1c; font-size: 13px; font-weight: 600;
+}
+.carta-elegante .combo-conviene .btn { white-space: nowrap; }
+.carta-elegante .fuera-horario { opacity: .75; }
+.carta-elegante .carta-horario { font-size: 12px; color: var(--gris); font-style: italic; text-align: right; }
+
+/* En el celular las categorías van solo en la barra de abajo (arriba ocupaban media pantalla) */
+@media (max-width: 640px) {
+  .carta-elegante .menu-categories { display: none; }
+}

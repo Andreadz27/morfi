@@ -6,7 +6,8 @@ const crypto = require('crypto');
 const { run, get, all, transaccion } = require('../db');
 const { emitEvento } = require('../realtime');
 const { errorHttp } = require('../util');
-const { generarNumeroPedido, resolverItems, recalcularTotales } = require('./pedidos');
+const { generarNumeroPedido, resolverItems, insertarItemTx, recalcularTotales } = require('./pedidos');
+const { controlarHorarios } = require('./venta-cruzada');
 const { comandaAutomatica } = require('./impresion');
 const { pagoMesaDisponible } = require('./pago-mesa');
 const { configWhatsApp, whatsappListo } = require('./whatsapp');
@@ -39,7 +40,8 @@ function itemsDelCliente(items) {
   if (!Array.isArray(items) || !items.length) throw errorHttp(400, 'El pedido no tiene ítems');
   if (items.length > MAX_ITEMS_MESA || items.some(i => !i || !(Number(i.cantidad) >= 1) || Number(i.cantidad) > MAX_CANTIDAD_MESA))
     throw errorHttp(400, `Para pedidos grandes llamá al mozo (máximo ${MAX_CANTIDAD_MESA} unidades por producto)`);
-  return items.map(i => ({ producto_id: Number(i.producto_id), cantidad: parseInt(i.cantidad, 10), notas: String(i.notas || '').slice(0, 200) }));
+  return items.map(i => ({ producto_id: Number(i.producto_id), cantidad: parseInt(i.cantidad, 10), notas: String(i.notas || '').slice(0, 200),
+    opciones: Array.isArray(i.opciones) ? i.opciones.slice(0, 20).map(Number) : [] }));
 }
 
 const resumenSolicitud = s => ({
@@ -55,10 +57,12 @@ async function solicitarPedidoMesa(mesa, { items, notas, cliente }) {
   const id = await transaccion(async () => {
     const { n } = await get("SELECT COUNT(*) n FROM solicitudes_mesa WHERE mesa_id = ? AND tipo = 'pedido' AND estado = 'pendiente'", [mesa.id]);
     if (n >= MAX_PENDIENTES_MESA) throw errorHttp(429, 'Ya hay pedidos esperando al mozo: en un momento los confirma');
+    await controlarHorarios(pedidos);
     const resueltos = await resolverItems(pedidos);
     if (resueltos.some(i => !(i.precio > 0))) throw errorHttp(400, 'Producto no disponible');
     const r = await run('INSERT INTO solicitudes_mesa (mesa_id, tipo, items, notas, cliente) VALUES (?, ?, ?, ?, ?)',
-      [mesa.id, 'pedido', JSON.stringify(resueltos.map(i => ({ producto_id: i.producto_id, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio, notas: i.notas }))),
+      [mesa.id, 'pedido', JSON.stringify(resueltos.map(i => ({ producto_id: i.producto_id, nombre: i.nombre, cantidad: i.cantidad, precio: i.precio, notas: i.notas,
+        opciones: i.opciones.map(o => o.id) }))),
        String(notas || '').slice(0, 300), String(cliente || '').trim().slice(0, 60)]);
     return r.id;
   });
@@ -146,9 +150,7 @@ async function confirmarSolicitud(id, usuarioId, itemsCorregidos = null) {
     }
     const itemIds = [];
     for (const item of items) {
-      const ins = await run(`INSERT INTO pedido_items (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal, notas)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`, [pedido.id, item.producto_id, item.nombre, item.cantidad, item.precio, item.subtotal, item.notas]);
-      itemIds.push(ins.id);
+      itemIds.push(await insertarItemTx(pedido.id, item));
     }
     await recalcularTotales(pedido.id);
     await run('UPDATE pedidos SET listo_en = NULL WHERE id = ?', [pedido.id]);

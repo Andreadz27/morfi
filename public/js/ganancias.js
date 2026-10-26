@@ -1,7 +1,7 @@
 // =============================================
 // MORFI - Ganancias
-// Cuánto queda de lo que se vende: por día, semana, mes o año; por plato, canal, medio de pago, horario y mozo;
-// qué se come la ganancia y cuánto hay que vender para cubrir los gastos fijos.
+// Cuánto queda de lo que se vende: por día, semana, mes o año; por plato, canal, medio de pago, horario, momento del
+// día y mozo; qué se come la ganancia, cuánto hay que vender para cubrir los gastos fijos y el costo de cada producto.
 // Los cálculos y las definiciones están en src/servicios/ganancias.js.
 // =============================================
 
@@ -12,12 +12,14 @@ const Ganancias = {
   agrupar: 'dia',
   mes: null,
   filtroClase: '',
+  filtroCostos: { texto: '', solo_sin_costo: false },
   datos: null,
   cfg: null,
 
   TABS: [
     ['resumen', 'fa-chart-line', 'Resumen'],
     ['platos', 'fa-utensils', 'Por plato'],
+    ['costos', 'fa-tags', 'Costos de la carta'],
     ['canales', 'fa-store', 'Canales y horarios'],
     ['fugas', 'fa-faucet-drip', 'Qué se come la ganancia'],
     ['equilibrio', 'fa-scale-balanced', 'Punto de equilibrio'],
@@ -40,7 +42,8 @@ const Ganancias = {
         canales: () => API.request('GET', `/ganancias/canales?${q}`),
         fugas: () => API.request('GET', `/ganancias/fugas?${q}`),
         equilibrio: () => API.request('GET', `/ganancias/equilibrio?mes=${this.mes}`),
-        config: () => API.request('GET', '/ganancias/config')
+        config: () => API.request('GET', '/ganancias/config'),
+        costos: () => API.request('GET', '/ganancias/costos')
       }[this.tab]();
       this.paint(view);
     } catch (err) {
@@ -53,7 +56,7 @@ const Ganancias = {
   paint(view) {
     const tabs = this.TABS.map(([id, icono, texto]) => `
       <button class="btn ${this.tab === id ? 'btn-primary' : 'btn-outline'}" onclick="Ganancias.setTab('${id}')"><i class="fas ${icono}"></i> ${texto}</button>`).join('');
-    const conPeriodo = !['equilibrio', 'config'].includes(this.tab);
+    const conPeriodo = !['equilibrio', 'config', 'costos'].includes(this.tab);
     view.innerHTML = `
       <div class="page-header">
         <div><h2><i class="fas fa-sack-dollar"></i> Ganancias</h2><p>Cuánto te queda de lo que vendés, y por qué</p></div>
@@ -157,7 +160,7 @@ const Ganancias = {
     const sinCosto = r.sin_costo.length ? `
       <div class="aviso-plan mb-20"><i class="fas fa-triangle-exclamation"></i> <strong>${r.sin_costo.length} producto(s) vendidos sin costo cargado</strong>:
         ${r.sin_costo.slice(0, 6).map(x => esc(x.producto)).join(', ')}${r.sin_costo.length > 6 ? '…' : ''}. Con ellos la ganancia sale más alta de lo real.
-        ${App.puede('catalogo') ? '<button class="btn btn-outline btn-sm" onclick="App.navigateTo(\'productos\')">Cargar costos</button>' : ''}</div>` : '';
+        ${App.puede('catalogo') ? '<button class="btn btn-outline btn-sm" onclick="Ganancias.setTab(\'costos\')">Cargar costos</button>' : ''}</div>` : '';
     return `
       ${sinCosto}
       <div class="grid grid-4 mb-20">
@@ -202,7 +205,7 @@ const Ganancias = {
   },
 
   // ===== Por plato =====
-  CLASE_ICONO: { estrella: 'fa-star', caballo: 'fa-horse', rompecabezas: 'fa-puzzle-piece', perro: 'fa-dog' },
+  CLASE_ICONO: { estrella: 'fa-star', caballo: 'fa-horse', rompecabezas: 'fa-puzzle-piece', perro: 'fa-dog', sin_costo: 'fa-circle-question' },
   html_platos() {
     const r = this.datos;
     if (!r.productos.length) return '<div class="empty-state"><i class="fas fa-utensils"></i><p>No hay ventas en el período</p></div>';
@@ -214,14 +217,21 @@ const Ganancias = {
       </div>`).join('');
     const lista = r.productos.filter(p => !this.filtroClase || p.clase === this.filtroClase);
     const filas = lista.map(p => `
-      <tr><td>${esc(p.producto)} ${p.sin_costo ? '<span class="badge badge-orange" title="Sin costo cargado">sin costo</span>' : ''}<br><small class="text-muted">${esc(p.categoria)}</small></td>
-        <td><span class="gan-badge gan-clase-${p.clase}"><i class="fas ${this.CLASE_ICONO[p.clase]}"></i> ${esc(r.clases[p.clase].nombre)}</span></td>
-        <td class="text-right">${p.unidades}</td><td class="text-right">${fmtContable(p.ventas)}</td><td class="text-right">${fmtContable(p.costo)}</td>
-        <td class="text-right font-bold">${fmtContable(p.ganancia)}</td><td class="text-right">${p.margen_pct} %</td>
-        <td class="text-right">${fmtContable(p.ganancia_unidad)}</td><td class="text-right">${p.participacion_pct} %</td></tr>`).join('');
+      <tr><td>${esc(p.producto)}<br><small class="text-muted">${esc(p.categoria)}</small></td>
+        <td><span class="gan-badge gan-clase-${p.clase}"><i class="fas ${this.CLASE_ICONO[p.clase]}"></i> ${esc(r.clases[p.clase].nombre)}</span>
+          ${p.sin_costo && p.popular ? '<br><small class="text-muted">Se vende mucho</small>' : ''}</td>
+        <td class="text-right">${p.unidades}</td><td class="text-right">${fmtContable(p.ventas)}</td><td class="text-right">${p.sin_costo ? '—' : fmtContable(p.costo)}</td>
+        <td class="text-right font-bold">${p.sin_costo ? '—' : fmtContable(p.ganancia)}</td><td class="text-right">${p.sin_costo ? '—' : p.margen_pct + ' %'}</td>
+        <td class="text-right">${p.sin_costo ? '—' : fmtContable(p.ganancia_unidad)}</td><td class="text-right">${p.sin_costo ? '—' : p.participacion_pct + ' %'}</td></tr>`).join('');
+    const sinCosto = r.referencias.productos_sin_costo;
+    const aviso = sinCosto ? `
+      <div class="aviso-plan mb-20"><i class="fas fa-triangle-exclamation"></i> <strong>${sinCosto === r.productos.length ? 'Ningún producto vendido tiene' : `${sinCosto} de ${r.productos.length} productos vendidos no tienen`} el costo cargado.</strong>
+        Sin el costo no se sabe cuánto deja cada uno, así que van al grupo "Sin costo" y no se comparan con los demás.
+        ${App.puede('catalogo') ? '<button class="btn btn-outline btn-sm" onclick="Ganancias.setTab(\'costos\')"><i class="fas fa-tags"></i> Cargar costos</button>' : ''}</div>` : '';
     const cats = r.categorias.map(c => `<tr><td>${esc(c.categoria)}</td><td class="text-right">${c.unidades}</td><td class="text-right">${fmtContable(c.ventas)}</td>
       <td class="text-right">${fmtContable(c.costo)}</td><td class="text-right font-bold">${fmtContable(c.ganancia)}</td><td class="text-right">${c.margen_pct} %</td></tr>`).join('');
     return `
+      ${aviso}
       <div class="gan-clases mb-20">${tarjetas}</div>
       <p class="text-muted mb-20">Popular: se vendieron ${Math.ceil(r.referencias.unidades_minimas_popular)} unidades o más (70 % del promedio). Rentable: deja más de
         ${fmtContable(r.referencias.ganancia_media_unidad)} por unidad (el promedio de la carta). ${this.filtroClase ? '<a href="#" onclick="Ganancias.filtrar(\'\');return false;">Ver todos</a>' : 'Tocá un grupo para filtrar.'}</p>
@@ -247,6 +257,7 @@ const Ganancias = {
     const horas = r.horas.map(h => `<div class="cont-barra" title="${h.nombre} · ${$(h.ventas)} · ${h.tickets} tickets">
       <div class="cont-barra-par"><span class="v" style="height:${h.ventas / max * 100}%"></span></div><small>${String(h.clave).padStart(2, '0')}</small></div>`).join('');
     return `
+      ${this.htmlMomentos(r.momentos || [])}
       <div class="grid grid-2 mb-20">
         <div class="card"><div class="card-header"><span class="card-title"><i class="fas fa-store"></i> Por canal</span></div>
           ${this.tabla(r.canales, [['Canal', f => esc(f.nombre)], ['Ventas', f => $(f.ventas), R], ['%', f => f.participacion_pct + ' %', R],
@@ -266,6 +277,107 @@ const Ganancias = {
           ${this.tabla(r.mozos, [['Usuario', f => esc(f.nombre)], ['Ventas', f => $(f.ventas), R], ['Tickets', f => f.tickets, R],
             ['Ticket prom.', f => $(f.ticket_promedio), R], ['Propinas', f => $(f.propinas), R]])}</div>
       </div>`;
+  },
+
+  // Ticket promedio y lo más vendido en cada momento de la carta (desayuno, brunch, almuerzo, merienda…)
+  htmlMomentos(momentos) {
+    const $ = fmtContable;
+    if (!momentos.length) return '';
+    const sinMomentos = momentos.every(m => !m.momento_id);
+    const tarjetas = momentos.map(m => `
+      <div class="gan-momento">
+        <div class="gan-momento-titulo">${m.icono ? `<span aria-hidden="true">${esc(m.icono)}</span> ` : ''}<strong>${esc(m.nombre)}</strong>
+          ${m.horario ? `<small class="text-muted">${esc(m.horario)}</small>` : ''}</div>
+        <div class="gan-momento-datos">
+          <div><span>Ticket promedio</span><strong>${$(m.ticket_promedio)}</strong></div>
+          <div><span>Ventas</span><strong>${$(m.ventas)}</strong><small class="text-muted">${m.participacion_pct} % del total</small></div>
+          <div><span>Tickets</span><strong>${m.tickets}</strong></div>
+          <div><span>Por día</span><strong>${$(m.ventas_por_dia)}</strong></div>
+        </div>
+        ${m.mas_vendidos.length ? `<div class="gan-momento-top"><span class="text-muted">Lo más vendido</span>
+          <ol>${m.mas_vendidos.map(x => `<li><span>${esc(x.producto)}</span><small>${x.unidades} u.</small></li>`).join('')}</ol></div>` : ''}
+      </div>`).join('');
+    return `
+      <div class="card mb-20"><div class="card-header"><span class="card-title"><i class="fas fa-mug-saucer"></i> Por momento del día</span></div>
+        ${sinMomentos ? `<p class="text-muted">Todavía no hay momentos en la carta (Desayuno, Brunch, Almuerzo…).
+          ${App.puede('catalogo') ? '<a href="#" onclick="App.navigateTo(\'productos\');return false;">Armalos en Productos</a>' : ''} para ver el ticket promedio de cada uno.</p>`
+          : `<div class="gan-momentos">${tarjetas}</div>
+            <p class="text-muted mt-10">Cada pedido cuenta en el momento en que se hizo, según los horarios de la carta.</p>`}</div>`;
+  },
+
+  // ===== Costos de la carta =====
+  html_costos() {
+    const r = this.datos, f = this.filtroCostos;
+    const editable = App.puede('catalogo');
+    const total = r.productos.length;
+    const filas = r.productos.map(p => `
+      <tr class="gan-costo-fila" data-id="${p.id}" data-buscar="${esc((p.nombre + ' ' + p.categoria).toLowerCase())}" data-sin="${p.costo > 0 ? 0 : 1}">
+        <td>${esc(p.nombre)}<br><small class="text-muted">${esc(p.categoria)}</small></td>
+        <td class="text-right">${p.vendidos}</td>
+        <td class="text-right">${fmtContable(p.precio_venta)}</td>
+        <td class="text-right">${p.con_receta
+          ? `${fmtContable(p.costo)}<br><small class="text-muted" title="El costo sale de los ingredientes de la receta (se edita en Productos)">por receta</small>`
+          : `<input type="number" class="gan-costo-input" min="0" step="0.01" inputmode="decimal" value="${p.costo > 0 ? p.costo : ''}" placeholder="0"
+              data-original="${p.costo}" data-precio="${p.precio_venta}" aria-label="Costo de ${esc(p.nombre)}" oninput="Ganancias.cambioCosto(this)" ${editable ? '' : 'disabled'}>`}</td>
+        <td class="text-right gan-costo-margen">${this.textoMargen(p.precio_venta, p.costo)}</td>
+      </tr>`).join('');
+    return `
+      <div class="grid grid-3 mb-20">
+        ${this.stat('fa-tags', r.sin_costo ? 'orange' : 'green', `${total - r.sin_costo} de ${total}`, 'Productos con costo')}
+        ${this.stat('fa-circle-question', r.sin_costo ? 'red' : 'green', r.sin_costo, 'Sin costo cargado', '<small class="text-muted">Aparecen primero, los más vendidos arriba</small>')}
+        ${this.stat('fa-lightbulb', 'blue', '30 %', 'Costo típico en cafetería', '<small class="text-muted">Entre 25 y 35 % del precio</small>')}
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title"><i class="fas fa-tags"></i> Lo que te cuesta hacer cada producto</span></div>
+        <p class="text-muted">Poné cuánto te cuesta una unidad: mercadería, envase y lo que lleve. Con eso Morfi calcula la ganancia de cada plato y
+          te dice cuáles conviene vender. "Vendidos" son las unidades de los últimos ${r.dias} días. Los que tienen receta toman el costo de sus ingredientes.</p>
+        <div class="gan-costos-filtros">
+          <input type="search" id="ganCostoBuscar" placeholder="Buscar producto o categoría" value="${esc(f.texto)}" oninput="Ganancias.filtrarCostos()" aria-label="Buscar">
+          <label><input type="checkbox" id="ganCostoSolo" ${f.solo_sin_costo ? 'checked' : ''} onchange="Ganancias.filtrarCostos()"> Solo los que no tienen costo</label>
+        </div>
+        <div class="table-wrap"><table class="gan-costos"><thead><tr><th>Producto</th><th class="text-right">Vendidos</th><th class="text-right">Precio</th>
+          <th class="text-right">Costo</th><th class="text-right">Margen</th></tr></thead><tbody>${filas ||
+            '<tr><td colspan="5" class="text-muted">No hay productos activos</td></tr>'}</tbody></table></div>
+        ${editable ? `<div class="gan-costos-guardar"><span id="ganCostosCambios" class="text-muted">Sin cambios</span>
+          <button class="btn btn-primary" id="ganCostosBtn" onclick="Ganancias.guardarCostos()" disabled><i class="fas fa-save"></i> Guardar costos</button></div>`
+          : '<p class="text-muted mt-10">Para cambiar los costos hace falta permiso sobre el catálogo.</p>'}
+      </div>`;
+  },
+  textoMargen(precio, costo) {
+    if (!(costo > 0)) return '<span class="text-muted">—</span>';
+    if (!(precio > 0)) return '<span class="text-muted">Sin precio</span>';
+    const m = Math.round((precio - costo) / precio * 1000) / 10;
+    return `<span class="${m < 50 ? 'text-danger' : m < 65 ? 'text-warning' : 'text-success'}">${m} %</span>`;
+  },
+  filtrarCostos() {
+    const texto = document.getElementById('ganCostoBuscar').value.trim().toLowerCase();
+    const solo = document.getElementById('ganCostoSolo').checked;
+    this.filtroCostos = { texto, solo_sin_costo: solo };
+    document.querySelectorAll('.gan-costo-fila').forEach(tr => {
+      tr.hidden = (texto && !tr.dataset.buscar.includes(texto)) || (solo && tr.dataset.sin !== '1');
+    });
+  },
+  costosCambiados() {
+    return [...document.querySelectorAll('.gan-costo-input')]
+      .filter(i => i.value !== '' && Number(i.value) !== Number(i.dataset.original))
+      .map(i => ({ id: Number(i.closest('tr').dataset.id), costo: Number(i.value) }));
+  },
+  cambioCosto(input) {
+    input.closest('tr').querySelector('.gan-costo-margen').innerHTML = this.textoMargen(Number(input.dataset.precio), Number(input.value));
+    const n = this.costosCambiados().length;
+    document.getElementById('ganCostosCambios').textContent = n ? `${n} costo(s) sin guardar` : 'Sin cambios';
+    document.getElementById('ganCostosBtn').disabled = !n;
+  },
+  async guardarCostos() {
+    const costos = this.costosCambiados();
+    if (!costos.length) return;
+    const btn = document.getElementById('ganCostosBtn');
+    btn.disabled = true;
+    try {
+      const r = await API.request('PUT', '/ganancias/costos', { costos });
+      App.showToast(`${r.actualizados} costo(s) guardados${r.omitidos.length ? `; ${r.omitidos.length} con receta quedaron igual` : ''}`, 'success');
+      this.render();
+    } catch (err) { App.showToast(err.message, 'error'); btn.disabled = false; }
   },
 
   // ===== Fugas =====
@@ -398,8 +510,9 @@ const Ganancias = {
       encabezado = ['Producto', 'Categoría', 'Grupo', 'Unidades', 'Ventas', 'Costo', 'Ganancia', 'Margen %', 'Ganancia por unidad'];
       filas = r.productos.map(p => [p.producto, p.categoria, r.clases[p.clase].nombre, p.unidades, p.ventas, p.costo, p.ganancia, p.margen_pct, p.ganancia_unidad]);
     } else {
-      encabezado = ['Canal', 'Ventas', 'Tickets', 'Comisiones', 'Ganancia bruta', 'Margen %'];
-      filas = r.canales.map(c => [c.nombre, c.ventas, c.tickets, c.comisiones, c.ganancia_bruta, c.margen_bruto_pct]);
+      encabezado = ['Canal / momento', 'Ventas', 'Tickets', 'Ticket promedio', 'Comisiones', 'Ganancia bruta', 'Margen %'];
+      filas = [...r.canales.map(c => [c.nombre, c.ventas, c.tickets, c.ticket_promedio, c.comisiones, c.ganancia_bruta, c.margen_bruto_pct]),
+        ...(r.momentos || []).filter(m => m.momento_id).map(m => [`Momento: ${m.nombre}`, m.ventas, m.tickets, m.ticket_promedio, m.comisiones, m.ganancia_bruta, m.margen_bruto_pct])];
     }
     const celda = v => typeof v === 'number' ? n(v) : `"${String(v).replace(/"/g, '""')}"`;
     const csv = '﻿' + [encabezado, ...filas].map(f => f.map(celda).join(';')).join('\r\n');

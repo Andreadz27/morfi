@@ -20,7 +20,8 @@ function validarPedidoOnline(datos) {
     origen: ['whatsapp', 'instagram', 'web'].includes(origen) ? origen : 'web',
     direccion: String(direccion || '').trim().slice(0, 200),
     notas: String(notas || '').slice(0, 500),
-    items: items.map(i => ({ producto_id: Number(i.producto_id), cantidad: parseInt(i.cantidad, 10), notas: String(i.notas || '').slice(0, 200) }))
+    items: items.map(i => ({ producto_id: Number(i.producto_id), cantidad: parseInt(i.cantidad, 10), notas: String(i.notas || '').slice(0, 200),
+      opciones: Array.isArray(i.opciones) ? i.opciones.slice(0, 20).map(Number) : [] }))
   };
 }
 

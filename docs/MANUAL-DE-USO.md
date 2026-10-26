@@ -90,6 +90,21 @@ Siempre con el motivo.
 **Caja → Cerrar caja** y contar el efectivo. Si el local usa **Arqueo ciego**, el cajero escribe lo que contó sin
 ver cuánto debería haber, y la diferencia la ve el encargado. Los cierres anteriores están en **Historial de cajas**.
 
+### Cierre del día (encargado y administrador)
+En **Caja → Cierre del día** está todo lo que pasó en el día: ventas (por medio de pago, por tipo de pedido y por
+persona, ticket promedio y comparación con el mismo día de la semana anterior), la caja (inicial, ventas en efectivo,
+ingresos, egresos, esperado, contado y lo cobrado con cada medio de pago), **todos los movimientos de caja** (hora,
+concepto y quién), **todos los cobros** (hora, pedido, mesa, medio de pago y monto), compras y gastos, propinas y
+su reparto, quién fichó, descuentos y cancelaciones, stock para reponer, lo que quedó pendiente y la copia de
+seguridad. **Ver cómo va hoy** lo muestra en el momento; **Cerrar el día ahora** lo guarda (se puede repetir si
+después hubo más ventas). Cada cierre se puede abrir e **imprimir** desde la lista.
+- **Automático:** en **Configurar** se elige la hora (por defecto 22:00) y los días que abre el local. 15 minutos
+  antes aparece el aviso para contar el efectivo.
+- **Si a esa hora la caja sigue abierta**, se cierra **sin contar** (nunca se inventa lo contado). Arriba de Caja
+  aparece el aviso y el encargado toca **Cargar lo contado**: ahí se ve si faltó o sobró plata.
+- **Propinas:** en Configurar se eligen las personas entre las que se reparten, en partes iguales. Si no se elige a
+  nadie, se reparten entre los que ficharon ese día.
+
 ---
 
 ## Cocina
@@ -112,6 +127,23 @@ ver cuánto debería haber, y la diferencia la ve el encargado. Los cierres ante
 ### Carta y precios
 - **Productos**: alta de productos, precios y categorías. Lo que se cambia acá se ve al instante en el
   sistema, en la carta QR y en la carta online.
+- **Opciones y adicionales** (en Productos): grupos como **"¿Qué leche?"** (se elige una: entera, descremada,
+  vegetal +$1300) o **"Adicionales"** (se eligen varios, cada uno con su precio, con tope opcional). En cada grupo
+  se agregan, editan o quitan opciones y se marcan los productos que lo usan (con "toda la categoría" de un toque).
+  Al agregar ese producto en el **Punto de Venta**, en **Agregar ítem** o en la **carta del QR**, se pregunta qué
+  opciones lleva; cocina y el ticket lo ven como "Latte · Leche vegetal" y el recargo se suma solo. Si una opción
+  obligatoria no se elige (por ejemplo, un pedido del asistente), va la primera.
+- **Para vender más** (venta cruzada): en cada **categoría**, "Acompañalo con" elige qué se sugiere (a los cafés,
+  laminados y pastelería); en cada **producto**, la **versión grande** ("¿Lo querés grande?"), el **horario** (las promos
+  de 8 a 12: fuera de horario el cliente lo ve pero no lo pide; en el Punto de Venta solo avisa) y, si es un combo,
+  **qué incluye** (1 café + 2 medialunas). La carta y el Punto de Venta sugieren después de agregar algo y, si el
+  pedido arma un combo suelto que sale más barato, avisan "Te conviene la promo" y lo cambian con un toque.
+- **Buscador del Punto de Venta**: escribir parte del nombre filtra en todas las categorías; **Enter** agrega el
+  primero y **Esc** borra la búsqueda.
+- **Carta en inglés y portugués**: al editar un producto o crear una categoría, abrir **Carta QR en otros idiomas**
+  y escribir el nombre (y la descripción) en inglés y portugués. En la carta del QR aparecen los botones
+  **ES / EN / PT**; si el celular del cliente está en inglés o portugués, la carta abre en ese idioma. Lo que se deja
+  vacío se ve en español. Cocina, caja y tickets siguen siempre en español.
 - **Menú QR / Display**: el QR de la carta (para las mesas o la vidriera), **QR de cada mesa: pedir desde la mesa**,
   **Imprimir QR de las mesas** y los **Links para compartir** en WhatsApp e Instagram.
 
@@ -131,7 +163,20 @@ tarde y ausencias, y **Repartir propinas** por horas trabajadas o en partes igua
 - **Reportes**: ventas del período, lo más vendido y en qué horarios se vende más.
 - **Ganancias** (plan Pro): cuánto queda después de costos, comisiones y gastos fijos; qué platos conviene empujar o
   revisar; punto de equilibrio.
+  - **Costos de la carta:** todos los productos en una lista para cargar lo que cuesta hacer cada uno (mercadería,
+    envase…). Arriba aparecen los que no tienen costo, los más vendidos primero; el margen se calcula al escribir.
+    Los que tienen receta toman el costo de sus ingredientes. Sin costo, un producto no se puede evaluar.
+  - **Por plato:** separa la carta en *Estrella* (se vende mucho y deja buena ganancia), *Caballo de batalla* (se vende
+    mucho pero deja poco: revisar precio o receta), *Rompecabezas* (deja bien pero se vende poco: recomendarlo) y
+    *Perro* (poco y poco). Los productos sin costo van al grupo *Sin costo* y no se comparan con los demás.
+  - **Canales y horarios → Por momento del día:** ticket promedio, ventas, tickets y lo más vendido en cada momento de
+    la carta (Desayuno, Brunch, Almuerzo, Merienda…), según la hora en que se hizo cada pedido.
 - **Contabilidad** (plan Pro): gastos, cuentas a pagar, IVA, estado de resultados y libro diario.
+  - **Factura de cada compra:** en **Cargar gasto**, tocar **Sacar foto o subir la factura** (foto con el celular o
+    PDF). Queda guardada con el gasto y se ve con **Ver factura** en la lista y en el IVA compras. Si está cargada la
+    clave de Claude (Integraciones → Asistente IA), Morfi lee la factura y completa fecha, proveedor, comprobante,
+    neto, IVA y percepciones: hay que revisarlos antes de guardar. Si el proveedor no está cargado, ofrece agregarlo.
+    Arriba de la lista se ve cuántos gastos todavía no tienen la factura adjunta.
 
 ### Administración (solo administrador)
 - **Usuarios**: alta de cada persona con su rol. Al irse alguien, desactivar su usuario.

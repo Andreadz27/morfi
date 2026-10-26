@@ -8,6 +8,7 @@ const POS = {
   categorias: [],
   cart: [],
   categoriaActiva: 'todas',
+  busqueda: '',
   descuento: 0,
   propina: 0,
   promociones: [],
@@ -31,6 +32,8 @@ const POS = {
     try {
       this.categorias = await API.getCategorias();
       this.productos = await API.getProductos();
+      await Opciones.cargar();
+      this.busqueda = '';
       this.cart = [];
       this.descuento = 0;
       this.propina = 0;
@@ -42,6 +45,12 @@ const POS = {
     } catch (err) {
       view.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: ${esc(err.message)}</p></div>`;
     }
+  },
+
+  // Nota de la categoría elegida (la misma de la carta: opciones de leche, horarios de las promos...)
+  htmlNotaCategoria() {
+    const c = this.categorias.find(x => x.id === this.categoriaActiva);
+    return c && c.descripcion ? `<div class="pos-nota-categoria"><i class="fas fa-info-circle"></i> ${esc(c.descripcion)}</div>` : '';
   },
 
   paint(view) {
@@ -56,13 +65,11 @@ const POS = {
       </button>`;
     })).join('');
 
-    const filtered = this.categoriaActiva === 'todas'
-      ? this.productos
-      : this.productos.filter(p => p.categoria_id == this.categoriaActiva);
+    const filtered = this.filtrados();
 
     const productBtns = filtered.map(p => `
       <button class="pos-product-btn" onclick="POS.addToCart(${p.id}, ${jsArg(p.nombre)}, ${Number(p.precio_venta) || 0})">
-        <div class="product-icon"><i class="fas fa-utensils"></i></div>
+        <div class="product-icon"><i class="fas ${p.grupos && p.grupos.length ? 'fa-sliders-h' : 'fa-utensils'}"></i></div>
         <div class="product-name">${esc(p.nombre)}</div>
         <div class="product-price">${fmtMoneda(p.precio_venta)}</div>
       </button>
@@ -75,7 +82,13 @@ const POS = {
             <h3><i class="fas fa-utensils"></i> Productos</h3>
             <span class="pos-products-count">${filtered.length} disponibles</span>
           </div>
+          <div class="pos-buscador">
+            <i class="fas fa-search"></i>
+            <input type="search" id="posBuscar" placeholder="Buscar producto... (Enter agrega el primero)" value="${esc(this.busqueda)}"
+              oninput="POS.buscar(this.value)" onkeydown="POS.teclaBuscar(event)" aria-label="Buscar producto" autocomplete="off">
+          </div>
           <div class="pos-categories">${catBtns}</div>
+          ${this.htmlNotaCategoria()}
           <div class="pos-product-grid">
             ${productBtns || '<div class="empty-state"><i class="fas fa-box-open"></i><p>Sin productos en esta categor\u00eda</p></div>'}
           </div>
@@ -89,8 +102,9 @@ const POS = {
               <button class="pos-cart-clear" onclick="POS.clearCart()" title="Vaciar pedido" ${this.cart.length === 0 ? 'disabled' : ''}><i class="fas fa-trash"></i></button>
             </div>
           </div>
+          <div class="pos-sugerencias" id="posSugerencias"></div>
           <div class="pos-cart-items" id="posCartItems">
-            ${this.renderCartItems()}
+            ${this.htmlCombo()}${this.renderCartItems()}
           </div>
           <div class="pos-cart-footer">
             <div class="pos-cart-actions">
@@ -152,18 +166,105 @@ const POS = {
     `).join('');
   },
 setCategoria(id) {
+    this.busqueda = '';
     this.categoriaActiva = id;
     this.paint(document.getElementById('view-pos'));
   },
 
+  // Con opciones ("¿Qué leche?", adicionales) pregunta antes de agregar; cada combinación es una línea
   addToCart(id, nombre, precio) {
-    const existing = this.cart.find(i => i.producto_id === id);
-    if (existing) {
-      existing.cantidad++;
-    } else {
-      this.cart.push({ producto_id: id, nombre, precio, cantidad: 1 });
-    }
+    const prod = this.productos.find(p => p.id === id) || { id, nombre, precio_venta: precio, grupos: [] };
+    if (!VentaCruzada.disponible(prod.horario)) App.showToast(`${nombre} está fuera de su horario (como promo, se ofrece en otro momento)`, 'warning', 6000);
+    Opciones.elegir(prod, ({ opciones, extra, sufijo }) => {
+      const clave = id + ':' + opciones.slice().sort((a, b) => a - b).join(',');
+      const existing = this.cart.find(i => (i.clave || i.producto_id + ':') === clave);
+      if (existing) {
+        existing.cantidad++;
+      } else {
+        this.cart.push({ producto_id: id, nombre: nombre + sufijo, precio: precio + extra, cantidad: 1, opciones, clave });
+      }
+      this.refreshCart();
+      this.sugerir(prod, this.cart.findIndex(i => (i.clave || i.producto_id + ':') === clave));
+    });
+  },
+
+  // ===== Venta cruzada (js/venta-cruzada.js): qué ofrecer, ¿grande?, te conviene la promo =====
+  sugerir(prod, linea) {
+    const el = document.getElementById('posSugerencias');
+    if (!el) return;
+    const grande = VentaCruzada.grande(prod, this.productos);
+    const acompa = VentaCruzada.acompanar(prod, this.productos, this.categorias, this.cart.map(i => i.producto_id));
+    if (!grande && !acompa.length) { el.innerHTML = ''; return; }
+    el.innerHTML = `<span class="pos-sug-titulo"><i class="fas fa-lightbulb"></i> Ofrecé:</span>
+      ${grande ? `<button class="pos-sug-btn pos-sug-grande" onclick="POS.cambiarAGrande(${linea})">Grande +${fmtMoneda(grande.precio_venta - prod.precio_venta)}</button>` : ''}
+      ${acompa.map(p => `<button class="pos-sug-btn" onclick="POS.addToCart(${p.id}, ${jsArg(p.nombre)}, ${Number(p.precio_venta) || 0})">${esc(p.nombre)}</button>`).join('')}`;
+  },
+
+  // Una unidad de la línea pasa a la versión grande (con las opciones que la grande también tiene)
+  cambiarAGrande(idx) {
+    const l = this.cart[idx];
+    if (!l) return;
+    const grande = VentaCruzada.grande(this.productos.find(p => p.id === l.producto_id), this.productos);
+    if (!grande) return;
+    const grupos = Opciones.gruposDe(grande);
+    const opciones = (l.opciones || []).filter(id => grupos.some(g => g.opciones.some(o => o.id === id)));
+    const elegidas = grupos.flatMap(g => g.opciones.filter(o => opciones.includes(o.id)));
+    l.cantidad--;
+    if (l.cantidad <= 0) this.cart.splice(idx, 1);
+    const clave = grande.id + ':' + opciones.slice().sort((a, b) => a - b).join(',');
+    const ya = this.cart.find(i => (i.clave || i.producto_id + ':') === clave);
+    if (ya) ya.cantidad++;
+    else this.cart.push({ producto_id: grande.id, nombre: grande.nombre + (elegidas.length ? ' · ' + elegidas.map(o => o.nombre).join(', ') : ''),
+      precio: grande.precio_venta + elegidas.reduce((s, o) => s + (Number(o.precio) || 0), 0), cantidad: 1, opciones, clave });
+    document.getElementById('posSugerencias').innerHTML = '';
     this.refreshCart();
+  },
+
+  htmlCombo() {
+    const c = VentaCruzada.comboConveniente(this.cart, this.productos);
+    return c ? `<div class="pos-combo-conviene"><span><i class="fas fa-tags"></i> Conviene <strong>${esc(c.combo.nombre)}</strong>: ahorra ${fmtMoneda(c.ahorro)}</span>
+      <button class="btn btn-sm btn-primary" onclick="POS.cambiarACombo()">Cambiar</button></div>` : '';
+  },
+
+  // Saca lo que arma el combo y agrega el combo (si tiene opciones, se eligen)
+  cambiarACombo() {
+    const c = VentaCruzada.comboConveniente(this.cart, this.productos);
+    if (!c) return;
+    for (const u of c.usar) this.cart[u.linea].cantidad -= u.cantidad;
+    this.cart = this.cart.filter(i => i.cantidad > 0);
+    this.refreshCart();
+    this.addToCart(c.combo.id, c.combo.nombre, Number(c.combo.precio_venta) || 0);
+  },
+
+  // Buscador: filtra en todas las categorías mientras se escribe; Enter agrega el primero
+  filtrados() {
+    const q = this.busqueda.trim().toLowerCase();
+    if (q) return this.productos.filter(p => p.nombre.toLowerCase().includes(q) || String(p.descripcion || '').toLowerCase().includes(q));
+    return this.categoriaActiva === 'todas' ? this.productos : this.productos.filter(p => p.categoria_id == this.categoriaActiva);
+  },
+  buscar(texto) {
+    this.busqueda = texto;
+    const grid = document.querySelector('#view-pos .pos-product-grid');
+    if (!grid) return;
+    const lista = this.filtrados();
+    grid.innerHTML = lista.map(p => `
+      <button class="pos-product-btn" onclick="POS.addToCart(${p.id}, ${jsArg(p.nombre)}, ${Number(p.precio_venta) || 0})">
+        <div class="product-icon"><i class="fas ${p.grupos && p.grupos.length ? 'fa-sliders-h' : 'fa-utensils'}"></i></div>
+        <div class="product-name">${esc(p.nombre)}</div>
+        <div class="product-price">${fmtMoneda(p.precio_venta)}</div>
+      </button>`).join('') || '<div class="empty-state"><i class="fas fa-search"></i><p>No hay productos con ese nombre</p></div>';
+    const c = document.querySelector('#view-pos .pos-products-count');
+    if (c) c.textContent = `${lista.length} disponibles`;
+  },
+  teclaBuscar(e) {
+    if (e.key === 'Escape') { e.target.value = ''; this.buscar(''); return; }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const p = this.filtrados()[0];
+    if (!p) return;
+    this.addToCart(p.id, p.nombre, Number(p.precio_venta) || 0);
+    e.target.value = '';
+    this.buscar('');
   },
 
   changeQty(idx, delta) {
@@ -319,7 +420,8 @@ setCategoria(id) {
 
   refreshCart() {
     const itemsEl = document.getElementById('posCartItems');
-    if (itemsEl) itemsEl.innerHTML = this.renderCartItems();
+    if (itemsEl) itemsEl.innerHTML = this.htmlCombo() + this.renderCartItems();
+    if (!this.cart.length) { const s = document.getElementById('posSugerencias'); if (s) s.innerHTML = ''; }
 
     const countEl = document.querySelector('#view-pos .pos-cart-count');
     if (countEl) countEl.textContent = `${this.cart.reduce((s,i)=>s+i.cantidad,0)} items`;
@@ -501,7 +603,8 @@ checkout() {
       producto_id: item.producto_id,
       nombre: item.nombre,
       cantidad: item.cantidad,
-      precio: item.precio
+      precio: item.precio,
+      opciones: item.opciones || []
     }));
 
     try {

@@ -1,6 +1,8 @@
 'use strict';
 const {
-  run, get, all, errorHttp, actualizarParcial, errorInterno, autenticar, requiere, transaccion, obtenerReceta, guardarRecetaTx, recalcularCostosConIngrediente, costoReceta
+  run, get, all, errorHttp, actualizarParcial, errorInterno, autenticar, requiere, transaccion, obtenerReceta, guardarRecetaTx, recalcularCostosConIngrediente, costoReceta,
+  normalizarTraducciones, ORDEN_CARTA, listarMomentos, guardarMomento, borrarMomento, listarGrupos, guardarGrupo, borrarGrupo, gruposPorProducto,
+  validarHorario, validarCombo, validarVersionGrande, validarSugerir
 } = require('../contexto');
 
 module.exports = function registrarRutas(app) {
@@ -18,10 +20,10 @@ app.get('/api/categorias', autenticar, async (req, res) => {
 
 app.post('/api/categorias', autenticar, requiere('catalogo'), async (req, res) => {
   try {
-    const { nombre, descripcion, color, orden } = req.body;
+    const { nombre, descripcion, color, orden, traducciones, sugerir } = req.body;
     const result = await run(
-      'INSERT INTO categorias (nombre, descripcion, color, orden) VALUES (?, ?, ?, ?)',
-      [nombre, descripcion || '', color || '#4CAF50', orden || 0]
+      'INSERT INTO categorias (nombre, descripcion, color, orden, traducciones, sugerir) VALUES (?, ?, ?, ?, ?, ?)',
+      [nombre, descripcion || '', color || '#4CAF50', orden || 0, normalizarTraducciones(traducciones), await validarSugerir(sugerir)]
     );
     res.status(201).json({ id: result.id, message: 'Categoría creada' });
   } catch (err) {
@@ -31,7 +33,10 @@ app.post('/api/categorias', autenticar, requiere('catalogo'), async (req, res) =
 
 app.put('/api/categorias/:id', autenticar, requiere('catalogo'), async (req, res) => {
   try {
-    await actualizarParcial('categorias', req.params.id, req.body || {}, ['nombre', 'descripcion', 'color', 'orden', 'activo']);
+    const body = { ...(req.body || {}) };
+    if (body.traducciones !== undefined) body.traducciones = normalizarTraducciones(body.traducciones);
+    if (body.sugerir !== undefined) body.sugerir = await validarSugerir(body.sugerir, req.params.id);
+    await actualizarParcial('categorias', req.params.id, body, ['nombre', 'descripcion', 'color', 'orden', 'activo', 'traducciones', 'sugerir']);
     res.json({ message: 'Categoría actualizada' });
   } catch (err) {
     errorInterno(res, err);
@@ -47,6 +52,44 @@ app.delete('/api/categorias/:id', autenticar, requiere('catalogo'), async (req, 
   }
 });
 
+// ============ MOMENTOS DE LA CARTA (servicios/carta.js) ============
+// Desayuno, Brunch, Almuerzo, Merienda...: horario y categorías. La carta abre en el de la hora.
+
+app.get('/api/carta/momentos', autenticar, async (req, res) => {
+  try { res.json(await listarMomentos()); } catch (err) { errorInterno(res, err); }
+});
+
+app.post('/api/carta/momentos', autenticar, requiere('catalogo'), async (req, res) => {
+  try { res.status(201).json(await guardarMomento(req.body)); } catch (err) { errorInterno(res, err); }
+});
+
+app.put('/api/carta/momentos/:id', autenticar, requiere('catalogo'), async (req, res) => {
+  try { res.json(await guardarMomento(req.body, Number(req.params.id))); } catch (err) { errorInterno(res, err); }
+});
+
+app.delete('/api/carta/momentos/:id', autenticar, requiere('catalogo'), async (req, res) => {
+  try { await borrarMomento(Number(req.params.id)); res.json({ message: 'Momento borrado' }); } catch (err) { errorInterno(res, err); }
+});
+
+// ============ OPCIONES Y ADICIONALES (servicios/opciones.js) ============
+// Grupos ("¿Qué leche?", "Adicionales") con sus opciones y precios, y los productos que los usan
+
+app.get('/api/opciones/grupos', autenticar, async (req, res) => {
+  try { res.json(await listarGrupos()); } catch (err) { errorInterno(res, err); }
+});
+
+app.post('/api/opciones/grupos', autenticar, requiere('catalogo'), async (req, res) => {
+  try { res.status(201).json(await guardarGrupo(req.body)); } catch (err) { errorInterno(res, err); }
+});
+
+app.put('/api/opciones/grupos/:id', autenticar, requiere('catalogo'), async (req, res) => {
+  try { res.json(await guardarGrupo(req.body, Number(req.params.id))); } catch (err) { errorInterno(res, err); }
+});
+
+app.delete('/api/opciones/grupos/:id', autenticar, requiere('catalogo'), async (req, res) => {
+  try { await borrarGrupo(Number(req.params.id)); res.json({ message: 'Grupo borrado' }); } catch (err) { errorInterno(res, err); }
+});
+
 // ============ PRODUCTOS ============
 
 app.get('/api/productos', autenticar, async (req, res) => {
@@ -57,8 +100,11 @@ app.get('/api/productos', autenticar, async (req, res) => {
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
       WHERE p.activo = 1
-      ORDER BY c.orden, p.nombre
+      ORDER BY c.orden, ${ORDEN_CARTA}
     `);
+    // Grupos de opciones de cada producto (el punto de venta pregunta "¿Qué leche?" al tocarlo)
+    const grupos = await gruposPorProducto();
+    for (const p of productos) p.grupos = grupos[p.id] || [];
     res.json(productos);
   } catch (err) {
     errorInterno(res, err);
@@ -101,7 +147,17 @@ async function datosProducto(body, actual = {}) {
     stock_actual: Number(valor('stock_actual', 0)) || 0, // puede quedar negativo por ventas
     stock_minimo: numero('stock_minimo', 0),
     unidad: String(valor('unidad', 'unidad') || 'unidad'),
-    activo: bandera('activo', 1)
+    activo: bandera('activo', 1),
+    orden: Math.trunc(numero('orden', 0)),
+    // Destacados de la carta: "Nuevo" y "Recomendado de la casa"
+    nuevo: bandera('nuevo', 0),
+    recomendado: bandera('recomendado', 0),
+    // Venta cruzada: versión grande, horario (promos de 8 a 12) y qué incluye un combo. Sin el campo, se conserva.
+    version_grande_id: body.version_grande_id !== undefined ? await validarVersionGrande(body.version_grande_id, actual.id) : (actual.version_grande_id || null),
+    horario: body.horario !== undefined ? (validarHorario(body.horario) || '') : (actual.horario || ''),
+    combo: body.combo !== undefined ? ((await validarCombo(body.combo, actual.id)) || '') : (actual.combo || ''),
+    // Sin "traducciones" en el body, la edición conserva las que tenía
+    traducciones: body.traducciones !== undefined ? normalizarTraducciones(body.traducciones) : (actual.traducciones || null)
   };
 }
 
@@ -109,9 +165,10 @@ app.post('/api/productos', autenticar, requiere('catalogo'), async (req, res) =>
   try {
     const p = await datosProducto(req.body || {});
     const result = await run(
-      `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo]
+      `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo, traducciones, orden, nuevo, recomendado,
+         version_grande_id, horario, combo)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo]
     );
     res.status(201).json({ id: result.id, message: 'Producto creado' });
   } catch (err) {
@@ -131,9 +188,10 @@ app.put('/api/productos/:id', autenticar, requiere('catalogo'), async (req, res)
       await run(
         `UPDATE productos SET
          nombre = ?, descripcion = ?, categoria_id = ?, precio_venta = ?, costo = ?,
-         es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?
+         es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?, traducciones = ?, orden = ?, nuevo = ?, recomendado = ?,
+         version_grande_id = ?, horario = ?, combo = ?
          WHERE id = ?`,
-        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, actual.id]
+        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo, actual.id]
       );
       // Si es ingrediente y cambió su costo, se actualiza el costo de los platos que lo usan
       if (Number(p.costo) !== Number(actual.costo)) await recalcularCostosConIngrediente(actual.id);

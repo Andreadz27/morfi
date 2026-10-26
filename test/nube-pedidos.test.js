@@ -144,8 +144,18 @@ test('el pedido online directo al local sigue funcionando igual', async () => {
   assert.equal(p.nube_pedido_id, null);
 });
 
-test('los links de la carta del local (QR, WhatsApp, Instagram) pasan a ser los fijos de la nube', async () => {
+test('los links de la carta del local (QR, WhatsApp, Instagram) pasan a ser los fijos de la nube', () => {
+  const { linkCartaNube } = require('../src/servicios/sync-nube');
+  assert.equal(linkCartaNube('https://nube.morfi.com.ar/l/centro'), 'https://nube.morfi.com.ar/l/centro');
+  assert.equal(linkCartaNube(null), null);
+});
+
+// Con la nube en la misma PC (NUBE_URL=127.0.0.1) el QR de la carta llevaba a 127.0.0.1: en los celulares
+// "rechazó la conexión". Un link local no se usa: quedan los de la dirección pública (o los arma el navegador).
+test('un link de la nube que solo abre en esta PC (127.0.0.1, localhost) no se usa para la carta', async () => {
+  const { linkCartaNube } = require('../src/servicios/sync-nube');
+  for (const url of [`${nubeBase}/l/centro`, 'http://localhost:4000/l/centro', 'http://[::1]:4000/l/x', 'http://0.0.0.0/l/x', 'no es url'])
+    assert.equal(linkCartaNube(url), null, url);
   const [, info] = await s.llamar('GET', '/api/publico/info');
-  assert.equal(info.links.carta, `${nubeBase}/l/centro/pedido.html`);
-  assert.equal(info.links.whatsapp, `${nubeBase}/l/centro/pedido.html?origen=whatsapp`);
+  assert.ok(!JSON.stringify(info.links).includes('127.0.0.1'), JSON.stringify(info.links));
 });

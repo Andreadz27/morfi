@@ -100,6 +100,16 @@ const API = {
   getCategorias() { return this.request('GET', '/categorias'); },
   createCategoria(data) { return this.request('POST', '/categorias', data); },
   updateCategoria(id, data) { return this.request('PUT', `/categorias/${id}`, data); },
+  // Opciones y adicionales de los productos ("¿Qué leche?", "Adicionales")
+  getGruposOpciones() { return this.request('GET', '/opciones/grupos'); },
+  crearGrupoOpciones(data) { return this.request('POST', '/opciones/grupos', data); },
+  actualizarGrupoOpciones(id, data) { return this.request('PUT', `/opciones/grupos/${id}`, data); },
+  borrarGrupoOpciones(id) { return this.request('DELETE', `/opciones/grupos/${id}`); },
+  // Momentos de la carta (Desayuno, Brunch...)
+  getMomentos() { return this.request('GET', '/carta/momentos'); },
+  crearMomento(data) { return this.request('POST', '/carta/momentos', data); },
+  actualizarMomento(id, data) { return this.request('PUT', `/carta/momentos/${id}`, data); },
+  borrarMomento(id) { return this.request('DELETE', `/carta/momentos/${id}`); },
   deleteCategoria(id) { return this.request('DELETE', `/categorias/${id}`); },
 
   // ===== Productos =====
@@ -194,11 +204,39 @@ const API = {
   updateGasto(id, data) { return this.request('PUT', `/contabilidad/gastos/${id}`, data); },
   pagarGasto(id, data) { return this.request('POST', `/contabilidad/gastos/${id}/pagar`, data); },
   anularGasto(id) { return this.request('DELETE', `/contabilidad/gastos/${id}`); },
+  // Factura adjunta: el archivo va tal cual en el cuerpo (no JSON)
+  async subirAdjunto(archivo, nombre, gastoId) {
+    const r = await this.archivo('POST', `/contabilidad/adjuntos${gastoId ? '?gasto_id=' + gastoId : ''}`, archivo,
+      { 'Content-Type': archivo.type || 'application/octet-stream', 'X-Nombre-Archivo': encodeURIComponent(nombre || '') });
+    return r.json();
+  },
+  async verAdjunto(id) { return (await this.archivo('GET', `/contabilidad/adjuntos/${id}`)).blob(); },
+  leerAdjunto(id) { return this.request('POST', `/contabilidad/adjuntos/${id}/leer`); },
+  borrarAdjunto(id) { return this.request('DELETE', `/contabilidad/adjuntos/${id}`); },
+  async archivo(method, url, body, headers = {}) {
+    const token = this.getToken();
+    let r;
+    try {
+      r = await fetch(`${this.baseURL}${url}`, { method, body, headers: { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+    } catch (e) {
+      throw Object.assign(new Error('Sin conexión con Morfi. Revisá el WiFi.'), { sinConexion: true });
+    }
+    if (r.status === 401) { this.clearToken(); window.location.reload(); throw new Error('Sesión expirada'); }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Error en la petición');
+    return r;
+  },
   getCuentasPagar() { return this.request('GET', '/contabilidad/cuentas-pagar'); },
   getResultados(desde, hasta) { return this.request('GET', `/contabilidad/resultados?desde=${desde}&hasta=${hasta}`); },
   getIva(mes) { return this.request('GET', `/contabilidad/iva?mes=${mes}`); },
   getLibroDiario(desde, hasta) { return this.request('GET', `/contabilidad/libro-diario?desde=${desde}&hasta=${hasta}`); },
   getArqueoCaja(id) { return this.request('GET', `/caja/${id}/arqueo`); },
+  completarArqueo(id, data) { return this.request('POST', `/caja/${id}/arqueo`, data); },
+  // Cierre del día
+  getCierreConfig() { return this.request('GET', '/cierre/config'); },
+  getCierreHoy() { return this.request('GET', '/cierre/hoy'); },
+  getCierres() { return this.request('GET', '/cierres'); },
+  getCierre(fecha) { return this.request('GET', `/cierres/${encodeURIComponent(fecha)}`); },
+  cerrarDia() { return this.request('POST', '/cierres', {}); },
   registrarMovimientoCaja(data) { return this.request('POST', '/caja/movimiento', data); },
 // ===== Proveedores =====
   getProveedores() { return this.request('GET', '/proveedores'); },

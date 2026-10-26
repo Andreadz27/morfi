@@ -4,6 +4,7 @@ const { run, get, all, transaccion } = require('../db');
 const { emitEvento } = require('../realtime');
 const { fechaLocal } = require('../tiempo');
 const { descontarStockItemTx } = require('./recetas');
+const { resolverOpciones } = require('./opciones');
 
 // Generar número de pedido: secuencial y atómico (P-AAAAMMDD-00001).
 // La fecha es la del negocio (ZONA_HORARIA), no la del servidor: en un servidor en UTC
@@ -15,6 +16,8 @@ async function generarNumeroPedido() {
 
 // Valida los ítems recibidos y toma nombre y precio de la tabla productos:
 // nunca se confía en el precio que manda el navegador.
+// Opciones y adicionales (item.opciones = ids, servicios/opciones.js): el recargo también sale de la base y el
+// nombre lleva lo elegido ("Latte · Leche vegetal"), así se ve igual en cocina, en el ticket y en la factura.
 async function resolverItems(items) {
   if (!Array.isArray(items) || !items.length) throw Object.assign(new Error('El pedido no tiene ítems'), { status: 400 });
   const resueltos = [];
@@ -24,10 +27,20 @@ async function resolverItems(items) {
       throw Object.assign(new Error('Cantidad inválida'), { status: 400 });
     const prod = await get('SELECT id, nombre, precio_venta FROM productos WHERE id = ? AND activo = 1', [item.producto_id]);
     if (!prod) throw Object.assign(new Error('Producto no disponible'), { status: 400 });
-    const precio = Number(prod.precio_venta) || 0;
-    resueltos.push({ producto_id: prod.id, nombre: prod.nombre, cantidad, precio, subtotal: centavos(cantidad * precio), notas: String(item.notas || '') });
+    const opciones = await resolverOpciones(prod.id, item.opciones);
+    const precio = centavos((Number(prod.precio_venta) || 0) + opciones.reduce((s, o) => s + o.precio, 0));
+    const nombre = opciones.length ? `${prod.nombre} · ${opciones.map(o => o.nombre).join(', ')}` : prod.nombre;
+    resueltos.push({ producto_id: prod.id, nombre, cantidad, precio, subtotal: centavos(cantidad * precio), notas: String(item.notas || ''), opciones });
   }
   return resueltos;
+}
+
+// Guarda un ítem ya resuelto (resolverItems) en el pedido, con las opciones elegidas. Devuelve el id.
+async function insertarItemTx(pedidoId, item) {
+  const r = await run(`INSERT INTO pedido_items (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal, notas, opciones)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [pedidoId, item.producto_id || null, item.nombre, item.cantidad, item.precio, item.subtotal, item.notas || '',
+    item.opciones && item.opciones.length ? JSON.stringify(item.opciones) : '']);
+  return r.id;
 }
 
 // Importe no negativo (descuento, propina, envío), en centavos
@@ -175,6 +188,6 @@ async function registrarCobroTx(pedidoId, { pagos, propina, usuarioId, items }) 
 }
 
 module.exports = {
-  generarNumeroPedido, resolverItems, importe, centavos, recalcularTotales, registrarPago, registrarPagoTx,
+  generarNumeroPedido, resolverItems, insertarItemTx, importe, centavos, recalcularTotales, registrarPago, registrarPagoTx,
   registrarCobroTx, saldoPedido, METODOS_PAGO
 };
