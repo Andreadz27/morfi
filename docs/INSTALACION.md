@@ -30,7 +30,7 @@ sin token. **Si pasa a privado**, cada instalación necesita un token de GitHub 
 **PowerShell como Administrador** en esa carpeta y ejecutar (con el repositorio privado, agregar `-Token "github_pat_..."`):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File instalar.ps1 -Cliente "la-buena-mesa" -ActualizacionAutomatica
+powershell -ExecutionPolicy Bypass -File instalar.ps1 -Cliente "la-buena-mesa" -ActualizacionAutomatica -BaseLimpia
 ```
 
 El checklist para imprimir y llevar al local está en `docs/CHECKLIST-INSTALACION.md`. El instalador se prueba solo en
@@ -38,6 +38,9 @@ un Windows limpio (workflow **Instalador (Windows limpio)**): instala, simula un
 
 `-Cliente` = nombre corto del local, en minúsculas y sin espacios (se usa en la nube y en el monitoreo).
 `-ActualizacionAutomatica` = actualiza todos los días a las 05:00, con copia previa y vuelta atrás si algo falla.
+`-BaseLimpia` = la base arranca vacía: sin la carta, las mesas, las categorías, los proveedores ni las promociones de
+ejemplo. Quedan el administrador inicial y las plataformas de delivery (apagadas). Solo vale cuando la base todavía no
+existe: volver a ejecutar el instalador con `-BaseLimpia` no borra nada.
 
 El instalador deja el sistema corriendo y muestra la dirección para las tablets (ej. `http://192.168.0.10:3000`).
 Se puede volver a ejecutar: no borra datos.

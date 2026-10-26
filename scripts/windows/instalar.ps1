@@ -2,6 +2,7 @@
 # Ejecutar en PowerShell COMO ADMINISTRADOR, en la PC o mini PC del restaurante:
 #   powershell -ExecutionPolicy Bypass -File instalar.ps1 -Cliente "la-buena-mesa" -Token "github_pat_..."
 # -Token: token de GitHub de SOLO LECTURA para este repositorio (el repo es privado; ver docs/INSTALACION.md).
+# -BaseLimpia: la base arranca vacía (sin la carta, mesas, categorías, proveedores ni promociones de ejemplo).
 # Hace todo: Node.js y Git (con winget), descarga el sistema, crea la base, lo deja corriendo con pm2,
 # lo arranca solo AL ENCENDER la PC (aunque nadie inicie sesión: si se corta la luz, vuelve solo),
 # abre el puerto para las tablets de la red local y (opcional) programa la actualización automática de madrugada.
@@ -20,6 +21,7 @@ param(
   [string]$Token,                                          # token de solo lectura (repositorio privado)
   [int]$Puerto = 3000,
   [switch]$ActualizacionAutomatica,                        # actualiza todos los días a las 05:00 (con copia y vuelta atrás)
+  [switch]$BaseLimpia,                                     # local nuevo: base sin la carta, mesas ni proveedores de ejemplo
   # Copias en la nube del local (también sirven sin -RestaurarDeLaNube, para dejarlas configuradas al instalar)
   [switch]$RestaurarDeLaNube,                              # PC de reemplazo: restaura la copia más nueva de la nube
   [string]$ClaveCopias,                                    # BACKUP_CLAVE del local (la del gestor de contraseñas)
@@ -163,8 +165,12 @@ if ($RestaurarDeLaNube) {
   $restaurada = ($salida | Select-String 'Copia más nueva de la nube: (.+)').Matches | ForEach-Object { $_.Groups[1].Value } | Select-Object -First 1
 } elseif (-not (Test-Path (Join-Path $Carpeta 'data\morfi.db')) -and -not (Test-Path (Join-Path $Carpeta 'data\gastromanager.db'))) {
   # data\morfi.db (si todavía se llama gastromanager.db, el sistema la renombra solo al arrancar)
-  npm run init-db; Revisar 'crear la base de datos'
-} else { Write-Host 'La base ya existe: no se toca.' }
+  # (node directo: con el atajo npm.ps1, PowerShell se come el "--" de "npm run init-db -- --sin-ejemplos")
+  if ($BaseLimpia) { node init-db.js --sin-ejemplos } else { npm run init-db }; Revisar 'crear la base de datos'
+} else {
+  Write-Host 'La base ya existe: no se toca.'
+  if ($BaseLimpia) { Write-Host '  -BaseLimpia solo vale al crear la base: los datos que ya tiene quedan como están.' -ForegroundColor Yellow }
+}
 
 Paso 'Rotación de logs de pm2'
 # Sin esto, logs\pm2-*.log crece sin límite hasta llenar el disco
