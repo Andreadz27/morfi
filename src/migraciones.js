@@ -442,6 +442,13 @@ async function migrarEsquema() {
     PRIMARY KEY (producto_id, grupo_id)
   )`);
   await agregarColumna('pedido_items', 'opciones', "TEXT DEFAULT ''");
+
+  // Venta cruzada (servicios/venta-cruzada.js): con qué se sugiere cada categoría, versión grande de un producto,
+  // horario (las promos de 8 a 12) y qué incluye un combo (para avisar "te conviene la promo")
+  await agregarColumna('categorias', 'sugerir', "TEXT NOT NULL DEFAULT ''");
+  await agregarColumna('productos', 'version_grande_id', 'INTEGER DEFAULT NULL');
+  await agregarColumna('productos', 'horario', "TEXT NOT NULL DEFAULT ''");
+  await agregarColumna('productos', 'combo', "TEXT NOT NULL DEFAULT ''");
 }
 
 // ============ Migración segura (lo que usa server.js) ============

@@ -8,7 +8,7 @@ const PD_API=(location.pathname.match(/^\/l\/[^/]+/)||[""])[0];
 // Carta en español, inglés y portugués. Los platos traen sus traducciones desde el local (si faltan, en español);
 // los textos de la página están acá. Lo que ve cocina y caja sigue en español.
 const PD_TEXTOS={
-  es:{op_una:"Elegí una",op_opcional:"Opcional",op_hasta:"Hasta {n}",op_varias:"Elegí las que quieras",op_falta:"Elegí: {g}",op_agregar:"Agregar {m}",cancelar:"Cancelar",letra:"Letra más grande",toda_carta:"Toda la carta",buscar_ph:"Buscar en la carta",sin_resultados:"No encontramos nada con esa búsqueda.",b_mas:"Lo más pedido",b_nuevo:"Nuevo",b_reco:"Recomendado",online_sub:"Arma tu pedido y lo recibimos enseguida",ver_sub:"Nuestra carta",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
+  es:{acompana:"Acompañalo con",grande_q:"¿Lo querés grande? +{m}",conviene:"Te conviene: {c}. Ahorrás {m}",cambiar:"Cambiar",se_pide:"Se pide {h}",dias:["dom","lun","mar","mié","jue","vie","sáb"],dias_todos:"todos los días",de_a:"de {d} a {h}",de_h:"de {a} a {b}",op_una:"Elegí una",op_opcional:"Opcional",op_hasta:"Hasta {n}",op_varias:"Elegí las que quieras",op_falta:"Elegí: {g}",op_agregar:"Agregar {m}",cancelar:"Cancelar",letra:"Letra más grande",toda_carta:"Toda la carta",buscar_ph:"Buscar en la carta",sin_resultados:"No encontramos nada con esa búsqueda.",b_mas:"Lo más pedido",b_nuevo:"Nuevo",b_reco:"Recomendado",online_sub:"Arma tu pedido y lo recibimos enseguida",ver_sub:"Nuestra carta",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
     llamar_mozo:"Llamar al mozo",pedir_cuenta:"Pedir la cuenta",tu_pedido:"Tu pedido",vacio:"Todavía no agregaste nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Tus datos",nombre:"Nombre",nombre_opc:"Tu nombre (opcional)",nombre_ph:"Tu nombre",telefono:"Teléfono",como:"¿Cómo lo querés?",retiro:"Retiro en el local",delivery:"Delivery",
     direccion:"Dirección de entrega",direccion_ph:"Calle, número, piso/dpto",notas:"Notas / aclaraciones",notas_ph:"Sin cebolla, sin sal, etc.",volver:"Volver",enviar:"Enviar pedido",enviar_mozo:"Enviar al mozo",
@@ -25,7 +25,7 @@ const PD_TEXTOS={
     listo_cocina:"¡Listo{n}! Tu pedido ya está en preparación.",espera_mozo:"¡Gracias{n}! El mozo lo confirma en un momento: abajo ves cuándo pasa a cocina.",
     pago_ok:"¡Pago aprobado! Gracias.",cuenta_paga:" La cuenta quedó paga.",falta_resto:" Falta pagar el resto de la mesa.",
     pago_proceso:"Tu pago está en proceso: cuando Mercado Pago lo apruebe, se acredita solo.",pago_no:"El pago no se completó. Podés intentar de nuevo o pedirle la cuenta al mozo."},
-  en:{op_una:"Choose one",op_opcional:"Optional",op_hasta:"Up to {n}",op_varias:"Choose any",op_falta:"Please choose: {g}",op_agregar:"Add {m}",cancelar:"Cancel",letra:"Bigger text",toda_carta:"Full menu",buscar_ph:"Search the menu",sin_resultados:"Nothing matches your search.",b_mas:"Most ordered",b_nuevo:"New",b_reco:"Our pick",online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",carta_sub:"Browse the menu and call the waiter when you're ready to order",
+  en:{acompana:"Goes great with",grande_q:"Make it large? +{m}",conviene:"Better deal: {c}. You save {m}",cambiar:"Switch",se_pide:"Available {h}",dias:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],dias_todos:"every day",de_a:"{d} to {h}",de_h:"from {a} to {b}",op_una:"Choose one",op_opcional:"Optional",op_hasta:"Up to {n}",op_varias:"Choose any",op_falta:"Please choose: {g}",op_agregar:"Add {m}",cancelar:"Cancel",letra:"Bigger text",toda_carta:"Full menu",buscar_ph:"Search the menu",sin_resultados:"Nothing matches your search.",b_mas:"Most ordered",b_nuevo:"New",b_reco:"Our pick",online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",carta_sub:"Browse the menu and call the waiter when you're ready to order",
     llamar_mozo:"Call the waiter",pedir_cuenta:"Ask for the bill",tu_pedido:"Your order",vacio:"You haven't added anything yet",total_estimado:"Estimated total",confirmar:"Confirm order",
     tus_datos:"Your details",nombre:"Name",nombre_opc:"Your name (optional)",nombre_ph:"Your name",telefono:"Phone",como:"How would you like it?",retiro:"Pick up at the store",delivery:"Delivery",
     direccion:"Delivery address",direccion_ph:"Street, number, floor/apt",notas:"Notes",notas_ph:"No onion, no salt, etc.",volver:"Back",enviar:"Send order",enviar_mozo:"Send to the waiter",
@@ -42,7 +42,7 @@ const PD_TEXTOS={
     listo_cocina:"Done{n}! Your order is being prepared.",espera_mozo:"Thank you{n}! The waiter will confirm it shortly: below you'll see when it goes to the kitchen.",
     pago_ok:"Payment approved! Thank you.",cuenta_paga:" The bill is fully paid.",falta_resto:" The rest of the table still has to pay.",
     pago_proceso:"Your payment is being processed: once Mercado Pago approves it, it will be credited automatically.",pago_no:"The payment wasn't completed. You can try again or ask the waiter for the bill."},
-  pt:{op_una:"Escolha uma",op_opcional:"Opcional",op_hasta:"Até {n}",op_varias:"Escolha as que quiser",op_falta:"Escolha: {g}",op_agregar:"Adicionar {m}",cancelar:"Cancelar",letra:"Letra maior",toda_carta:"Cardápio completo",buscar_ph:"Buscar no cardápio",sin_resultados:"Não encontramos nada com essa busca.",b_mas:"Mais pedido",b_nuevo:"Novo",b_reco:"Recomendado",online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
+  pt:{acompana:"Combina com",grande_q:"Quer grande? +{m}",conviene:"Vale mais a pena: {c}. Você economiza {m}",cambiar:"Trocar",se_pide:"Disponível {h}",dias:["dom","seg","ter","qua","qui","sex","sáb"],dias_todos:"todos os dias",de_a:"de {d} a {h}",de_h:"das {a} às {b}",op_una:"Escolha uma",op_opcional:"Opcional",op_hasta:"Até {n}",op_varias:"Escolha as que quiser",op_falta:"Escolha: {g}",op_agregar:"Adicionar {m}",cancelar:"Cancelar",letra:"Letra maior",toda_carta:"Cardápio completo",buscar_ph:"Buscar no cardápio",sin_resultados:"Não encontramos nada com essa busca.",b_mas:"Mais pedido",b_nuevo:"Novo",b_reco:"Recomendado",online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
     llamar_mozo:"Chamar o garçom",pedir_cuenta:"Pedir a conta",tu_pedido:"Seu pedido",vacio:"Você ainda não adicionou nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Seus dados",nombre:"Nome",nombre_opc:"Seu nome (opcional)",nombre_ph:"Seu nome",telefono:"Telefone",como:"Como você prefere?",retiro:"Retirar no local",delivery:"Delivery",
     direccion:"Endereço de entrega",direccion_ph:"Rua, número, andar/apto",notas:"Observações",notas_ph:"Sem cebola, sem sal, etc.",volver:"Voltar",enviar:"Enviar pedido",enviar_mozo:"Enviar ao garçom",
@@ -419,6 +419,7 @@ const PedidoOnline={
   setCat(id){this.catActiva=id;this.paintCats();this.paintItems();},
   visible(p){return p.tracking_stock?(p.stock_actual>0||p.es_plato===1):true;},
   itemCard(p){
+    if(!this.soloVer&&p.disponible===false)return this._cardFueraHorario(p);
     const conOpciones=this._gruposDe(p).length;
     const q=conOpciones?0:(this.carrito.find(i=>i.producto_id===p.id)||{cantidad:0}).cantidad;
     const qc=this.soloVer||(this.mesa&&this.mesa.modo==="solo_carta")?""
@@ -475,12 +476,66 @@ const PedidoOnline={
     this._sumar(prod,[],0);
   },
   // Cada combinación de opciones es una línea del carrito (el precio lo vuelve a calcular el local)
-  _sumar(prod,opciones,extra){
+  _sumar(prod,opciones,extra,sinSugerir){
     const clave=prod.id+":"+opciones.slice().sort((a,b)=>a-b).join(",");
     const item=this.carrito.find(i=>(i.clave||i.producto_id+":")===clave);
     if(item)item.cantidad++;
     else this.carrito.push({producto_id:prod.id,nombre:prod.nombre,precio:prod.precio_venta+extra,cantidad:1,notas:"",opciones,clave});
     this.paintItems();this.paintCarrito();
+    if(!sinSugerir)this._sugerir(prod,this.carrito.findIndex(i=>(i.clave||i.producto_id+":")===clave));
+  },
+
+  // ── Venta cruzada (js/venta-cruzada.js): acompañalo con, ¿lo querés grande?, te conviene la promo ──
+  _textoHorario(h){
+    if(!h)return"";
+    const D=pdT("dias");const seguidos=h.dias.length>2&&h.dias.every((d,i)=>i===0||d===h.dias[i-1]+1);
+    const dias=h.dias.length===7?pdT("dias_todos"):seguidos?pdT("de_a",{d:D[h.dias[0]],h:D[h.dias[h.dias.length-1]]}):h.dias.map(d=>D[d]).join(", ");
+    return dias+" "+pdT("de_h",{a:h.desde,b:h.hasta});
+  },
+  _cardFueraHorario(p){
+    return`<div class="menu-item-card pedido-item-card fuera-horario" data-id="${p.id}"><div class="menu-item-info">
+      <div class="carta-linea"><span class="menu-item-nombre">${pdE(pdTr(p,"nombre"))}</span><span class="carta-puntos" aria-hidden="true"></span><span class="menu-item-precio">${pdM(p.precio_venta)}</span></div>
+      ${this._marcas(p)}${pdTr(p,"descripcion")?`<div class="menu-item-desc">${pdE(pdTr(p,"descripcion"))}</div>`:""}</div>
+      <div class="item-qty-ctrl"><span class="carta-horario"><i class="far fa-clock"></i> ${pdE(pdT("se_pide",{h:this._textoHorario(p.horario)}))}</span></div></div>`;
+  },
+  _sugerir(prod,linea){
+    const el=document.getElementById("sugerenciasCarta");if(!el||this.soloVer)return;
+    const grande=VentaCruzada.grande(prod,this.productos);
+    const acompa=VentaCruzada.acompanar(prod,this.productos,this.categorias,this.carrito.map(i=>i.producto_id));
+    if(!grande&&!acompa.length){el.style.display="none";return;}
+    el.innerHTML=`<button type="button" class="sugerencias-cerrar" onclick="PedidoOnline.cerrarSugerencias()" aria-label="Cerrar">&times;</button>
+      ${grande?`<button type="button" class="sugerencia-grande" onclick="PedidoOnline.cambiarAGrande(${linea})"><i class="fas fa-arrow-up"></i> ${pdE(pdT("grande_q",{m:pdM(grande.precio_venta-prod.precio_venta)}))}</button>`:""}
+      ${acompa.length?`<div class="sugerencias-titulo">${pdE(pdT("acompana"))}</div><div class="sugerencias-lista">${acompa.map(p=>`<button type="button" onclick="PedidoOnline.agregarSugerido(${p.id})"><span>${pdE(pdTr(p,"nombre"))}</span><b>${pdM(p.precio_venta)} +</b></button>`).join("")}</div>`:""}`;
+    el.style.display="";
+    clearTimeout(this._sugTimer);this._sugTimer=setTimeout(()=>this.cerrarSugerencias(),12000);
+  },
+  cerrarSugerencias(){const el=document.getElementById("sugerenciasCarta");if(el)el.style.display="none";},
+  agregarSugerido(id){this.cerrarSugerencias();this.agregar(id);},
+  // Cambia una unidad de la línea por la versión grande, con las opciones que la grande también tiene
+  cambiarAGrande(idx){
+    const l=this.carrito[idx];if(!l)return;
+    const prod=this.productos.find(p=>p.id===l.producto_id);const grande=VentaCruzada.grande(prod,this.productos);if(!grande)return;
+    const gruposG=this._gruposDe(grande);
+    const opciones=(l.opciones||[]).filter(id=>gruposG.some(g=>g.opciones.some(o=>o.id===id)));
+    const extra=opciones.reduce((s,id)=>{for(const g of gruposG){const o=g.opciones.find(x=>x.id===id);if(o)return s+(Number(o.precio)||0);}return s;},0);
+    this.cerrarSugerencias();
+    l.cantidad--;if(l.cantidad<=0)this.carrito.splice(idx,1);
+    this._sumar(grande,opciones,extra,true);
+  },
+  _htmlCombo(){
+    const c=VentaCruzada.comboConveniente(this.carrito,this.productos);
+    if(!c||this.soloVer)return"";
+    return`<div class="combo-conviene"><span><i class="fas fa-tags"></i> ${pdE(pdT("conviene",{c:pdTr(c.combo,"nombre"),m:pdM(c.ahorro)}))}</span>
+      <button type="button" class="btn btn-sm btn-primary" onclick="PedidoOnline.cambiarACombo()">${pdE(pdT("cambiar"))}</button></div>`;
+  },
+  // Saca del carrito lo que arma el combo y agrega el combo (si tiene opciones, se eligen)
+  cambiarACombo(){
+    const c=VentaCruzada.comboConveniente(this.carrito,this.productos);if(!c)return;
+    for(const u of c.usar)this.carrito[u.linea].cantidad-=u.cantidad;
+    this.carrito=this.carrito.filter(i=>i.cantidad>0);
+    const combo=c.combo;
+    if(this._gruposDe(combo).length){this.paintItems();this.paintCarrito();return this._elegirOpciones(combo);}
+    this._sumar(combo,[],0,true);
   },
   _elegirOpciones(prod){
     const grupos=this._gruposDe(prod);
@@ -554,9 +609,10 @@ const PedidoOnline={
     const html=this._carritoHTML();
     const has=this.carrito.length>0;
     const set=(id,val,prop)=>{const e=document.getElementById(id);if(e){if(prop==="html")e.innerHTML=val;else if(prop==="display")e.style.display=val;else if(prop==="text")e.textContent=val;}};
-    set("carritoItems",html,"html");set("carritoTotalRow",has?"":"none","display");set("carritoTotal",pdM(total),"text");
+    const combo=this._htmlCombo();
+    set("carritoItems",combo+html,"html");set("carritoTotalRow",has?"":"none","display");set("carritoTotal",pdM(total),"text");
     set("btnConfirmar",has?"":"none","display");set("carritoCount",count+" "+pdT(count===1?"item":"items"),"text");
-    set("carritoItemsMobile",html,"html");set("carritoTotalRowMobile",has?"":"none","display");set("carritoTotalMobile",pdM(total),"text");
+    set("carritoItemsMobile",combo+html,"html");set("carritoTotalRowMobile",has?"":"none","display");set("carritoTotalMobile",pdM(total),"text");
     set("btnConfirmarMobile",has?"":"none","display");
     set("carritoFlotante",has?"":"none","display");set("carritoFlotanteCount",String(count),"text");
   },

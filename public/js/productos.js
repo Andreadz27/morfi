@@ -222,6 +222,7 @@ const Productos = {
           <label>Stock inicial</label>
           <input type="number" id="prodStockInicial" min="0" value="${p ? p.stock_actual : '0'}">
         </div>
+        ${this.htmlVentaCruzada(p)}
         ${this.htmlTraducciones('prod', p && p.traducciones, true)}
         <div class="modal-footer">
           <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
@@ -249,6 +250,7 @@ async guardar(e, id) {
       orden: parseInt(document.getElementById('prodOrden').value || 0),
       recomendado: document.getElementById('prodRecomendado').checked ? 1 : 0,
       nuevo: document.getElementById('prodNuevo').checked ? 1 : 0,
+      ...this.leerVentaCruzada(id),
       traducciones: this.leerTraducciones('prod', true)
     };
     if (data.tracking_stock && !id) {
@@ -309,6 +311,80 @@ async guardar(e, id) {
     } catch (err) {
       App.showToast(err.message, 'error');
     }
+  },
+
+  // ===== Venta cruzada en el formulario de producto: versión grande, horario y qué incluye un combo =====
+  DIAS_CORTOS: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+  leerJSON(t) { try { return t ? (typeof t === 'string' ? JSON.parse(t) : t) : null; } catch (e) { return null; } },
+
+  htmlVentaCruzada(p) {
+    const h = this.leerJSON(p && p.horario);
+    const combo = this.leerJSON(p && p.combo);
+    const otros = this.productos.filter(x => !p || x.id !== p.id);
+    const algo = !!(p && (p.version_grande_id || h || combo));
+    return `<details class="form-group" ${algo ? 'open' : ''}>
+        <summary><i class="fas fa-bullhorn"></i> Para vender más (opcional)</summary>
+        <div class="form-group mt-10">
+          <label>Versión grande</label>
+          <select id="prodGrande"><option value="">— Ninguna —</option>${otros.map(x => `<option value="${Number(x.id)}" ${p && p.version_grande_id === x.id ? 'selected' : ''}>${esc(x.nombre)} (${fmtMoneda(x.precio_venta)})</option>`).join('')}</select>
+          <small class="form-hint">Al agregarlo, la carta y el punto de venta ofrecen "¿Lo querés grande?" por la diferencia.</small>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label"><input type="checkbox" id="prodHorarioOn" ${h ? 'checked' : ''} onchange="document.getElementById('prodHorario').style.display = this.checked ? '' : 'none'"> Solo en un horario (por ejemplo, promos de 8 a 12)</label>
+          <div id="prodHorario" style="${h ? '' : 'display:none'}">
+            <div class="cierre-dias">${this.DIAS_CORTOS.map((d, i) => `<label class="checkbox-label"><input type="checkbox" class="prodDia" value="${i}" ${!h ? (i >= 1 && i <= 5 ? 'checked' : '') : (h.dias.includes(i) ? 'checked' : '')}> ${d}</label>`).join('')}</div>
+            <div class="grid grid-2 mt-10">
+              <input type="time" id="prodDesde" value="${h ? esc(h.desde) : '08:00'}">
+              <input type="time" id="prodHasta" value="${h ? esc(h.hasta) : '12:00'}">
+            </div>
+            <small class="form-hint">Fuera de horario el cliente lo ve pero no lo puede pedir; en el punto de venta solo avisa.</small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Si es un combo: qué incluye</label>
+          <div id="prodCombo">${(combo ? combo.componentes : []).map(c => this.filaCombo(c, p)).join('')}</div>
+          <button type="button" class="btn btn-outline btn-sm mt-10" onclick="document.getElementById('prodCombo').insertAdjacentHTML('beforeend', Productos.filaCombo(null, null))"><i class="fas fa-plus"></i> Agregar parte del combo</button>
+          <small class="form-hint">Ej.: 1 de "Cafetería caliente" + 2 "Medialuna". Si el cliente lo arma suelto y el combo sale más barato, se le avisa.</small>
+        </div>
+      </details>`;
+  },
+
+  // Una parte del combo: cantidad + "cualquiera de una categoría" o un producto
+  filaCombo(c, p) {
+    let valor = '';
+    if (c) {
+      const cat = this.categorias.find(k => {
+        const ids = this.productos.filter(x => x.categoria_id === k.id && (!p || x.id !== p.id)).map(x => x.id).sort();
+        return ids.length && ids.join(',') === c.productos.slice().sort().join(',');
+      });
+      valor = cat ? 'c:' + cat.id : c.productos.length === 1 ? 'p:' + c.productos[0] : 'l:' + c.productos.join(',');
+    }
+    const opcionesCat = this.categorias.map(k => `<option value="c:${Number(k.id)}" ${valor === 'c:' + k.id ? 'selected' : ''}>Cualquiera de: ${esc(k.nombre)}</option>`).join('');
+    const opcionesProd = this.productos.filter(x => !p || x.id !== p.id).map(x => `<option value="p:${Number(x.id)}" ${valor === 'p:' + x.id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('');
+    return `<div class="opcion-fila combo-fila">
+        <input type="number" class="comboCant" min="1" max="10" value="${c ? Number(c.cantidad) : 1}" title="Cantidad">
+        <select class="comboQue">
+          ${valor.startsWith('l:') ? `<option value="${esc(valor)}" selected>${c.productos.length} productos elegidos</option>` : ''}
+          <optgroup label="Categorías">${opcionesCat}</optgroup><optgroup label="Productos">${opcionesProd}</optgroup>
+        </select>
+        <button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.combo-fila').remove()" title="Quitar"><i class="fas fa-times"></i></button>
+      </div>`;
+  },
+
+  leerVentaCruzada(id) {
+    const on = document.getElementById('prodHorarioOn').checked;
+    const componentes = [...document.querySelectorAll('#prodCombo .combo-fila')].map(f => {
+      const [tipo, valor] = f.querySelector('.comboQue').value.split(':');
+      const productos = tipo === 'c' ? this.productos.filter(x => x.categoria_id === Number(valor) && x.id !== id).map(x => x.id)
+        : String(valor).split(',').map(Number);
+      return { productos, cantidad: Number(f.querySelector('.comboCant').value) || 1 };
+    }).filter(c => c.productos.length);
+    return {
+      version_grande_id: Number(document.getElementById('prodGrande').value) || null,
+      horario: on ? { dias: [...document.querySelectorAll('.prodDia')].filter(x => x.checked).map(x => Number(x.value)),
+        desde: document.getElementById('prodDesde').value, hasta: document.getElementById('prodHasta').value } : '',
+      combo: componentes.length ? { componentes } : ''
+    };
   },
 
   // ===== Opciones y adicionales ("¿Qué leche?", "Adicionales") =====
@@ -549,6 +625,11 @@ async guardar(e, id) {
             <input type="number" id="catOrden" value="${c ? Number(c.orden) || 0 : 0}">
           </div>
         </div>
+        <div class="form-group">
+          <label>Acompañalo con (sugerencias al agregar algo de esta categoría)</label>
+          <div class="cierre-dias">${this.categorias.filter(k => !c || k.id !== c.id).map(k => `<label class="checkbox-label"><input type="checkbox" class="catSugerir" value="${Number(k.id)}" ${c && String(c.sugerir || '').split(',').map(Number).includes(k.id) ? 'checked' : ''}> ${esc(k.nombre)}</label>`).join('')}</div>
+          <small class="form-hint">Ej.: a los cafés, laminados y pastelería. La carta y el punto de venta los ofrecen (primero los recomendados).</small>
+        </div>
         ${this.htmlTraducciones('cat', c && c.traducciones, true)}
         <div class="modal-footer">
           <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
@@ -565,7 +646,8 @@ async guardar(e, id) {
       descripcion: document.getElementById('catDescripcion').value,
       color: document.getElementById('catColor').value,
       orden: parseInt(document.getElementById('catOrden').value) || 0,
-      traducciones: this.leerTraducciones('cat', true)
+      traducciones: this.leerTraducciones('cat', true),
+      sugerir: [...document.querySelectorAll('.catSugerir')].filter(x => x.checked).map(x => Number(x.value))
     };
     try {
       if (id) await API.updateCategoria(id, data);

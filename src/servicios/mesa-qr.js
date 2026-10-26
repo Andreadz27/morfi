@@ -7,6 +7,7 @@ const { run, get, all, transaccion } = require('../db');
 const { emitEvento } = require('../realtime');
 const { errorHttp } = require('../util');
 const { generarNumeroPedido, resolverItems, insertarItemTx, recalcularTotales } = require('./pedidos');
+const { controlarHorarios } = require('./venta-cruzada');
 const { comandaAutomatica } = require('./impresion');
 const { pagoMesaDisponible } = require('./pago-mesa');
 const { configWhatsApp, whatsappListo } = require('./whatsapp');
@@ -56,6 +57,7 @@ async function solicitarPedidoMesa(mesa, { items, notas, cliente }) {
   const id = await transaccion(async () => {
     const { n } = await get("SELECT COUNT(*) n FROM solicitudes_mesa WHERE mesa_id = ? AND tipo = 'pedido' AND estado = 'pendiente'", [mesa.id]);
     if (n >= MAX_PENDIENTES_MESA) throw errorHttp(429, 'Ya hay pedidos esperando al mozo: en un momento los confirma');
+    await controlarHorarios(pedidos);
     const resueltos = await resolverItems(pedidos);
     if (resueltos.some(i => !(i.precio > 0))) throw errorHttp(400, 'Producto no disponible');
     const r = await run('INSERT INTO solicitudes_mesa (mesa_id, tipo, items, notas, cliente) VALUES (?, ?, ?, ?, ?)',

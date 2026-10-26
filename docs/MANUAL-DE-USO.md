@@ -131,6 +131,11 @@ después hubo más ventas). Cada cierre se puede abrir e **imprimir** desde la l
   Al agregar ese producto en el **Punto de Venta**, en **Agregar ítem** o en la **carta del QR**, se pregunta qué
   opciones lleva; cocina y el ticket lo ven como "Latte · Leche vegetal" y el recargo se suma solo. Si una opción
   obligatoria no se elige (por ejemplo, un pedido del asistente), va la primera.
+- **Para vender más** (venta cruzada): en cada **categoría**, "Acompañalo con" elige qué se sugiere (a los cafés,
+  laminados y pastelería); en cada **producto**, la **versión grande** ("¿Lo querés grande?"), el **horario** (las promos
+  de 8 a 12: fuera de horario el cliente lo ve pero no lo pide; en el Punto de Venta solo avisa) y, si es un combo,
+  **qué incluye** (1 café + 2 medialunas). La carta y el Punto de Venta sugieren después de agregar algo y, si el
+  pedido arma un combo suelto que sale más barato, avisan "Te conviene la promo" y lo cambian con un toque.
 - **Buscador del Punto de Venta**: escribir parte del nombre filtra en todas las categorías; **Enter** agrega el
   primero y **Esc** borra la búsqueda.
 - **Carta en inglés y portugués**: al editar un producto o crear una categoría, abrir **Carta QR en otros idiomas**
