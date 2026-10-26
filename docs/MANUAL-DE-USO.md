@@ -92,7 +92,9 @@ ver cuánto debería haber, y la diferencia la ve el encargado. Los cierres ante
 
 ### Cierre del día (encargado y administrador)
 En **Caja → Cierre del día** está todo lo que pasó en el día: ventas (por medio de pago, por tipo de pedido y por
-persona, ticket promedio y comparación con el mismo día de la semana anterior), la caja, compras y gastos, propinas y
+persona, ticket promedio y comparación con el mismo día de la semana anterior), la caja (inicial, ventas en efectivo,
+ingresos, egresos, esperado, contado y lo cobrado con cada medio de pago), **todos los movimientos de caja** (hora,
+concepto y quién), **todos los cobros** (hora, pedido, mesa, medio de pago y monto), compras y gastos, propinas y
 su reparto, quién fichó, descuentos y cancelaciones, stock para reponer, lo que quedó pendiente y la copia de
 seguridad. **Ver cómo va hoy** lo muestra en el momento; **Cerrar el día ahora** lo guarda (se puede repetir si
 después hubo más ventas). Cada cierre se puede abrir e **imprimir** desde la lista.

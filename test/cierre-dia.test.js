@@ -35,6 +35,7 @@ test('el resumen del día junta ventas, propinas, gastos, caja y pendientes', as
   const [stG] = await s.llamar('POST', '/api/contabilidad/gastos', { fecha: cierre.ahoraLocal().fecha, categoria: 'mercaderia',
     descripcion: 'Verdulería', neto: 3000, tipo_comprobante: 'sin_comprobante' }, s.tokenAdmin);
   assert.ok([200, 201].includes(stG), 'gasto cargado');
+  assert.equal((await s.llamar('POST', '/api/caja/movimiento', { tipo: 'egreso', monto: 700, concepto: 'Hielo' }, s.tokenAdmin))[0], 201);
 
   const [st, r] = await s.llamar('GET', '/api/cierre/hoy', undefined, s.tokenAdmin);
   assert.equal(st, 200);
@@ -45,7 +46,17 @@ test('el resumen del día junta ventas, propinas, gastos, caja y pendientes', as
   assert.equal(r.gastos.total, 3000);
   assert.equal(r.cajas.length, 1);
   assert.equal(r.cajas[0].estado, 'abierta');
-  assert.equal(r.cajas[0].efectivo_esperado, 10000 + prod.precio_venta * 2 + 500);
+  assert.equal(r.cajas[0].efectivo_esperado, 10000 + prod.precio_venta * 2 + 500 - 700);
+  // Todo lo de la caja: el desglose del esperado, cada movimiento y lo cobrado por cada medio de pago
+  assert.equal(r.cajas[0].ventas_efectivo, prod.precio_venta * 2 + 500);
+  assert.equal(r.cajas[0].egresos, 700);
+  assert.deepEqual(r.cajas[0].movimientos.map(m => [m.tipo, m.concepto, m.monto]), [['egreso', 'Hielo', 700]]);
+  assert.ok(r.cajas[0].movimientos[0].usuario, 'quién lo hizo');
+  assert.deepEqual(r.cajas[0].por_metodo.map(m => m.metodo).sort(), ['efectivo', 'tarjeta']);
+  // Cada cobro del día, con su pedido y su medio de pago
+  assert.deepEqual(r.cobros.map(c => c.metodo).sort(), ['efectivo', 'tarjeta']);
+  assert.equal(r.cobros.reduce((t, c) => t + c.monto, 0), r.ventas.total);
+  assert.ok(r.cobros.every(c => c.numero_pedido && c.fecha && c.tipo === 'mostrador'));
   assert.ok(r.pendientes.pedidos_abiertos.some(p => p.numero_pedido === abierto.numero_pedido));
   assert.ok(r.ventas.mas_vendidos.length >= 1);
   // Un cajero no ve el resumen del día

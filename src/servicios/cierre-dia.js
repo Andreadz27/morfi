@@ -87,7 +87,16 @@ async function ventasDelDia(fecha) {
   };
 }
 
-// Las cajas del día (abiertas ese día) con su arqueo: esperado, contado o "falta contar"
+// Cada cobro del día (hora, pedido, medio y monto): el detalle de lo que suma "Ventas por medio de pago"
+async function cobrosDelDia(fecha) {
+  return all(`SELECT pg.id, pg.fecha, pg.metodo, ROUND(pg.monto, 2) AS monto, pg.referencia, p.numero_pedido, p.tipo,
+      m.nombre AS mesa, u.nombre AS usuario
+    FROM pagos pg JOIN pedidos p ON p.id = pg.pedido_id LEFT JOIN mesas m ON m.id = p.mesa_id LEFT JOIN usuarios u ON u.id = p.usuario_id
+    WHERE date(pg.fecha, ${LOCAL()}) = ? ORDER BY pg.fecha, pg.id LIMIT 2000`, [fecha]);
+}
+
+// Las cajas del día (abiertas ese día) con su arqueo (esperado, contado o "falta contar"), sus cobros por medio de
+// pago y todos sus movimientos (ingresos y egresos con su concepto)
 async function cajasDelDia(fecha) {
   const cajas = await all(`SELECT c.*, u.nombre AS usuario_nombre FROM caja c LEFT JOIN usuarios u ON u.id = c.usuario_id
     WHERE date(c.fecha_apertura, ${LOCAL()}) = ? OR c.estado = 'abierta' ORDER BY c.fecha_apertura`, [fecha]);
@@ -97,7 +106,9 @@ async function cajasDelDia(fecha) {
     if (!r) r = await resumenCaja(c);
     return {
       id: c.id, estado: c.estado, usuario: c.usuario_nombre, apertura: c.fecha_apertura, cierre: c.fecha_cierre,
-      monto_inicial: r.monto_inicial, ingresos: r.ingresos, egresos: r.egresos, efectivo_esperado: r.efectivo_esperado,
+      monto_inicial: r.monto_inicial, ventas_efectivo: r.ventas_efectivo, ingresos: r.ingresos, egresos: r.egresos,
+      efectivo_esperado: r.efectivo_esperado, por_metodo: r.por_metodo || [],
+      movimientos: (r.movimientos || []).map(m => ({ id: m.id, tipo: m.tipo, concepto: m.concepto, monto: m.monto, fecha: m.fecha, usuario: m.usuario_nombre })),
       contado: c.estado === 'cerrada' && !c.pendiente_arqueo ? c.monto_final_real : null,
       diferencia: c.estado === 'cerrada' && !c.pendiente_arqueo ? c.diferencia : null,
       pendiente_arqueo: !!c.pendiente_arqueo, observaciones: c.observaciones_cierre || ''
@@ -122,8 +133,9 @@ async function resumenDelDia(fecha = fechaLocal()) {
   if (!FECHA.test(String(fecha))) throw errorHttp(400, 'Fecha inválida (AAAA-MM-DD)');
   const cfg = await configCierre();
   const L = LOCAL();
-  const [ventas, semanaPasada, cajas, propinas, personal] = await Promise.all([
-    ventasDelDia(fecha), ventasDelDia(restarDias(fecha, 7)), cajasDelDia(fecha), propinasDelDia(fecha, cfg), horasPorPersona(fecha, fecha)
+  const [ventas, semanaPasada, cajas, propinas, personal, cobros] = await Promise.all([
+    ventasDelDia(fecha), ventasDelDia(restarDias(fecha, 7)), cajasDelDia(fecha), propinasDelDia(fecha, cfg), horasPorPersona(fecha, fecha),
+    cobrosDelDia(fecha)
   ]);
   const gastos = await all(`SELECT g.id, g.categoria, g.descripcion, g.total, g.estado, g.tipo_comprobante, g.numero_comprobante,
       pr.nombre AS proveedor FROM gastos g LEFT JOIN proveedores pr ON pr.id = g.proveedor_id
@@ -142,6 +154,7 @@ async function resumenDelDia(fecha = fechaLocal()) {
     comparacion: { fecha: restarDias(fecha, 7), total: semanaPasada.total, tickets: semanaPasada.tickets,
       variacion: semanaPasada.total > 0 ? Math.round((ventas.total - semanaPasada.total) / semanaPasada.total * 1000) / 10 : null },
     cajas,
+    cobros,
     gastos: { items: gastos, total: redondear(gastos.reduce((s, g) => s + g.total, 0)) },
     propinas,
     personal: { horas: personal, sin_salida: sinSalida.map(x => x.nombre) },
