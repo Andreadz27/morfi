@@ -200,6 +200,13 @@ a:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px;
   font-weight: 400;
 }
 
+/* Eslogan del local, debajo del nombre */
+.menu-hero .menu-hero-eslogan {
+  font-size: clamp(15px, 3vw, 19px);
+  font-weight: 600;
+  margin: 0 0 var(--space-sm);
+}
+
 /* ---- Menu Container ---- */
 .menu-container {
   max-width: 720px;

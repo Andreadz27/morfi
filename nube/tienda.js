@@ -30,7 +30,7 @@ module.exports = function registrarTienda(app, { ruta, errorHttp, autenticarLoca
     const { info = {}, categorias, productos } = req.body || {};
     if (!Array.isArray(categorias) || !Array.isArray(productos) || productos.length > 3000) throw errorHttp(400, 'Carta inválida');
     const carta = {
-      info: { nombre: texto(info.nombre, 100), direccion: texto(info.direccion, 200), telefono: texto(info.telefono, 40), email: texto(info.email, 120) },
+      info: { nombre: texto(info.nombre, 100), eslogan: texto(info.eslogan, 80), direccion: texto(info.direccion, 200), telefono: texto(info.telefono, 40), email: texto(info.email, 120) },
       categorias: categorias.slice(0, 300).map(c => ({ id: Number(c.id), nombre: texto(c.nombre, 80) })),
       productos: productos.map(p => ({
         id: Number(p.id), nombre: texto(p.nombre, 120), descripcion: texto(p.descripcion, 500), precio_venta: r2(p.precio_venta),
@@ -93,7 +93,7 @@ module.exports = function registrarTienda(app, { ruta, errorHttp, autenticarLoca
   app.get('/l/:cliente/api/publico/info', conLocal(async (req, res, l, carta) => {
     const base = `${req.protocol}://${req.get('host')}/l/${encodeURIComponent(l.cliente)}`;
     res.json({
-      nombre: carta.info.nombre || 'Morfi', descripcion: carta.info.direccion ? `Dirección: ${carta.info.direccion}` : '',
+      nombre: carta.info.nombre || 'Morfi', eslogan: carta.info.eslogan || '', descripcion: carta.info.direccion ? `Dirección: ${carta.info.direccion}` : '',
       telefono: carta.info.telefono, email: carta.info.email, cuit: carta.info.cuit || '',
       links: { carta: `${base}/pedido.html`, whatsapp: `${base}/pedido.html?origen=whatsapp`, instagram: `${base}/pedido.html?origen=instagram` },
       recibe_pedidos: recibe(l), aviso: recibe(l) ? '' : sinConexion(carta)

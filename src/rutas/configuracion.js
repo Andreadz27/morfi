@@ -30,6 +30,8 @@ app.get('/api/red-local', autenticar, requiere('catalogo'), (req, res) => {
 
 // ============ CONFIGURACION ============
 
+const MAX_ESLOGAN = 80;
+
 const PERFILES_NEGOCIO = {
   restaurante_grande:  { label:'Restaurante Grande',    modulos:['pos','mesas','pedidos','delivery','cocina','productos','stock','proveedores','clientes','caja','reportes'], terminologia:{pedido:'Comanda',mesa:'Mesa',producto:'Plato'} },
   restaurante_mediano: { label:'Restaurante Mediano',   modulos:['pos','mesas','pedidos','delivery','cocina','productos','stock','proveedores','clientes','caja','reportes'], terminologia:{pedido:'Pedido', mesa:'Mesa',producto:'Plato'} },
@@ -64,13 +66,17 @@ app.put('/api/config', autenticar, esAdmin, async (req, res) => {
     if (b.modulos_activos !== undefined) b.modulos_activos = JSON.stringify(Array.isArray(b.modulos_activos) ? b.modulos_activos : []);
     if (b.terminologia !== undefined) b.terminologia = JSON.stringify(b.terminologia && typeof b.terminologia === 'object' ? b.terminologia : {});
     if (b.nombre_negocio !== undefined && !String(b.nombre_negocio).trim()) throw errorHttp(400, 'El nombre del negocio es obligatorio');
+    if (b.eslogan !== undefined) {
+      b.eslogan = String(b.eslogan || '').trim();
+      if (b.eslogan.length > MAX_ESLOGAN) throw errorHttp(400, `El eslogan puede tener hasta ${MAX_ESLOGAN} caracteres`);
+    }
     if (b.qr_mesa_modo !== undefined && !MODOS_QR_MESA.includes(b.qr_mesa_modo)) throw errorHttp(400, 'Modo de pedido por QR inválido');
     // Programa de puntos: cada cuántos pesos se gana un punto, cuánto vale al canjear y desde cuántos se canjea
     for (const c of ['puntos_cada', 'puntos_valor']) if (b[c] !== undefined && !(Number(b[c]) > 0)) throw errorHttp(400, 'Los valores de los puntos tienen que ser mayores a cero');
     if (b.puntos_minimo !== undefined && !(Number(b.puntos_minimo) >= 0)) throw errorHttp(400, 'Mínimo de puntos inválido');
     // Cierre del día: hora HH:MM, días que abre (0 = domingo) y quiénes reparten las propinas
     validarConfigCierre(b);
-    await actualizarParcial('configuracion', 1, b, ['nombre_negocio', 'direccion', 'telefono', 'email', 'cuit', 'tasa_iva',
+    await actualizarParcial('configuracion', 1, b, ['nombre_negocio', 'eslogan', 'direccion', 'telefono', 'email', 'cuit', 'tasa_iva',
       'moneda', 'activar_impresion', 'tipo_negocio', 'modulos_activos', 'terminologia', 'setup_completado', 'mozo_cobra_mesa', 'pin_autorizacion', 'arqueo_ciego',
       'qr_mesa_modo', 'puntos_activo', 'puntos_cada', 'puntos_valor', 'puntos_minimo',
       'cierre_auto_activo', 'cierre_hora', 'cierre_dias', 'cierre_propinas_usuarios']);

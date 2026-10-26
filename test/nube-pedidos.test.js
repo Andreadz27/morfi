@@ -41,7 +41,7 @@ before(async () => {
   s = await iniciarServidor({ NUBE_URL: nubeBase, NUBE_TOKEN: token, NUBE_SEGUNDOS: '1', NUBE_PEDIDOS_SEGUNDOS: '1' });
   [prod] = await s.q('SELECT id, nombre FROM productos WHERE activo = 1 ORDER BY id LIMIT 1');
   await s.q('UPDATE productos SET precio_venta = 1000 WHERE id = ?', [prod.id]);
-  await s.q("UPDATE configuracion SET nombre_negocio = 'La Buena Mesa', telefono = '11 4444-5555' WHERE id = 1");
+  await s.q("UPDATE configuracion SET nombre_negocio = 'La Buena Mesa', eslogan = 'Café & cosas ricas', telefono = '11 4444-5555' WHERE id = 1");
 });
 after(async () => {
   if (s) await s.cerrar();
@@ -57,6 +57,7 @@ test('la carta del local se publica en la nube con link fijo y la página es la 
   }), 'la carta no llegó (o sin el precio actualizado)');
   const [, info] = await aNube('GET', '/l/centro/api/publico/info');
   assert.equal(info.nombre, 'La Buena Mesa');
+  assert.equal(info.eslogan, 'Café & cosas ricas', 'el eslogan también llega a la carta en la nube');
   assert.equal(info.recibe_pedidos, true);
   assert.match(info.links.carta, /\/l\/centro\/pedido\.html$/);
 

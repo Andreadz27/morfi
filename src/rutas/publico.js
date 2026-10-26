@@ -61,7 +61,7 @@ app.get('/api/publico/menu', async (req, res) => {
 
 app.get('/api/publico/info', async (req, res) => {
   try {
-    const config = await get('SELECT nombre_negocio, direccion, telefono, email, cuit FROM configuracion WHERE id = 1');
+    const config = await get('SELECT nombre_negocio, eslogan, direccion, telefono, email, cuit FROM configuracion WHERE id = 1');
     // Sin BASE_URL no hay links: el navegador arma los suyos con la dirección por la que entró
     // (antes salían con localhost y el QR impreso en las mesas no abría en ningún celular)
     const base = urlPublica();
@@ -69,6 +69,7 @@ app.get('/api/publico/info', async (req, res) => {
     const nube = urlCartaNube();
     res.json({
       nombre: config?.nombre_negocio || 'Morfi',
+      eslogan: config?.eslogan || '',
       descripcion: config?.direccion ? `Dirección: ${config.direccion}` : '',
       telefono: config?.telefono || '',
       email: config?.email || '',

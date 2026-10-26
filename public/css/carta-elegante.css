@@ -67,6 +67,13 @@ body.menu-body.carta-elegante::before { display: none; }
   font-weight: 600;
   opacity: 1;
 }
+.carta-elegante .menu-hero .menu-hero-eslogan {
+  color: var(--tinta);
+  letter-spacing: .2em;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
 .carta-elegante .origen-badge-hero,
 .carta-elegante .origen-badge-hero.badge-web {
   background: transparent;

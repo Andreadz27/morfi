@@ -378,6 +378,8 @@ async function migrarEsquema() {
   await agregarColumna('configuracion', 'cierre_hora', "TEXT DEFAULT '22:00'");
   await agregarColumna('configuracion', 'cierre_dias', "TEXT DEFAULT '0,1,2,3,4,5,6'");
   await agregarColumna('configuracion', 'cierre_propinas_usuarios', "TEXT DEFAULT ''");
+  // Eslogan del local (ej. "Café & cosas ricas"): va debajo del nombre en la carta y en el ticket
+  await agregarColumna('configuracion', 'eslogan', "TEXT DEFAULT ''");
   await agregarColumna('caja', 'pendiente_arqueo', 'INTEGER NOT NULL DEFAULT 0');
   await agregarColumna('caja', 'arqueo_por', 'INTEGER');
   await agregarColumna('caja', 'arqueo_en', 'TEXT');

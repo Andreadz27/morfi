@@ -211,3 +211,27 @@ test('mesas: sin nombre o con capacidad fuera de 1 a 100 no se crean ni se edita
   assert.equal((await s.llamar('PUT', `/api/mesas/${m.id}`, { nombre: '' }, s.tokenAdmin))[0], 400);
   assert.equal((await s.llamar('PUT', `/api/mesas/${m.id}`, { sector: 'Patio' }, s.tokenAdmin))[0], 200, 'editar otro campo sigue andando');
 });
+
+// "Toda la carta" (y "Todas" en las categorías) no hacía nada al tocarla: el onclick se armaba con
+// JSON.stringify("todo") y sus comillas dobles cortaban el atributo onclick="...". Los de id numérico sí andaban.
+test('carta online: los botones de momento y categoría con texto ("todo", "todas") responden al tocarlos', () => {
+  const fs = require('fs'), path = require('path'), vm = require('vm');
+  const elementos = {};
+  const el = () => ({ style: {}, innerHTML: '', textContent: '', addEventListener() {}, querySelectorAll: () => [] });
+  const ctx = vm.createContext({
+    document: { getElementById: id => (elementos[id] = elementos[id] || el()), addEventListener() {}, querySelectorAll: () => [], documentElement: {} },
+    window: {}, localStorage: { getItem() {}, setItem() {} }, navigator: { language: 'es' }, location: { search: '', href: '', pathname: '/pedido.html' }, URLSearchParams
+  });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'pedido.js'), 'utf8'), ctx);
+  vm.runInContext(`PedidoOnline.momentos = [{ id: 3, nombre: 'Desayuno', icono: '☕', desde: '08:00', hasta: '12:00', categorias: [7] }];
+    PedidoOnline.categorias = [{ id: 7, nombre: 'Cafés' }]; PedidoOnline.momentoActivo = 3;
+    PedidoOnline.paintMomentos(); PedidoOnline.paintCats();`, ctx);
+  // Cada onclick tiene que ser un atributo completo que llame a la función con el valor del botón
+  const clics = html => [...html.matchAll(/<button[^>]*onclick="([^"]*)"[^>]*>/g)].map(m => m[1]);
+  const llamados = [];
+  vm.runInContext('PedidoOnline.setMomento = id => __llamar("momento", id); PedidoOnline.setCat = id => __llamar("cat", id);', Object.assign(ctx, { __llamar: (q, v) => llamados.push([q, v]) }));
+  for (const c of [...clics(elementos.momentosCarta.innerHTML), ...clics(elementos.menuCategorias.innerHTML)]) vm.runInContext(c, ctx);
+  assert.deepEqual(llamados, [['momento', 3], ['momento', 'todo'], ['cat', 'todas'], ['cat', 7]]);
+  assert.ok(!elementos.momentosCarta.innerHTML.includes('☕'), 'los momentos se muestran sin ícono, solo el nombre');
+  assert.ok(elementos.momentosCarta.innerHTML.includes('Desayuno') && elementos.momentosCarta.innerHTML.includes('08:00'));
+});

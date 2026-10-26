@@ -183,6 +183,7 @@ tarde y ausencias, y **Repartir propinas** por horas trabajadas o en partes igua
 - **Configuración**: datos del local (nombre, CUIT, dirección, teléfono, que también aparecen en el aviso de
   privacidad del pedido online), cómo llegan los pedidos del QR, arqueo ciego, PIN del encargado, impresora y
   copias de seguridad.
+  - **Eslogan** (opcional, ej. "Café & cosas ricas"): aparece debajo del nombre en la carta online y en el ticket.
 - **Integraciones**: ARCA (factura electrónica), Mercado Pago, WhatsApp Business, apps de delivery y Asistente IA.
 - **Tu plan**: qué incluye el plan, cuándo vence y cómo cambiarlo. Si soporte te pasa una licencia, se pega ahí.
 
