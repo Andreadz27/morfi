@@ -162,6 +162,11 @@ tarde y ausencias, y **Repartir propinas** por horas trabajadas o en partes igua
 - **Ganancias** (plan Pro): cuánto queda después de costos, comisiones y gastos fijos; qué platos conviene empujar o
   revisar; punto de equilibrio.
 - **Contabilidad** (plan Pro): gastos, cuentas a pagar, IVA, estado de resultados y libro diario.
+  - **Factura de cada compra:** en **Cargar gasto**, tocar **Sacar foto o subir la factura** (foto con el celular o
+    PDF). Queda guardada con el gasto y se ve con **Ver factura** en la lista y en el IVA compras. Si está cargada la
+    clave de Claude (Integraciones → Asistente IA), Morfi lee la factura y completa fecha, proveedor, comprobante,
+    neto, IVA y percepciones: hay que revisarlos antes de guardar. Si el proveedor no está cargado, ofrece agregarlo.
+    Arriba de la lista se ve cuántos gastos todavía no tienen la factura adjunta.
 
 ### Administración (solo administrador)
 - **Usuarios**: alta de cada persona con su rol. Al irse alguien, desactivar su usuario.

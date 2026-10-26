@@ -449,6 +449,21 @@ async function migrarEsquema() {
   await agregarColumna('productos', 'version_grande_id', 'INTEGER DEFAULT NULL');
   await agregarColumna('productos', 'horario', "TEXT NOT NULL DEFAULT ''");
   await agregarColumna('productos', 'combo', "TEXT NOT NULL DEFAULT ''");
+
+  // Facturas de compra adjuntas a los gastos (servicios/adjuntos-gastos.js). El archivo va en la base para que
+  // entre en las copias de seguridad. gasto_id NULL: subido desde el formulario y todavía sin guardar.
+  await run(`CREATE TABLE IF NOT EXISTS gasto_adjuntos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gasto_id INTEGER,
+    nombre TEXT NOT NULL DEFAULT '',
+    tipo TEXT NOT NULL,
+    tamano INTEGER NOT NULL DEFAULT 0,
+    datos BLOB NOT NULL,
+    usuario_id INTEGER,
+    creado_en TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (gasto_id) REFERENCES gastos(id)
+  )`);
+  await run('CREATE INDEX IF NOT EXISTS idx_gasto_adjuntos_gasto ON gasto_adjuntos(gasto_id)');
 }
 
 // ============ Migración segura (lo que usa server.js) ============

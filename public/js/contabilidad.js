@@ -208,13 +208,14 @@ const Contabilidad = {
     const gastos = this.datos;
     const total = gastos.reduce((s, g) => s + g.total, 0);
     const pendiente = gastos.filter(g => g.estado === 'pendiente').reduce((s, g) => s + g.total, 0);
+    const sinFactura = gastos.filter(g => g.tipo_comprobante !== 'sin_comprobante' && !(g.adjuntos || []).length).length;
     const cats = this.opciones.categorias.map(c => `<option value="${c.id}" ${this.filtroCategoria === c.id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('');
     const filas = gastos.map(g => `
       <tr>
         <td>${fmtFecha(g.fecha)}</td>
         <td class="font-bold">${esc(g.descripcion)}<br><small class="text-muted">${esc(this.nombreCategoria(g.categoria))}</small></td>
         <td>${esc(g.proveedor_nombre || '-')}</td>
-        <td>${esc(this.opciones.comprobantes[g.tipo_comprobante] || '')}${g.numero_comprobante ? '<br><small class="text-muted">' + esc(g.numero_comprobante) + '</small>' : ''}</td>
+        <td>${esc(this.opciones.comprobantes[g.tipo_comprobante] || '')}${g.numero_comprobante ? '<br><small class="text-muted">' + esc(g.numero_comprobante) + '</small>' : ''}${this.botonesAdjuntos(g)}</td>
         <td class="text-right">${g.iva ? fmtContable(g.iva) : '-'}</td>
         <td class="text-right font-bold">${fmtContable(g.total)}</td>
         <td>${g.estado === 'pagado'
@@ -230,7 +231,7 @@ const Contabilidad = {
       ${this.barraPeriodo()}
       <div class="card">
         <div class="card-header cont-filtros">
-          <span class="card-title"><i class="fas fa-file-invoice"></i> ${gastos.length} gastos · ${fmtContable(total)}${pendiente ? ` · <span class="text-warning">${fmtContable(pendiente)} a pagar</span>` : ''}</span>
+          <span class="card-title"><i class="fas fa-file-invoice"></i> ${gastos.length} gastos · ${fmtContable(total)}${pendiente ? ` · <span class="text-warning">${fmtContable(pendiente)} a pagar</span>` : ''}${sinFactura ? ` · <span class="text-muted">${sinFactura} sin la factura adjunta</span>` : ''}</span>
           <div>
             <select onchange="Contabilidad.filtroCategoria = this.value; Contabilidad.render()">
               <option value="">Todas las categorías</option>${cats}
@@ -302,7 +303,7 @@ const Contabilidad = {
       <tr>
         <td>${fmtFecha(g.fecha)}</td>
         <td>${esc(g.proveedor_nombre || '-')}<br><small class="text-muted">${esc(g.proveedor_cuit || '')}</small></td>
-        <td>${esc(this.opciones.comprobantes[g.tipo_comprobante] || '')} ${esc(g.numero_comprobante || '')}</td>
+        <td>${esc(this.opciones.comprobantes[g.tipo_comprobante] || '')} ${esc(g.numero_comprobante || '')}${this.botonesAdjuntos(g)}</td>
         <td class="text-right">${fmtContable(g.neto)}</td>
         <td class="text-right">${fmtContable(g.iva)}</td>
         <td class="text-right">${fmtContable(g.total)}</td>
@@ -398,8 +399,19 @@ const Contabilidad = {
     const cats = o.categorias.map(c => `<option value="${c.id}" ${g && g.categoria === c.id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('');
     const provs = this.proveedores.map(p => `<option value="${p.id}" ${g && g.proveedor_id === p.id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('');
     const pagado = g && g.estado === 'pagado';
+    // Adjuntos del formulario: los que ya tenía el gasto y los subidos ahora (se le pasan al guardar)
+    this.adjForm = { existentes: g ? [...(g.adjuntos || [])] : [], nuevos: [], leyendo: false, nuevoGasto: !g };
     App.showModal(`
       <form onsubmit="Contabilidad.guardar(event, ${g ? g.id : 'null'})" id="formGasto">
+        <div class="cont-adjuntos">
+          <div class="cont-adjuntos-cab">
+            <label class="btn btn-outline btn-sm"><i class="fas fa-camera"></i> Sacar foto o subir la factura
+              <input type="file" accept="image/*,application/pdf" multiple hidden onchange="Contabilidad.elegirArchivos(this)"></label>
+            <small class="text-muted">${o.lectura_facturas ? 'Morfi la lee y completa los datos: revisalos antes de guardar.' : 'Foto o PDF, queda guardada con el gasto.'}</small>
+          </div>
+          <div class="cont-adj-lista" id="gasAdjLista"></div>
+          <div class="cont-lectura" id="gasLectura"></div>
+        </div>
         <div class="grid grid-2">
           <div class="form-group"><label>Fecha del comprobante</label><input type="date" id="gasFecha" value="${g ? g.fecha : o.hoy}" required></div>
           <div class="form-group"><label>Categoría</label><select id="gasCategoria" required>${cats}</select></div>
@@ -436,6 +448,154 @@ const Contabilidad = {
       </form>
     `, { title: g ? 'Editar gasto' : 'Cargar gasto o compra' });
     this.actualizarForm();
+    this.pintarAdjuntos();
+  },
+
+  // ===== Facturas adjuntas =====
+  botonesAdjuntos(g) {
+    const lista = g.adjuntos || [];
+    if (!lista.length) return '';
+    return '<br>' + lista.map((a, i) => `<button type="button" class="cont-ver-adj" onclick="Contabilidad.verAdjunto(${a.id})" title="Ver ${esc(a.nombre)}">
+      <i class="fas fa-paperclip"></i> ${lista.length > 1 ? 'Factura ' + (i + 1) : 'Ver factura'}</button>`).join(' ');
+  },
+
+  // Se abre en otra pestaña (las fotos y los PDF se ven con el visor del navegador). La pestaña se abre antes
+  // de pedir el archivo: si no, el navegador la toma como ventana emergente y la bloquea.
+  async verAdjunto(id) {
+    const ventana = window.open('', '_blank');
+    try {
+      const url = URL.createObjectURL(await API.verAdjunto(id));
+      if (ventana) ventana.location.href = url; else window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      if (ventana) ventana.close();
+      App.showToast(err.message, 'error');
+    }
+  },
+
+  pintarAdjuntos() {
+    const cont = document.getElementById('gasAdjLista');
+    if (!cont) return;
+    const f = this.adjForm;
+    const chip = (a, nuevo) => `<span class="cont-adj">
+      <i class="fas ${a.tipo === 'application/pdf' ? 'fa-file-pdf' : 'fa-image'}"></i><span title="${esc(a.nombre)}">${esc(a.nombre)}</span>
+      <button type="button" onclick="Contabilidad.verAdjunto(${a.id})" title="Ver"><i class="fas fa-eye"></i></button>
+      ${this.opciones.lectura_facturas ? `<button type="button" onclick="Contabilidad.leerFactura(${a.id})" title="Completar los datos con esta factura"><i class="fas fa-wand-magic-sparkles"></i></button>` : ''}
+      <button type="button" onclick="Contabilidad.quitarAdjunto(${a.id}, ${nuevo})" title="Quitar"><i class="fas fa-times"></i></button>
+    </span>`;
+    cont.innerHTML = f.existentes.map(a => chip(a, false)).join('') + f.nuevos.map(a => chip(a, true)).join('');
+  },
+
+  // Las fotos se achican antes de subirlas (la factura se sigue leyendo bien y la base no crece de más)
+  async achicarFoto(archivo) {
+    if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(archivo.type) && archivo.type !== '') return archivo;
+    const url = URL.createObjectURL(archivo);
+    try {
+      const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = url; });
+      const escala = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+      const lienzo = document.createElement('canvas');
+      lienzo.width = Math.round(img.naturalWidth * escala);
+      lienzo.height = Math.round(img.naturalHeight * escala);
+      const ctx = lienzo.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+      ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+      const jpg = await new Promise(ok => lienzo.toBlob(ok, 'image/jpeg', 0.82));
+      return jpg ? new File([jpg], (archivo.name || 'factura').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : archivo;
+    } catch (e) {
+      return archivo; // el navegador no la pudo abrir: va como está y el servidor dice si el formato sirve
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  },
+
+  async elegirArchivos(input) {
+    const archivos = [...input.files];
+    input.value = '';
+    const f = this.adjForm;
+    let primero = null;
+    for (const original of archivos) {
+      if (f.existentes.length + f.nuevos.length >= 6) { App.showToast('Hasta 6 archivos por gasto', 'warning'); break; }
+      try {
+        const archivo = original.type === 'application/pdf' ? original : await this.achicarFoto(original);
+        if (archivo.size > this.opciones.max_adjunto) throw new Error(`${original.name}: es muy grande (hasta 4 MB)`);
+        const a = await API.subirAdjunto(archivo, archivo.name);
+        f.nuevos.push(a);
+        primero = primero || a;
+        this.pintarAdjuntos();
+      } catch (err) {
+        App.showToast(err.message, 'error');
+      }
+    }
+    // Gasto nuevo: la primera factura completa el formulario sola. Al editar, se pide con el botón de la varita.
+    if (primero && f.nuevoGasto && this.opciones.lectura_facturas && !f.leido) this.leerFactura(primero.id);
+  },
+
+  async quitarAdjunto(id, nuevo) {
+    const f = this.adjForm;
+    if (!nuevo && !confirm('¿Quitar esta factura del gasto?')) return;
+    try {
+      await API.borrarAdjunto(id);
+      f.existentes = f.existentes.filter(a => a.id !== id);
+      f.nuevos = f.nuevos.filter(a => a.id !== id);
+      this.pintarAdjuntos();
+      // Ya estaba guardada: se borró en el momento, aunque después se cancele el formulario
+      if (!nuevo && Array.isArray(this.datos)) for (const g of this.datos) g.adjuntos = (g.adjuntos || []).filter(a => a.id !== id);
+    } catch (err) {
+      App.showToast(err.message, 'error');
+    }
+  },
+
+  async leerFactura(id) {
+    const f = this.adjForm;
+    const estado = document.getElementById('gasLectura');
+    if (f.leyendo || !estado) return;
+    f.leyendo = true;
+    estado.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Leyendo la factura…';
+    try {
+      const d = await API.leerAdjunto(id);
+      if (!document.getElementById('formGasto')) return; // se cerró el formulario mientras leía
+      f.leido = true;
+      const poner = (campo, valor) => { const el = document.getElementById(campo); if (el && valor !== '' && valor !== null && valor !== undefined) el.value = valor; };
+      poner('gasFecha', d.fecha);
+      poner('gasCategoria', d.categoria);
+      poner('gasDescripcion', d.descripcion);
+      poner('gasTipo', d.tipo_comprobante);
+      poner('gasNumero', d.numero_comprobante);
+      poner('gasNeto', d.neto || '');
+      poner('gasIva', d.tipo_comprobante === 'factura_a' ? d.iva : '');
+      poner('gasOtros', d.otros_impuestos || '');
+      if (d.proveedor_id) poner('gasProveedor', d.proveedor_id);
+      this.actualizarForm();
+      const avisos = d.avisos.map(a => `<li>${esc(a)}</li>`).join('');
+      const nuevo = d.proveedor_nuevo
+        ? `<p class="mt-10"><i class="fas fa-truck"></i> Proveedor que no está cargado: <strong>${esc(d.proveedor_nuevo.nombre)}</strong>${d.proveedor_nuevo.cuit ? ' · CUIT ' + esc(d.proveedor_nuevo.cuit) : ''}
+          <button type="button" class="btn btn-outline btn-sm" onclick="Contabilidad.agregarProveedor()">Agregarlo</button></p>` : '';
+      this.proveedorLeido = d.proveedor_nuevo;
+      estado.innerHTML = `<span class="text-success"><i class="fas fa-circle-check"></i> Datos completados con la factura: revisalos antes de guardar.</span>
+        ${avisos ? `<ul class="text-warning">${avisos}</ul>` : ''}${nuevo}`;
+    } catch (err) {
+      if (document.getElementById('gasLectura')) estado.innerHTML = `<span class="text-warning"><i class="fas fa-triangle-exclamation"></i> ${esc(err.message)}</span>`;
+    } finally {
+      f.leyendo = false;
+    }
+  },
+
+  async agregarProveedor() {
+    const p = this.proveedorLeido;
+    if (!p) return;
+    try {
+      const r = await API.createProveedor({ nombre: p.nombre, cuit: p.cuit });
+      const id = r.id;
+      this.proveedores.push({ id, nombre: p.nombre, cuit: p.cuit });
+      const sel = document.getElementById('gasProveedor');
+      if (sel) { sel.insertAdjacentHTML('beforeend', `<option value="${id}">${esc(p.nombre)}</option>`); sel.value = id; }
+      this.proveedorLeido = null;
+      const boton = document.querySelector('#gasLectura .fa-truck');
+      if (boton) boton.closest('p').innerHTML = `<i class="fas fa-circle-check"></i> Proveedor ${esc(p.nombre)} agregado.`;
+    } catch (err) {
+      App.showToast(err.message, 'error');
+    }
   },
 
   // Factura A: neto + IVA (se sugiere la tasa configurada). Otros comprobantes: un solo importe.
@@ -466,7 +626,8 @@ const Contabilidad = {
       fecha: val('gasFecha'), categoria: val('gasCategoria'), descripcion: val('gasDescripcion'),
       proveedor_id: val('gasProveedor') || null, tipo_comprobante: val('gasTipo'), numero_comprobante: val('gasNumero'),
       neto: Number(val('gasNeto')) || 0, iva: val('gasTipo') === 'factura_a' ? Number(val('gasIva')) || 0 : 0,
-      otros_impuestos: Number(val('gasOtros')) || 0
+      otros_impuestos: Number(val('gasOtros')) || 0,
+      adjuntos: this.adjForm ? this.adjForm.nuevos.map(a => a.id) : []
     };
     if (val('gasVence') !== undefined) data.vencimiento = val('gasVence') || null;
     const pagado = document.getElementById('gasPagado');
@@ -564,7 +725,8 @@ const Contabilidad = {
       Comprobante: this.opciones.comprobantes[g.tipo_comprobante] || '', Numero: g.numero_comprobante,
       Neto: g.neto, IVA: g.iva, Otros: g.otros_impuestos, Total: g.total,
       Estado: g.estado === 'pagado' ? 'Pagado' : 'A pagar', Vencimiento: g.vencimiento || '',
-      'Fecha de pago': g.fecha_pago || '', 'Medio de pago': this.opciones.metodos[g.metodo_pago] || ''
+      'Fecha de pago': g.fecha_pago || '', 'Medio de pago': this.opciones.metodos[g.metodo_pago] || '',
+      'Factura adjunta': (g.adjuntos || []).length ? 'Sí' : 'No'
     })));
   },
 

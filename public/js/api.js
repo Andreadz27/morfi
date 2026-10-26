@@ -204,6 +204,27 @@ const API = {
   updateGasto(id, data) { return this.request('PUT', `/contabilidad/gastos/${id}`, data); },
   pagarGasto(id, data) { return this.request('POST', `/contabilidad/gastos/${id}/pagar`, data); },
   anularGasto(id) { return this.request('DELETE', `/contabilidad/gastos/${id}`); },
+  // Factura adjunta: el archivo va tal cual en el cuerpo (no JSON)
+  async subirAdjunto(archivo, nombre, gastoId) {
+    const r = await this.archivo('POST', `/contabilidad/adjuntos${gastoId ? '?gasto_id=' + gastoId : ''}`, archivo,
+      { 'Content-Type': archivo.type || 'application/octet-stream', 'X-Nombre-Archivo': encodeURIComponent(nombre || '') });
+    return r.json();
+  },
+  async verAdjunto(id) { return (await this.archivo('GET', `/contabilidad/adjuntos/${id}`)).blob(); },
+  leerAdjunto(id) { return this.request('POST', `/contabilidad/adjuntos/${id}/leer`); },
+  borrarAdjunto(id) { return this.request('DELETE', `/contabilidad/adjuntos/${id}`); },
+  async archivo(method, url, body, headers = {}) {
+    const token = this.getToken();
+    let r;
+    try {
+      r = await fetch(`${this.baseURL}${url}`, { method, body, headers: { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+    } catch (e) {
+      throw Object.assign(new Error('Sin conexión con Morfi. Revisá el WiFi.'), { sinConexion: true });
+    }
+    if (r.status === 401) { this.clearToken(); window.location.reload(); throw new Error('Sesión expirada'); }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Error en la petición');
+    return r;
+  },
   getCuentasPagar() { return this.request('GET', '/contabilidad/cuentas-pagar'); },
   getResultados(desde, hasta) { return this.request('GET', `/contabilidad/resultados?desde=${desde}&hasta=${hasta}`); },
   getIva(mes) { return this.request('GET', `/contabilidad/iva?mes=${mes}`); },
