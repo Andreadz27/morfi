@@ -44,7 +44,13 @@ test('actualiza a la versión nueva con copia previa; sin cambios no hace nada; 
     const espia = path.join(tmp, 'espia.js'), cargados = path.join(tmp, 'cargados.txt');
     fs.writeFileSync(espia, `process.on('exit', () => { if (process.argv[1] && process.argv[1].endsWith('actualizar.js'))
       require('fs').writeFileSync(${JSON.stringify(cargados)}, Object.keys(require.cache).join('\\n')); });`);
-    r = spawnSync(process.execPath, ['--require', espia, path.join(inst, 'scripts', 'actualizar.js'), '--sin-npm', '--sin-reiniciar'], { cwd: inst, env, encoding: 'utf8' });
+    // Con la copia en la nube, el proceso de la copia imprime "[backup] Copia subida a la nube" después del
+    // resultado (el 2026-10-26 se tomó esa línea como el resultado y no actualizó)
+    const nubeTarde = path.join(tmp, 'nube-tarde.js');
+    fs.writeFileSync(nubeTarde, `if (!process.argv[1]) { let ya = false;
+      process.on('beforeExit', () => { if (!ya) { ya = true; console.log('[backup] Copia subida a la nube: local/x.db.cifrado'); } }); }`);
+    r = spawnSync(process.execPath, ['--require', espia, path.join(inst, 'scripts', 'actualizar.js'), '--sin-npm', '--sin-reiniciar'],
+      { cwd: inst, env: { ...env, NODE_OPTIONS: `--require "${nubeTarde.replace(/\\/g, '/')}"` }, encoding: 'utf8' });
     assert.equal(r.status, 0, r.stdout + r.stderr);
     assert.doesNotMatch(fs.readFileSync(cargados, 'utf8'), /[\\/]sqlite3[\\/]/, 'sqlite3 se carga solo en el proceso de la copia');
     assert.equal(git(inst, 'rev-parse', 'HEAD'), nueva);

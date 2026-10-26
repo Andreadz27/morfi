@@ -106,11 +106,16 @@ function devolverNombreBase() {
 
 // La copia se hace en otro proceso: si este cargara sqlite3, Windows no deja borrar node_sqlite3.node y npm ci
 // falla con EPERM (pasó en la PC del local al actualizar el 2026-10-24).
+// El resultado va en una línea marcada: con la copia en la nube activa, "[backup] Copia subida a la nube" se
+// imprime después y antes se leía esa línea como JSON (no actualizaba: pasó el 2026-10-26).
+const MARCA_COPIA = 'COPIA_PREVIA:';
 function crearCopiaAparte() {
   const codigo = "require('./src/servicios/backups').crearBackup()" +
-    '.then(c => console.log(JSON.stringify(c || null)), e => { console.error(e.message); process.exit(1); })';
+    `.then(c => console.log('${MARCA_COPIA}' + JSON.stringify(c || null)), e => { console.error(e.message); process.exit(1); })`;
   const salida = execFileSync(process.execPath, ['-e', codigo], { cwd: RAIZ, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  return JSON.parse(salida.trim().split('\n').pop());
+  const linea = salida.split(/\r?\n/).find(l => l.startsWith(MARCA_COPIA));
+  if (!linea) throw new Error('La copia previa no devolvió resultado: ' + salida.trim().slice(-200));
+  return JSON.parse(linea.slice(MARCA_COPIA.length));
 }
 
 async function main() {
