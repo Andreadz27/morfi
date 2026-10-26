@@ -8,6 +8,7 @@ const POS = {
   categorias: [],
   cart: [],
   categoriaActiva: 'todas',
+  busqueda: '',
   descuento: 0,
   propina: 0,
   promociones: [],
@@ -31,6 +32,8 @@ const POS = {
     try {
       this.categorias = await API.getCategorias();
       this.productos = await API.getProductos();
+      await Opciones.cargar();
+      this.busqueda = '';
       this.cart = [];
       this.descuento = 0;
       this.propina = 0;
@@ -62,13 +65,11 @@ const POS = {
       </button>`;
     })).join('');
 
-    const filtered = this.categoriaActiva === 'todas'
-      ? this.productos
-      : this.productos.filter(p => p.categoria_id == this.categoriaActiva);
+    const filtered = this.filtrados();
 
     const productBtns = filtered.map(p => `
       <button class="pos-product-btn" onclick="POS.addToCart(${p.id}, ${jsArg(p.nombre)}, ${Number(p.precio_venta) || 0})">
-        <div class="product-icon"><i class="fas fa-utensils"></i></div>
+        <div class="product-icon"><i class="fas ${p.grupos && p.grupos.length ? 'fa-sliders-h' : 'fa-utensils'}"></i></div>
         <div class="product-name">${esc(p.nombre)}</div>
         <div class="product-price">${fmtMoneda(p.precio_venta)}</div>
       </button>
@@ -80,6 +81,11 @@ const POS = {
           <div class="pos-products-head">
             <h3><i class="fas fa-utensils"></i> Productos</h3>
             <span class="pos-products-count">${filtered.length} disponibles</span>
+          </div>
+          <div class="pos-buscador">
+            <i class="fas fa-search"></i>
+            <input type="search" id="posBuscar" placeholder="Buscar producto... (Enter agrega el primero)" value="${esc(this.busqueda)}"
+              oninput="POS.buscar(this.value)" onkeydown="POS.teclaBuscar(event)" aria-label="Buscar producto" autocomplete="off">
           </div>
           <div class="pos-categories">${catBtns}</div>
           ${this.htmlNotaCategoria()}
@@ -159,18 +165,55 @@ const POS = {
     `).join('');
   },
 setCategoria(id) {
+    this.busqueda = '';
     this.categoriaActiva = id;
     this.paint(document.getElementById('view-pos'));
   },
 
+  // Con opciones ("¿Qué leche?", adicionales) pregunta antes de agregar; cada combinación es una línea
   addToCart(id, nombre, precio) {
-    const existing = this.cart.find(i => i.producto_id === id);
-    if (existing) {
-      existing.cantidad++;
-    } else {
-      this.cart.push({ producto_id: id, nombre, precio, cantidad: 1 });
-    }
-    this.refreshCart();
+    const prod = this.productos.find(p => p.id === id) || { id, nombre, precio_venta: precio, grupos: [] };
+    Opciones.elegir(prod, ({ opciones, extra, sufijo }) => {
+      const clave = id + ':' + opciones.slice().sort((a, b) => a - b).join(',');
+      const existing = this.cart.find(i => (i.clave || i.producto_id + ':') === clave);
+      if (existing) {
+        existing.cantidad++;
+      } else {
+        this.cart.push({ producto_id: id, nombre: nombre + sufijo, precio: precio + extra, cantidad: 1, opciones, clave });
+      }
+      this.refreshCart();
+    });
+  },
+
+  // Buscador: filtra en todas las categorías mientras se escribe; Enter agrega el primero
+  filtrados() {
+    const q = this.busqueda.trim().toLowerCase();
+    if (q) return this.productos.filter(p => p.nombre.toLowerCase().includes(q) || String(p.descripcion || '').toLowerCase().includes(q));
+    return this.categoriaActiva === 'todas' ? this.productos : this.productos.filter(p => p.categoria_id == this.categoriaActiva);
+  },
+  buscar(texto) {
+    this.busqueda = texto;
+    const grid = document.querySelector('#view-pos .pos-product-grid');
+    if (!grid) return;
+    const lista = this.filtrados();
+    grid.innerHTML = lista.map(p => `
+      <button class="pos-product-btn" onclick="POS.addToCart(${p.id}, ${jsArg(p.nombre)}, ${Number(p.precio_venta) || 0})">
+        <div class="product-icon"><i class="fas ${p.grupos && p.grupos.length ? 'fa-sliders-h' : 'fa-utensils'}"></i></div>
+        <div class="product-name">${esc(p.nombre)}</div>
+        <div class="product-price">${fmtMoneda(p.precio_venta)}</div>
+      </button>`).join('') || '<div class="empty-state"><i class="fas fa-search"></i><p>No hay productos con ese nombre</p></div>';
+    const c = document.querySelector('#view-pos .pos-products-count');
+    if (c) c.textContent = `${lista.length} disponibles`;
+  },
+  teclaBuscar(e) {
+    if (e.key === 'Escape') { e.target.value = ''; this.buscar(''); return; }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const p = this.filtrados()[0];
+    if (!p) return;
+    this.addToCart(p.id, p.nombre, Number(p.precio_venta) || 0);
+    e.target.value = '';
+    this.buscar('');
   },
 
   changeQty(idx, delta) {
@@ -508,7 +551,8 @@ checkout() {
       producto_id: item.producto_id,
       nombre: item.nombre,
       cantidad: item.cantidad,
-      precio: item.precio
+      precio: item.precio,
+      opciones: item.opciones || []
     }));
 
     try {

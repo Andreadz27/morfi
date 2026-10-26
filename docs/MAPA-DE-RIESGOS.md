@@ -96,7 +96,14 @@ Pago, cierre del pedido, liberación de la mesa y descuento de stock son una sol
 El precio siempre sale de la base, nunca del navegador.
 - **Carta online · CORREGIDO (23/10/2026):** ahora usa `resolverItems`, con topes (30 ítems, 50 unidades por
   producto) y sin productos de precio 0. Antes un script podía mandar a imprimir 999.999.999 unidades.
-- **Lo protege:** `pedidos.test.js` (precio de la base), `flujos.test.js` (carta online), prueba de fuego.
+- **Opciones y adicionales (25/10/2026):** `resolverItems` suma el recargo de cada opción elegida con los precios
+  de la base (`servicios/opciones.js`, `resolverOpciones`) y valida que la opción sea de ese producto, que no se
+  elija más de una en "se elige una" y el tope de los adicionales. Si una obligatoria no llega (asistente, Tienda
+  Nube, celulares con la versión vieja) va la primera, sin recargo. Todos los ítems se guardan con
+  `insertarItemTx` (antes había cinco `INSERT` iguales). **Lo rompe:** guardar un ítem sin pasar por
+  `resolverItems`, o tomar el recargo del navegador.
+- **Lo protege:** `pedidos.test.js` (precio de la base), `flujos.test.js` (carta online), `opciones.test.js`
+  (recargos, validaciones, opción por defecto, pedidos viejos que no cambian, QR de mesa y pedido online), prueba de fuego.
 
 ### 3. Arqueo de caja — `src/rutas/caja.js` (`resumenCaja`) · riesgo ALTO
 Las ventas del turno se buscan por **rango de fechas** de `pagos.fecha` entre apertura y cierre, no por caja.

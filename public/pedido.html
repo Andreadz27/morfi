@@ -38,6 +38,21 @@
   </section>
 
   <!-- Pagar desde la mesa: Mercado Pago (toda la cuenta o mi parte, con propina) o avisar al mozo cómo se paga -->
+  <!-- Opciones y adicionales al agregar un producto ("¿Qué leche?", "Adicionales") -->
+  <div id="opcionesModal" class="pedido-form-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="opcionesTitulo">
+    <div class="pedido-form-modal">
+      <div class="pedido-form-header">
+        <h3 id="opcionesTitulo"></h3>
+        <button onclick="PedidoOnline.cerrarOpciones()" class="btn-cerrar" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="opciones-elegir" id="opcionesContenido"></div>
+      <div class="form-actions opciones-acciones">
+        <button type="button" class="btn btn-outline" id="opcionesCancelar" onclick="PedidoOnline.cerrarOpciones()">Cancelar</button>
+        <button type="button" class="btn btn-success" id="opcionesOk" onclick="PedidoOnline.confirmarOpciones()"></button>
+      </div>
+    </div>
+  </div>
+
   <div id="pagoModal" class="pedido-form-overlay" style="display:none" role="dialog" aria-modal="true" aria-label="Pagar la cuenta">
     <div class="pedido-form-modal">
       <div class="pedido-form-header">

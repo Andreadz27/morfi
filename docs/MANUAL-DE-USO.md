@@ -125,6 +125,14 @@ después hubo más ventas). Cada cierre se puede abrir e **imprimir** desde la l
 ### Carta y precios
 - **Productos**: alta de productos, precios y categorías. Lo que se cambia acá se ve al instante en el
   sistema, en la carta QR y en la carta online.
+- **Opciones y adicionales** (en Productos): grupos como **"¿Qué leche?"** (se elige una: entera, descremada,
+  vegetal +$1300) o **"Adicionales"** (se eligen varios, cada uno con su precio, con tope opcional). En cada grupo
+  se agregan, editan o quitan opciones y se marcan los productos que lo usan (con "toda la categoría" de un toque).
+  Al agregar ese producto en el **Punto de Venta**, en **Agregar ítem** o en la **carta del QR**, se pregunta qué
+  opciones lleva; cocina y el ticket lo ven como "Latte · Leche vegetal" y el recargo se suma solo. Si una opción
+  obligatoria no se elige (por ejemplo, un pedido del asistente), va la primera.
+- **Buscador del Punto de Venta**: escribir parte del nombre filtra en todas las categorías; **Enter** agrega el
+  primero y **Esc** borra la búsqueda.
 - **Carta en inglés y portugués**: al editar un producto o crear una categoría, abrir **Carta QR en otros idiomas**
   y escribir el nombre (y la descripción) en inglés y portugués. En la carta del QR aparecen los botones
   **ES / EN / PT**; si el celular del cliente está en inglés o portugués, la carta abre en ese idioma. Lo que se deja

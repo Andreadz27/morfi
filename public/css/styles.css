@@ -2328,3 +2328,25 @@ tr:hover td {
 /* Nota de la categoría en el punto de venta y en Productos (la misma que se ve en la carta) */
 .pos-nota-categoria, .prod-nota-categoria { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
   background: #fff8ec; border: 1px solid #f3dcb5; color: #7a5236; }
+
+/* Opciones y adicionales al agregar un producto (js/opciones.js) y su editor (js/productos.js) */
+.opciones-elegir { display: flex; flex-direction: column; gap: 16px; }
+.opciones-grupo h4 { margin: 0 0 8px; font-size: 15px; display: flex; align-items: baseline; gap: 8px; }
+.opciones-grupo h4 small { font-weight: 500; color: var(--text-light); font-size: 12px; }
+.opciones-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+.opcion-chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; min-height: 44px; border: 2px solid var(--border);
+  border-radius: 12px; cursor: pointer; background: var(--white); font-size: 14px; }
+.opcion-chip:has(input:checked) { border-color: var(--info); background: #eff8ff; font-weight: 600; }
+.opcion-chip input { width: 18px; height: 18px; margin: 0; }
+.opcion-chip b { color: var(--success); font-weight: 700; }
+.opcion-fila { display: grid; grid-template-columns: minmax(140px, 2fr) 90px 1fr 1fr auto; gap: 6px; margin-bottom: 6px; }
+@media (max-width: 640px) { .opcion-fila { grid-template-columns: 1fr 90px auto; } .opcion-fila .opEn, .opcion-fila .opPt { display: none; } }
+.grupo-productos { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.grupo-cat + .grupo-cat { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+
+/* Buscador del punto de venta */
+.pos-buscador { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 12px;
+  border: 2px solid var(--border); border-radius: 12px; background: var(--white); }
+.pos-buscador:focus-within { border-color: var(--info); }
+.pos-buscador i { color: var(--text-light); }
+.pos-buscador input { flex: 1; border: 0; outline: 0; font-size: 16px; background: transparent; min-width: 0; }
