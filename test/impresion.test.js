@@ -132,7 +132,7 @@ test('ticket: precuenta a pedido y ticket al cobrar con cajón', async () => {
   await esperarTrabajos(caja, 1);
   assert.ok(caja.texto(0).includes('PRECUENTA') && caja.texto(0).includes('TOTAL'));
 
-  await s.q("UPDATE configuracion SET nombre_negocio = 'La Buena Mesa', cuit = '20-12345678-9' WHERE id = 1");
+  await s.q("UPDATE configuracion SET nombre_negocio = 'La Buena Mesa', eslogan = 'CAFÉ & COSAS RICAS', cuit = '20-12345678-9' WHERE id = 1");
   await s.llamar('PUT', '/api/impresion/config', { ticket_al_cobrar: true, abrir_cajon: true, pie: 'Volvé pronto' }, s.tokenAdmin);
   const [, ped] = await s.llamar('GET', `/api/pedidos/${pedidoId}`, undefined, s.tokenVendedor);
   const [st, cobro] = await s.llamar('POST', `/api/pedidos/${pedidoId}/pagar`, { metodo: 'efectivo', monto: ped.total + 1000 }, s.tokenVendedor);
@@ -141,6 +141,8 @@ test('ticket: precuenta a pedido y ticket al cobrar con cajón', async () => {
   await esperarTrabajos(caja, 2);
   const t = caja.texto(1);
   assert.ok(t.includes('La Buena Mesa') && t.includes('CUIT: 20-12345678-9'));
+  assert.ok(t.includes('CAF & COSAS RICAS'), 'el eslogan va debajo del nombre (É en PC850)');
+  assert.ok(t.indexOf('La Buena Mesa') < t.indexOf('CAF & COSAS RICAS'));
   assert.ok(t.includes('2 x Milanesa con papas') && t.includes('TOTAL'));
   assert.ok(t.includes('Pago Efectivo') && t.includes('Vuelto'));
   assert.ok(t.includes('Volv\x82 pronto') && t.includes('no v\xa0lido como factura'));

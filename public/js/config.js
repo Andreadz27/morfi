@@ -66,6 +66,10 @@ const ConfigView = {
             <label>Nombre del negocio</label>
             <input type="text" id="cfgNombre" value="${esc(c.nombre_negocio || '')}" required>
           </div>
+          <div class="form-group">
+            <label>Eslogan <small class="text-muted">(opcional: va debajo del nombre en la carta y en el ticket)</small></label>
+            <input type="text" id="cfgEslogan" maxlength="80" placeholder="Ej.: Café & cosas ricas" value="${esc(c.eslogan || '')}">
+          </div>
           <div class="grid grid-2">
             <div class="form-group">
               <label>Dirección</label>
@@ -612,6 +616,7 @@ const ConfigView = {
     e.preventDefault();
     const data = {
       nombre_negocio: document.getElementById('cfgNombre').value,
+      eslogan: document.getElementById('cfgEslogan').value,
       direccion: document.getElementById('cfgDireccion').value,
       telefono: document.getElementById('cfgTelefono').value,
       email: document.getElementById('cfgEmail').value,

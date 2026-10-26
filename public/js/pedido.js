@@ -1,5 +1,7 @@
 // MORFI - Pedido Online (WhatsApp / Instagram)
 function pdM(v){return new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",minimumFractionDigits:0}).format(v||0);}
+// Argumento para un onclick="...": número tal cual, texto entre comillas simples (con comillas dobles cortaba el atributo)
+function pdA(v){return typeof v==="number"?String(v):"'"+String(v).replace(/[^\w-]/g,"")+"'";}
 function pdE(s){if(s==null)return"";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 
 // Desde Morfi Nube la página vive en /l/<local>/: la API también
@@ -108,6 +110,7 @@ const PedidoOnline={
       this.productos=m.productos||[];
       this.config=info;
       if(info.nombre){document.getElementById("negocioNombre").textContent=info.nombre;document.title="Pedido | "+info.nombre;}
+      if(info.eslogan){const es=document.getElementById("negocioEslogan");es.textContent=info.eslogan;es.hidden=false;}
       this._selectorIdioma();
       if(mesa)this._iniciarMesa(mesa);else this._textos();
       if(info.recibe_pedidos===false&&info.aviso){const av=document.createElement("div");av.className="mesa-seguimiento";av.textContent=info.aviso;document.getElementById("menuItems").before(av);}
@@ -232,7 +235,7 @@ const PedidoOnline={
   },
   _pintarPago(){
     const e=this.mesa,c=e.cuenta,o=this.pagoOpc,k=this._calcPago();
-    const chip=(v,l)=>`<button type="button" class="pago-chip ${o.propina===v?"activo":""}" onclick="PedidoOnline.opcPago('propina',${JSON.stringify(v)})">${l}</button>`;
+    const chip=(v,l)=>`<button type="button" class="pago-chip ${o.propina===v?"activo":""}" onclick="PedidoOnline.opcPago('propina',${pdA(v)})">${l}</button>`;
     const mp=e.pago&&e.pago.mercadopago?`
       <div class="pago-seccion">
         <h4><i class="fas fa-mobile-alt"></i> ${pdE(pdT("mp_titulo"))}</h4>
@@ -399,14 +402,15 @@ const PedidoOnline={
   paintMomentos(){
     const el=document.getElementById("momentosCarta");if(!el)return;
     if(!this.momentos.length){el.style.display="none";return;}
-    const tab=(id,icono,nombre,horario)=>`<button type="button" role="tab" aria-selected="${this.momentoActivo===id}" class="momento-btn ${this.momentoActivo===id?"activo":""}" onclick="PedidoOnline.setMomento(${JSON.stringify(id)})">${icono?`<span class="momento-icono">${pdE(icono)}</span>`:""}<span>${pdE(nombre)}</span>${horario?`<small>${pdE(horario)}</small>`:""}</button>`;
-    el.innerHTML=this.momentos.map(m=>tab(m.id,m.icono,pdTr(m,"nombre"),m.desde+" – "+m.hasta)).join("")+tab("todo","",pdT("toda_carta"),"");
+    // Solo el nombre y el horario, sin íconos
+    const tab=(id,nombre,horario)=>`<button type="button" role="tab" aria-selected="${this.momentoActivo===id}" class="momento-btn ${this.momentoActivo===id?"activo":""}" onclick="PedidoOnline.setMomento(${pdA(id)})"><span>${pdE(nombre)}</span>${horario?`<small>${pdE(horario)}</small>`:""}</button>`;
+    el.innerHTML=this.momentos.map(m=>tab(m.id,pdTr(m,"nombre"),m.desde+" – "+m.hasta)).join("")+tab("todo",pdT("toda_carta"),"");
     el.style.display="";
   },
   setMomento(id){this.momentoActivo=id;this.catActiva="todas";this.paintMomentos();this.paintCats();this.paintItems();},
   buscar(t){this.busqueda=String(t||"");this.paintItems();},
   paintCats(){
-    const mk=(id,lbl)=>`<button class="menu-cat-btn ${this.catActiva==id?"active":""}" onclick="PedidoOnline.setCat(${JSON.stringify(id)})">${pdE(lbl)}</button>`;
+    const mk=(id,lbl)=>`<button class="menu-cat-btn ${this.catActiva==id?"active":""}" onclick="PedidoOnline.setCat(${pdA(id)})">${pdE(lbl)}</button>`;
     const h=[mk("todas",pdT("todas")),...this.catsMomento().map(c=>mk(c.id,pdTr(c,"nombre")))].join("");
     ["menuCategorias","mobileCatScroll"].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=h;});
   },

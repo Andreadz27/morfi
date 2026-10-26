@@ -222,6 +222,7 @@ function plantillaTicket(pedido, negocio, opciones, impresora, extra = {}) {
   const t = new Ticket(impresora.ancho === 58 ? 32 : 48);
   const f = pedido.fiscal;
   t.alinear('centro').negrita().tamano(2, 2).linea(negocio.nombre_negocio || 'Morfi').normal().alinear('centro');
+  if (negocio.eslogan) t.linea(negocio.eslogan);
   if (f) {
     // Encabezado de factura: datos del emisor (RG 1415), letra y número
     if (f.prueba) t.negrita().linea('*** COMPROBANTE DE PRUEBA ***').linea('SIN VALIDEZ FISCAL').normal().alinear('centro');
@@ -351,7 +352,7 @@ async function imprimirComanda(pedidoId, { itemIds = null, titulo = 'COMANDA' } 
 async function imprimirTicket(pedidoId, extra = {}) {
   const [pedido, impresoras, negocio, opciones] = await Promise.all([
     datosPedido(pedidoId), impresorasActivas('ticket'),
-    get('SELECT nombre_negocio, direccion, telefono, cuit FROM configuracion WHERE id = 1'), opcionesImpresion()
+    get('SELECT nombre_negocio, eslogan, direccion, telefono, cuit FROM configuracion WHERE id = 1'), opcionesImpresion()
   ]);
   if (!pedido || !impresoras.length) return [];
   const resultados = [];

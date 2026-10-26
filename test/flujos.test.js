@@ -175,8 +175,14 @@ test('altas, cambios y bajas: clientes, promociones, categorías, productos y co
   assert.deepEqual(cfg.modulos_activos, ['pos', 'caja']);
   assert.equal(cfg.setup_completado, 1);
   assert.equal((await api('admin', 'PUT', '/api/config', { nombre_negocio: '  ' }))[0], 400);
+  // Eslogan: opcional, va debajo del nombre en la carta; sin espacios de más y con tope de largo
+  assert.equal((await ok(s.llamar('GET', '/api/publico/info'))).eslogan, '', 'sin eslogan cargado viene vacío');
+  await ok(api('admin', 'PUT', '/api/config', { eslogan: '  CAFÉ & COSAS RICAS ' }));
+  assert.equal((await ok(api('admin', 'GET', '/api/config'))).eslogan, 'CAFÉ & COSAS RICAS');
+  assert.equal((await api('admin', 'PUT', '/api/config', { eslogan: 'x'.repeat(81) }))[0], 400);
   const info = await ok(s.llamar('GET', '/api/publico/info'));
   assert.equal(info.nombre, 'La Esquina');
+  assert.equal(info.eslogan, 'CAFÉ & COSAS RICAS');
   assert.equal(info.telefono, '1140001234');
   // El formulario del pedido muestra el aviso de privacidad con el CUIT del local (responsable de los datos)
   assert.equal(info.cuit, '30-12345678-9');
