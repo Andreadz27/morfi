@@ -31,6 +31,8 @@ test('usuarios, contraseñas, impresoras, integraciones y copias bloqueados', as
     ['POST', '/api/integraciones/test/mercadopago'],
     ['POST', '/api/backups'],
     ['GET', '/api/backups/morfi_2026-01-01_000000.db'],
+    ['POST', '/api/contabilidad/adjuntos'],
+    ['POST', '/api/contabilidad/adjuntos/1/leer'],
     // Express no distingue mayúsculas: el bloqueo tampoco (antes /API/Usuarios pasaba)
     ['POST', '/API/Usuarios', { nombre: 'X', email: 'y@x.com', password: 'clave1234', rol: 'admin' }],
     ['PUT', '/Api/Auth/Password', { actual: 'admin123', nueva: 'otraclave1' }]

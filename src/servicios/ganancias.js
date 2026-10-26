@@ -1,6 +1,6 @@
 'use strict';
 // Ganancias del negocio: cuánto queda de lo que se vende, por día, semana, mes o año; por plato, canal, medio de
-// pago, horario y mozo; qué se come la ganancia, y cuánto hay que vender para no perder plata.
+// pago, horario, momento del día y mozo; qué se come la ganancia, y cuánto hay que vender para no perder plata.
 // Definiciones (las mismas en toda la sección y en la pantalla):
 // - Ventas: lo cobrado de los pedidos pagados, sin propina (es del personal). Día: el del cierre del pedido.
 // - Ventas netas: sin el IVA que contienen (solo si el negocio discrimina IVA: configuracion.tasa_iva > 0).
@@ -11,9 +11,11 @@
 // - Gastos: los cargados en Contabilidad, sin mercadería (ya está en el costo) ni comisiones (ya estimadas),
 //   más los egresos de caja sueltos. Ganancia = ganancia bruta − gastos.
 // - Gastos fijos del mes (configurables): para el punto de equilibrio y la ganancia estimada de hoy.
-const { get, all, run } = require('../db');
+const { get, all, run, transaccion } = require('../db');
 const { LOCAL, fechaLocal, ZONA_HORARIA } = require('../tiempo');
 const { errorHttp } = require('../util');
+const { listarMomentos, momentoActual } = require('./carta');
+const { recalcularCostosConIngrediente } = require('./recetas');
 
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
 const pct = (parte, total) => total > 0 ? Math.round(parte / total * 1000) / 10 : 0;
@@ -79,6 +81,7 @@ async function pedidosDelPeriodo(desde, hasta, cfg) {
     SELECT p.id, p.tipo, p.usuario_id, u.nombre AS mozo, p.total, p.propina, p.descuento, p.descuento_puntos, p.descuento_cupon,
       ${DIA()} AS dia, CAST(strftime('%H', COALESCE(p.cerrado_en, p.creado_en), ${LOCAL()}) AS INTEGER) AS hora,
       CAST(strftime('%w', COALESCE(p.cerrado_en, p.creado_en), ${LOCAL()}) AS INTEGER) AS dow,
+      strftime('%H:%M', p.creado_en, ${LOCAL()}) AS hora_pedido,
       (SELECT e.plataforma FROM entregas e WHERE e.pedido_id = p.id AND e.plataforma <> '' LIMIT 1) AS plataforma,
       (SELECT COALESCE(SUM(pi.cantidad * COALESCE(pr.costo, 0)), 0) FROM pedido_items pi
         LEFT JOIN productos pr ON pr.id = pi.producto_id WHERE pi.pedido_id = p.id) AS costo
@@ -207,11 +210,14 @@ async function resumenGanancias({ desde, hasta, agrupar = 'dia' } = {}) {
 
 // ---------- Por plato y categoría (ingeniería de menú) ----------
 // Popularidad: se vende más que el 70 % del promedio. Rentabilidad: deja por unidad más que el promedio ponderado.
+// Los productos sin costo cargado van aparte: su ganancia sería el precio entero, quedarían todos como "rentables"
+// y además inflarían el promedio con el que se mide a los demás.
 const CLASES = {
   estrella: { nombre: 'Estrella', consejo: 'Se vende mucho y deja buena ganancia: cuidalo, que esté siempre y bien visible en la carta.' },
   caballo: { nombre: 'Caballo de batalla', consejo: 'Se vende mucho pero deja poco: subí un poco el precio o bajá el costo de la receta.' },
   rompecabezas: { nombre: 'Rompecabezas', consejo: 'Deja buena ganancia pero se vende poco: recomendalo, ponelo más arriba en la carta o con foto.' },
-  perro: { nombre: 'Perro', consejo: 'Se vende poco y deja poco: pensá en sacarlo o rehacerlo.' }
+  perro: { nombre: 'Perro', consejo: 'Se vende poco y deja poco: pensá en sacarlo o rehacerlo.' },
+  sin_costo: { nombre: 'Sin costo', consejo: 'Sin el costo cargado no se sabe cuánto deja: cargalo en "Costos de la carta".' }
 };
 
 async function gananciaPorProducto({ desde, hasta } = {}) {
@@ -234,10 +240,13 @@ async function gananciaPorProducto({ desde, hasta } = {}) {
   const unidades = productos.reduce((s, p) => s + p.unidades, 0);
   const gananciaTotal = productos.reduce((s, p) => s + p.ganancia, 0);
   const umbralPopularidad = productos.length ? 0.7 * unidades / productos.length : 0;
-  const gananciaMedia = unidades ? gananciaTotal / unidades : 0;
+  const conCosto = productos.filter(p => !p.sin_costo);
+  const unidadesConCosto = conCosto.reduce((s, p) => s + p.unidades, 0);
+  const gananciaMedia = unidadesConCosto ? conCosto.reduce((s, p) => s + p.ganancia, 0) / unidadesConCosto : 0;
   for (const p of productos) {
-    const popular = p.unidades >= umbralPopularidad, rentable = p.ganancia_unidad >= gananciaMedia;
-    p.clase = popular ? (rentable ? 'estrella' : 'caballo') : (rentable ? 'rompecabezas' : 'perro');
+    p.popular = p.unidades >= umbralPopularidad;
+    const rentable = p.ganancia_unidad >= gananciaMedia;
+    p.clase = p.sin_costo ? 'sin_costo' : p.popular ? (rentable ? 'estrella' : 'caballo') : (rentable ? 'rompecabezas' : 'perro');
     p.participacion_pct = pct(p.ganancia, gananciaTotal);
   }
   const porCategoria = new Map();
@@ -249,7 +258,8 @@ async function gananciaPorProducto({ desde, hasta } = {}) {
   const categorias = [...porCategoria.values()].map(c => ({ ...c, ventas: r2(c.ventas), ventas_netas: r2(c.ventas_netas), costo: r2(c.costo),
     ganancia: r2(c.ganancia), margen_pct: pct(c.ganancia, c.ventas_netas) })).sort((a, b) => b.ganancia - a.ganancia);
   return { desde, hasta, productos, categorias, clases: CLASES,
-    referencias: { unidades_minimas_popular: r2(umbralPopularidad), ganancia_media_unidad: r2(gananciaMedia) } };
+    referencias: { unidades_minimas_popular: r2(umbralPopularidad), ganancia_media_unidad: r2(gananciaMedia),
+      productos_sin_costo: productos.length - conCosto.length } };
 }
 
 // ---------- Por canal, medio de pago, horario, día de la semana y mozo ----------
@@ -290,8 +300,98 @@ async function gananciaPorCanal({ desde, hasta } = {}) {
     ventas_promedio: cuantos[x.clave] ? r2(x.ventas / cuantos[x.clave]) : 0,
     ganancia_promedio: cuantos[x.clave] ? r2(x.ganancia_bruta / cuantos[x.clave]) : 0 })).sort((a, b) => ((a.clave + 6) % 7) - ((b.clave + 6) % 7));
   const porMozo = agrupar(pedidos, p => p.usuario_id || 0, k => (pedidos.find(p => (p.usuario_id || 0) === k) || {}).mozo || 'Sin asignar (online)');
+  const momentos = await ventasPorMomento(desde, hasta, pedidos);
 
-  return { desde, hasta, total, canales, medios: porMedio, horas: porHora, dias_semana: porDiaSemana, mozos: porMozo };
+  return { desde, hasta, total, canales, medios: porMedio, horas: porHora, dias_semana: porDiaSemana, mozos: porMozo, momentos };
+}
+
+// ---------- Por momento del día (desayuno, brunch, almuerzo, merienda…) ----------
+// Cada pedido va al momento de la carta en que se hizo (la hora en que se abrió, no la del cobro); si dos momentos se
+// superponen, al que empezó último, igual que la carta. Los que caen fuera de todo horario van aparte.
+const MAS_VENDIDOS_POR_MOMENTO = 5;
+
+async function ventasPorMomento(desde, hasta, pedidos) {
+  const momentos = (await listarMomentos()).filter(m => m.activo);
+  const porId = new Map(momentos.map(m => [m.id, m]));
+  const momentoDe = new Map(pedidos.map(p => [p.id, momentoActual(momentos, p.hora_pedido) || 0]));
+  const items = await all(`SELECT pi.pedido_id, pi.nombre_producto AS producto, SUM(pi.cantidad) AS unidades, SUM(pi.subtotal) AS ventas
+    FROM pedido_items pi JOIN pedidos p ON p.id = pi.pedido_id
+    WHERE p.estado = 'pagado' AND ${DIA()} BETWEEN ? AND ? GROUP BY pi.pedido_id, pi.nombre_producto`, [desde, hasta]);
+  const productos = new Map();
+  for (const it of items) {
+    const k = momentoDe.get(it.pedido_id);
+    if (k === undefined) continue;
+    if (!productos.has(k)) productos.set(k, new Map());
+    const x = productos.get(k).get(it.producto) || { producto: it.producto, unidades: 0, ventas: 0 };
+    x.unidades += Number(it.unidades) || 0; x.ventas += Number(it.ventas) || 0;
+    productos.get(k).set(it.producto, x);
+  }
+  const total = sumar(pedidos).ventas;
+  const dias = diasEntre(desde, hasta) + 1;
+  const orden = k => k ? momentos.findIndex(m => m.id === k) : Infinity;
+  return agrupar(pedidos, p => momentoDe.get(p.id), k => k ? porId.get(k).nombre : 'Fuera de los horarios de la carta')
+    .map(g => {
+      const m = porId.get(g.clave);
+      return { ...g, momento_id: m ? m.id : null, icono: m ? m.icono || '' : '', horario: m ? `${m.desde} a ${m.hasta}` : '',
+        participacion_pct: pct(g.ventas, total), ventas_por_dia: r2(g.ventas / dias),
+        mas_vendidos: [...(productos.get(g.clave) || new Map()).values()]
+          .sort((a, b) => b.unidades - a.unidades || b.ventas - a.ventas).slice(0, MAS_VENDIDOS_POR_MOMENTO)
+          .map(x => ({ ...x, ventas: r2(x.ventas) })) };
+    })
+    .sort((a, b) => orden(a.clave) - orden(b.clave));
+}
+
+// ---------- Costos de la carta ----------
+// Para cargar el costo de todos los productos en una sola pantalla: primero los que no tienen costo y más se venden
+// (los que más mueven la ganancia). Los que tienen receta no se editan acá: su costo sale de los ingredientes.
+const DIAS_VENDIDOS = 30;
+const MAX_COSTOS = 1000;
+
+async function costosDeLaCarta() {
+  const desde = fechaLocal(DIAS_VENDIDOS - 1), hasta = fechaLocal();
+  const filas = await all(`SELECT pr.id, pr.nombre, pr.precio_venta, COALESCE(pr.costo, 0) AS costo,
+      COALESCE(c.nombre, 'Sin categoría') AS categoria,
+      EXISTS (SELECT 1 FROM recetas r WHERE r.plato_id = pr.id) AS con_receta,
+      (SELECT COALESCE(SUM(pi.cantidad), 0) FROM pedido_items pi JOIN pedidos p ON p.id = pi.pedido_id
+        WHERE pi.producto_id = pr.id AND p.estado = 'pagado' AND ${DIA()} BETWEEN ? AND ?) AS vendidos
+    FROM productos pr LEFT JOIN categorias c ON c.id = pr.categoria_id
+    WHERE pr.activo = 1
+    ORDER BY COALESCE(pr.costo, 0) > 0, vendidos DESC, pr.nombre`, [desde, hasta]);
+  const productos = filas.map(f => ({ id: f.id, nombre: f.nombre, categoria: f.categoria, precio_venta: r2(f.precio_venta), costo: r2(f.costo),
+    con_receta: !!f.con_receta, vendidos: Number(f.vendidos) || 0,
+    margen_pct: f.precio_venta > 0 && f.costo > 0 ? pct(f.precio_venta - f.costo, f.precio_venta) : null }));
+  return { desde, hasta, dias: DIAS_VENDIDOS, productos, sin_costo: productos.filter(p => !(p.costo > 0)).length };
+}
+
+async function guardarCostos(costos, usuarioId) {
+  if (!Array.isArray(costos) || !costos.length) throw errorHttp(400, 'No hay costos para guardar');
+  if (costos.length > MAX_COSTOS) throw errorHttp(400, `Hasta ${MAX_COSTOS} productos por vez`);
+  const limpios = costos.map(c => {
+    const id = Number(c && c.id), costo = Number(c && c.costo);
+    if (!Number.isInteger(id) || id <= 0) throw errorHttp(400, 'Producto inválido');
+    if (!(costo >= 0 && costo < 1e9)) throw errorHttp(400, 'El costo tiene que ser un número de 0 en adelante');
+    return { id, costo: r2(costo) };
+  });
+  let actualizados = 0;
+  const omitidos = [];
+  await transaccion(async () => {
+    for (const c of limpios) {
+      const p = await get(`SELECT id, nombre, costo, EXISTS (SELECT 1 FROM recetas r WHERE r.plato_id = productos.id) AS con_receta
+        FROM productos WHERE id = ?`, [c.id]);
+      if (!p) throw errorHttp(400, 'Uno de los productos ya no existe: refrescá la pantalla');
+      if (p.con_receta) { omitidos.push(p.nombre); continue; }
+      if (r2(p.costo) === c.costo) continue;
+      await run('UPDATE productos SET costo = ? WHERE id = ?', [c.costo, c.id]);
+      // Si es ingrediente de alguna receta, cambia el costo de esos platos
+      await recalcularCostosConIngrediente(c.id);
+      actualizados++;
+    }
+    if (actualizados) {
+      await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)',
+        [usuarioId || null, 'editar_costos', `Costos de la carta: ${actualizados} producto(s) actualizados`]);
+    }
+  });
+  return { actualizados, omitidos };
 }
 
 // ---------- Lo que se come la ganancia ----------
@@ -387,5 +487,5 @@ async function gananciaDeHoy() {
 
 module.exports = {
   configGanancias, guardarConfigGanancias, resumenGanancias, gananciaPorProducto, gananciaPorCanal, fugasDeGanancia,
-  puntoDeEquilibrio, gananciaDeHoy, COMISIONES_TIPICAS
+  puntoDeEquilibrio, gananciaDeHoy, costosDeLaCarta, guardarCostos, COMISIONES_TIPICAS
 };

@@ -17,20 +17,24 @@ aunque se corte internet; la nube guarda las copias y da acceso remoto.
 
 ## 2. Instalar (una vez por local, unos 15 minutos)
 
-El repositorio es **privado**: cada instalación descarga el sistema con un token de GitHub de solo lectura.
+Cada instalación descarga el sistema de GitHub (`Andreadz27/morfi`). Hoy el repositorio es **público**: se instala
+sin token. **Si pasa a privado**, cada instalación necesita un token de GitHub de solo lectura (`-Token`):
 
-**Una vez (para todos los locales):** en GitHub, **Settings → Developer settings → Personal access tokens →
-Fine-grained tokens → Generate new token**: acceso solo al repositorio `gastromanager`, permiso
-**Contents: Read-only**, vencimiento de 1 año. Guardarlo en un lugar seguro (no se vuelve a mostrar).
-Antes de que venza, generar uno nuevo y volver a ejecutar el instalador en cada local con el token nuevo
-(no borra datos).
+- **Una vez (para todos los locales):** en GitHub, **Settings → Developer settings → Personal access tokens →
+  Fine-grained tokens → Generate new token**: acceso solo al repositorio `morfi`, permiso **Contents: Read-only**,
+  vencimiento de 1 año. Guardarlo en un lugar seguro (no se vuelve a mostrar).
+- Antes de que venza, generar uno nuevo y volver a ejecutar el instalador en cada local con el token nuevo (no borra
+  datos). Los locales que se instalaron sin token también lo necesitan para seguir recibiendo actualizaciones.
 
 **En cada local:** copiar `scripts\windows\instalar.ps1` a la PC (pendrive o WhatsApp), abrir
-**PowerShell como Administrador** en esa carpeta y ejecutar:
+**PowerShell como Administrador** en esa carpeta y ejecutar (con el repositorio privado, agregar `-Token "github_pat_..."`):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File instalar.ps1 -Cliente "la-buena-mesa" -Token "github_pat_..." -ActualizacionAutomatica -BaseLimpia
+powershell -ExecutionPolicy Bypass -File instalar.ps1 -Cliente "la-buena-mesa" -ActualizacionAutomatica -BaseLimpia
 ```
+
+El checklist para imprimir y llevar al local está en `docs/CHECKLIST-INSTALACION.md`. El instalador se prueba solo en
+un Windows limpio (workflow **Instalador (Windows limpio)**): instala, simula un reinicio y lo vuelve a correr.
 
 `-Cliente` = nombre corto del local, en minúsculas y sin espacios (se usa en la nube y en el monitoreo).
 `-ActualizacionAutomatica` = actualiza todos los días a las 05:00, con copia previa y vuelta atrás si algo falla.

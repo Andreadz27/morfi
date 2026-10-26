@@ -9,6 +9,16 @@
 .badge-ig  { background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); color:#fff; }
 .badge-web { background:rgba(255,255,255,.2); color:#fff; border:1px solid rgba(255,255,255,.4); }
 
+/* Selector de idioma de la carta (ES / EN / PT) */
+.selector-idioma { display:flex;justify-content:center;gap:6px;margin-top:12px; }
+.selector-idioma button {
+  min-width:44px;min-height:36px;padding:4px 12px;border-radius:18px;cursor:pointer;
+  font-size:.85rem;font-weight:700;letter-spacing:.5px;
+  background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.45);
+}
+.selector-idioma button.activo { background:#fff;color:#c2410c;border-color:#fff; }
+.selector-idioma button:focus-visible { outline:3px solid #fff;outline-offset:2px; }
+
 .pedido-layout {
   display:flex;gap:24px;max-width:1200px;
   margin:0 auto;padding:24px 16px;align-items:flex-start;

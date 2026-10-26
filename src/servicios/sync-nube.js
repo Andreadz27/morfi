@@ -11,6 +11,7 @@ const { listarBackups } = require('./backups');
 const { estadoNube } = require('./copia-nube');
 const { crearPedidoOnline } = require('./pedido-online');
 const { guardarLicencia } = require('../licencia');
+const { ORDEN_CARTA } = require('../util');
 const VERSION = require('../../package.json').version;
 
 const TANDA = 200;
@@ -84,12 +85,22 @@ async function vuelta() {
 // Los pedidos quedan en la nube y se traen cada 10 s; si el local no viene a buscar, la nube deja de tomarlos.
 let cartaEnviada = '';
 let urlCarta = null; // link fijo en la nube (lo contesta la nube al recibir la carta)
-const urlCartaNube = () => (configurada() ? urlCarta : null);
+// La nube contesta con la dirección por la que el local la llamó. Si corre en la misma PC (NUBE_URL=127.0.0.1)
+// ese link solo abre en esa PC: en los celulares daba "rechazó la conexión". Un link local no se usa para la
+// carta (QR, WhatsApp, Instagram) y quedan los de la dirección pública del local.
+function esDireccionLocal(url) {
+  try {
+    const h = new URL(url).hostname.replace(/^\[|\]$/g, '');
+    return h === 'localhost' || h === '::1' || h === '0.0.0.0' || /^127\./.test(h);
+  } catch (e) { return true; }
+}
+const linkCartaNube = url => (url && !esDireccionLocal(url) ? url : null);
+const urlCartaNube = () => (configurada() ? linkCartaNube(urlCarta) : null);
 async function cartaLocal() {
   const categorias = await all(`SELECT c.id, c.nombre FROM categorias c
     WHERE c.activo = 1 AND EXISTS (SELECT 1 FROM productos p WHERE p.categoria_id = c.id AND p.activo = 1) ORDER BY c.orden, c.nombre`);
   const productos = await all(`SELECT id, nombre, descripcion, precio_venta, categoria_id, tracking_stock, stock_actual, es_plato
-    FROM productos WHERE activo = 1 ORDER BY nombre`);
+    FROM productos p WHERE activo = 1 ORDER BY ${ORDEN_CARTA}`);
   const c = await get('SELECT nombre_negocio, direccion, telefono, email, cuit FROM configuracion WHERE id = 1') || {};
   return { info: { nombre: c.nombre_negocio, direccion: c.direccion, telefono: c.telefono, email: c.email, cuit: c.cuit }, categorias, productos };
 }
@@ -193,4 +204,4 @@ function iniciarSyncNube() {
   console.log(`[nube] Sincronizando con ${process.env.NUBE_URL} cada ${Math.round(ms / 1000)} s; pedidos online y precios cada ${Math.round(msPedidos / 1000)} s`);
 }
 
-module.exports = { iniciarSyncNube, sincronizar, traerPedidos, traerLicencia, aplicarCambiosDePrecio, enviarCarta, estadoLocal, configurada, urlCartaNube };
+module.exports = { iniciarSyncNube, sincronizar, traerPedidos, traerLicencia, aplicarCambiosDePrecio, enviarCarta, estadoLocal, configurada, urlCartaNube, linkCartaNube };

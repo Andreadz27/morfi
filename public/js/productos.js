@@ -11,7 +11,10 @@ const Productos = {
     const view = document.getElementById('view-productos');
     view.innerHTML = '<div class="text-center mt-20"><i class="fas fa-spinner fa-spin fa-3x"></i></div>';
     try {
-      const [productos, categorias] = await Promise.all([API.getProductos(), API.getCategorias()]);
+      const [productos, categorias, momentos, grupos] = await Promise.all([API.getProductos(), API.getCategorias(), API.getMomentos().catch(() => []),
+        API.getGruposOpciones().catch(() => [])]);
+      this.gruposOpciones = grupos;
+      this.momentos = momentos;
       this.productos = productos;
       this.categorias = categorias;
       this.paint(view);
@@ -24,60 +27,36 @@ const Productos = {
     return App.puede('catalogo');
   },
 
-  catNombre(id) {
-    const c = this.categorias.find(c => c.id === id);
-    return c ? c.nombre : '-';
-  },
+  // Filtro de la vista: categoría elegida ('todas' o su id) y texto buscado
+  filtroCat: 'todas',
+  busqueda: '',
 
   paint(view) {
     const esAdmin = this.esAdmin();
-
-    const rows = this.productos.map(p => `
-      <tr>
-        <td>${esc(p.nombre)}</td>
-        <td>${esc(this.catNombre(p.categoria_id))}</td>
-        <td class="font-bold">${fmtMoneda(p.precio_venta)}</td>
-        <td>${fmtMoneda(p.costo)}</td>
-        <td>
-          ${
-            p.tracking_stock ? `
-            <span class="${p.stock_actual <= p.stock_minimo ? 'text-danger font-bold' : ''}">${p.stock_actual} ${esc(p.unidad || '')}</span>
-            ` : '<span class="text-muted">Sin control</span>'
-          }
-        </td>
-        <td>${p.es_plato ? '<span class="badge badge-blue">Plato</span>' : '<span class="badge badge-gray">Producto</span>'}</td>
-        <td>
-          ${p.activo ? '<span class="badge badge-green">Activo</span>' : '<span class="badge badge-red">Inactivo</span>'}
-        </td>
-        ${
-          esAdmin ? `
-          <td>
-            <button class="btn btn-outline btn-sm" onclick="Productos.receta(${p.id})" title="Receta e ingredientes">
-              <i class="fas fa-blender"></i>${p.ingredientes_receta ? ` ${p.ingredientes_receta}` : ''}</button>
-            <button class="btn btn-outline btn-sm" onclick="Productos.editar(${p.id})"><i class="fas fa-edit"></i></button>
-            <button class="btn btn-danger btn-sm" onclick="Productos.eliminar(${p.id})"><i class="fas fa-trash"></i></button>
-          </td>
-          ` : ''
-        }
-      </tr>
-    `).join('');
-
-    const catRows = this.categorias.map(c => `
-      <button class="pos-cat-btn" style="background:${esc(c.color || '#64748b')}" onclick="Productos.verCategoria(${c.id})">
-        ${esc(c.nombre)}
-      </button>
-    `).join('');
+    const cuenta = id => this.productos.filter(p => p.categoria_id === id).length;
+    const sinCat = this.productos.filter(p => !this.categorias.some(c => c.id === p.categoria_id)).length;
+    const chip = (id, nombre, n, color, icono) => `
+      <button class="pos-cat-btn ${String(this.filtroCat) === String(id) ? 'active' : ''}" onclick="Productos.verCategoria('${id}')"
+        ${color ? `style="--cat-color:${esc(color)}"` : ''}>
+        ${icono ? `<i class="fas ${icono}"></i> ` : `<span class="prod-cat-punto" style="background:${esc(color || '#64748b')}"></span>`}${esc(nombre)}
+        <span class="pos-cat-count">${n}</span>
+      </button>`;
+    const chips = [
+      chip('todas', 'Todas', this.productos.length, '', 'fa-th-large'),
+      ...this.categorias.map(c => chip(c.id, c.nombre, cuenta(c.id), c.color)),
+      ...(sinCat ? [chip('sin', 'Sin categoría', sinCat, '#94a3b8')] : [])
+    ].join('');
 
     view.innerHTML = `
       <div class="page-header">
         <div>
           <h2><i class="fas fa-hamburger"></i> Productos</h2>
-          <p>Gesti\u00f3n del men\u00fa y precios</p>
+          <p>${this.productos.length} productos en ${this.categorias.length} categorías</p>
         </div>
         <div>
           ${
             esAdmin ? `
-            <button class="btn btn-primary" onclick="Productos.nuevaCategoria()"><i class="fas fa-tag"></i> Categor\u00eda</button>
+            <button class="btn btn-primary" onclick="Productos.nuevaCategoria()"><i class="fas fa-tag"></i> Categoría</button>
             <button class="btn btn-success" onclick="Productos.nuevo()"><i class="fas fa-plus"></i> Nuevo producto</button>
             ` : ''
           }
@@ -86,36 +65,85 @@ const Productos = {
       </div>
 
       <div class="card mb-20">
-        <div class="card-header">
-          <span class="card-title"><i class="fas fa-tags"></i> Categor\u00edas</span>
+        <div class="prod-buscador">
+          <i class="fas fa-search"></i>
+          <input type="search" id="prodBuscar" placeholder="Buscar producto..." value="${esc(this.busqueda)}"
+            oninput="Productos.buscar(this.value)" aria-label="Buscar producto">
         </div>
-        <div class="pos-categories">${catRows || '<span class="text-muted">Sin categor\u00edas</span>'}</div>
+        <div class="pos-categories">${chips}</div>
       </div>
 
-      <div class="card">
-        ${
-          this.productos.length > 0 ? `
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Producto</th><th>Categor\u00eda</th><th>Precio</th><th>Costo</th>
-                  <th>Stock</th><th>Tipo</th><th>Estado</th>${esAdmin ? '<th>Acciones</th>' : ''}
-                </tr>
-              </thead>
-              <tbody>${rows}</tbody>
-            </table>
-          </div>
-          ` : `<div class="empty-state"><i class="fas fa-box-open"></i><p>Sin productos</p></div>`
-        }
-      </div>
+      ${esAdmin ? this.htmlMomentos() : ''}
+      ${esAdmin ? this.htmlGruposOpciones() : ''}
+
+      <div id="prodListado">${this.htmlListado(esAdmin)}</div>
     `;
   },
 
-  verCategoria(id) {
-    App.showToast(`Categor\u00eda ${this.catNombre(id)}`, 'info');
+  // Productos agrupados por categoría, en el orden de la carta; cada grupo con su color y cantidad
+  htmlListado(esAdmin = this.esAdmin()) {
+    if (!this.productos.length) return `<div class="card"><div class="empty-state"><i class="fas fa-box-open"></i><p>Sin productos</p></div></div>`;
+    const texto = this.busqueda.trim().toLowerCase();
+    const coincide = p => !texto || p.nombre.toLowerCase().includes(texto) || String(p.descripcion || '').toLowerCase().includes(texto);
+    const grupos = [
+      ...this.categorias.map(c => ({ id: c.id, nombre: c.nombre, color: c.color, nota: c.descripcion, productos: this.productos.filter(p => p.categoria_id === c.id) })),
+      { id: 'sin', nombre: 'Sin categoría', color: '#94a3b8', productos: this.productos.filter(p => !this.categorias.some(c => c.id === p.categoria_id)) }
+    ].filter(g => this.filtroCat === 'todas' || String(g.id) === String(this.filtroCat))
+      .map(g => ({ ...g, productos: g.productos.filter(coincide) }))
+      .filter(g => g.productos.length);
+    if (!grupos.length) return `<div class="card"><div class="empty-state"><i class="fas fa-search"></i><p>No hay productos${texto ? ` que coincidan con "${esc(this.busqueda.trim())}"` : ' en esta categoría'}</p></div></div>`;
+
+    const fila = p => `
+      <tr>
+        <td><div class="font-bold">${esc(p.nombre)}</div>${p.descripcion ? `<small class="text-muted prod-desc">${esc(p.descripcion)}</small>` : ''}</td>
+        <td class="font-bold">${fmtMoneda(p.precio_venta)}</td>
+        <td>${fmtMoneda(p.costo)}</td>
+        <td>${p.tracking_stock
+          ? `<span class="${p.stock_actual <= p.stock_minimo ? 'text-danger font-bold' : ''}">${p.stock_actual} ${esc(p.unidad || '')}</span>`
+          : '<span class="text-muted">Sin control</span>'}</td>
+        <td>${p.es_plato ? '<span class="badge badge-blue">Plato</span>' : '<span class="badge badge-gray">Producto</span>'}</td>
+        ${esAdmin ? `
+          <td class="prod-acciones">
+            <button class="btn btn-outline btn-sm" onclick="Productos.receta(${p.id})" title="Receta e ingredientes">
+              <i class="fas fa-blender"></i>${p.ingredientes_receta ? ` ${p.ingredientes_receta}` : ''}</button>
+            <button class="btn btn-outline btn-sm" onclick="Productos.editar(${p.id})" title="Editar"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="Productos.eliminar(${p.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
+          </td>` : ''}
+      </tr>`;
+    return grupos.map(g => `
+      <div class="card mb-20 prod-grupo" style="--cat-color:${esc(g.color || '#64748b')}">
+        <div class="card-header">
+          <span class="card-title"><span class="prod-cat-punto"></span> ${esc(g.nombre)}</span>
+          <span>
+            ${esAdmin && g.id !== 'sin' ? `<button class="btn btn-outline btn-sm" onclick="Productos.editarCategoria(${Number(g.id)})" title="Editar categoría"><i class="fas fa-edit"></i></button>` : ''}
+            <span class="pos-cat-count">${g.productos.length}</span>
+          </span>
+        </div>
+        ${g.nota ? `<div class="prod-nota-categoria"><i class="fas fa-info-circle"></i> ${esc(g.nota)} <small>(se ve en la carta)</small></div>` : ''}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Producto</th><th>Precio</th><th>Costo</th><th>Stock</th><th>Tipo</th>${esAdmin ? '<th>Acciones</th>' : ''}</tr>
+            </thead>
+            <tbody>${g.productos.map(fila).join('')}</tbody>
+          </table>
+        </div>
+      </div>`).join('');
   },
-nuevo() {
+
+  verCategoria(id) {
+    this.filtroCat = id;
+    this.paint(document.getElementById('view-productos'));
+  },
+
+  // Al escribir solo se rehace el listado: el buscador no pierde el foco
+  buscar(texto) {
+    this.busqueda = texto;
+    const el = document.getElementById('prodListado');
+    if (el) el.innerHTML = this.htmlListado();
+  },
+
+  nuevo() {
     this.abrirFormulario(null);
   },
 
@@ -152,6 +180,11 @@ nuevo() {
             </select>
           </div>
         </div>
+        <div class="form-group">
+          <label>Orden en la carta</label>
+          <input type="number" id="prodOrden" min="0" step="1" value="${p && p.orden ? p.orden : ''}" placeholder="Ej: 1 = primero de su categoría">
+          <small class="form-hint">Posición dentro de su categoría, como en la carta impresa. Vacío: va después, por nombre.</small>
+        </div>
         <div class="grid grid-2">
           <div class="form-group">
             <label>Precio de venta ($)</label>
@@ -179,10 +212,18 @@ nuevo() {
             Controlar stock
           </label>
         </div>
+        <div class="form-group">
+          <label>Destacar en la carta</label>
+          <label class="checkbox-label"><input type="checkbox" id="prodRecomendado" ${p && p.recomendado ? 'checked' : ''}> Recomendado de la casa</label>
+          <label class="checkbox-label"><input type="checkbox" id="prodNuevo" ${p && p.nuevo ? 'checked' : ''}> Nuevo</label>
+          <small class="form-hint">"Lo más pedido" se marca solo con las ventas de las últimas 4 semanas.</small>
+        </div>
         <div class="form-group" id="stockInicialGroup" ${(!p && 'style="display:none"') || ''}>
           <label>Stock inicial</label>
           <input type="number" id="prodStockInicial" min="0" value="${p ? p.stock_actual : '0'}">
         </div>
+        ${this.htmlVentaCruzada(p)}
+        ${this.htmlTraducciones('prod', p && p.traducciones, true)}
         <div class="modal-footer">
           <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-success">Guardar</button>
@@ -205,7 +246,12 @@ async guardar(e, id) {
       costo: parseFloat(document.getElementById('prodCosto').value || 0),
       unidad: document.getElementById('prodUnidad').value,
       stock_minimo: parseInt(document.getElementById('prodStockMin').value || 0),
-      tracking_stock: document.getElementById('prodTracking').checked ? 1 : 0
+      tracking_stock: document.getElementById('prodTracking').checked ? 1 : 0,
+      orden: parseInt(document.getElementById('prodOrden').value || 0),
+      recomendado: document.getElementById('prodRecomendado').checked ? 1 : 0,
+      nuevo: document.getElementById('prodNuevo').checked ? 1 : 0,
+      ...this.leerVentaCruzada(id),
+      traducciones: this.leerTraducciones('prod', true)
     };
     if (data.tracking_stock && !id) {
       data.stock_actual = parseInt(document.getElementById('prodStockInicial').value || 0);
@@ -225,6 +271,37 @@ async guardar(e, id) {
     }
   },
 
+  // Carta QR en ingl\u00e9s y portugu\u00e9s (src/traducciones.js). Lo que se deja vac\u00edo se muestra en espa\u00f1ol.
+  IDIOMAS: { en: 'Ingl\u00e9s', pt: 'Portugu\u00e9s' },
+  htmlTraducciones(prefijo, guardadas, conDescripcion) {
+    let t = {};
+    try { t = typeof guardadas === 'string' ? JSON.parse(guardadas) || {} : guardadas || {}; } catch (e) { t = {}; }
+    const algo = Object.keys(t).length > 0;
+    const filas = Object.entries(this.IDIOMAS).map(([k, nombre]) => `
+      <div class="form-group">
+        <label>${nombre}: nombre</label>
+        <input type="text" id="${prefijo}Tr_${k}_nombre" maxlength="120" value="${esc((t[k] && t[k].nombre) || '')}">
+      </div>
+      ${conDescripcion ? `<div class="form-group">
+        <label>${nombre}: descripci\u00f3n</label>
+        <textarea id="${prefijo}Tr_${k}_descripcion" maxlength="500">${esc((t[k] && t[k].descripcion) || '')}</textarea>
+      </div>` : ''}`).join('');
+    return `<details class="form-group" ${algo ? 'open' : ''}>
+        <summary><i class="fas fa-language"></i> Carta QR en otros idiomas (opcional)</summary>
+        <small class="form-hint">Los clientes eligen ES / EN / PT en la carta del QR. Lo que dejes vac\u00edo se ve en espa\u00f1ol.</small>
+        ${filas}
+      </details>`;
+  },
+  leerTraducciones(prefijo, conDescripcion) {
+    const t = {};
+    for (const k of Object.keys(this.IDIOMAS)) {
+      const valor = campo => { const el = document.getElementById(`${prefijo}Tr_${k}_${campo}`); return el ? el.value.trim() : ''; };
+      t[k] = { nombre: valor('nombre') };
+      if (conDescripcion) t[k].descripcion = valor('descripcion');
+    }
+    return t;
+  },
+
   async eliminar(id) {
     if (!confirm('\u00bfSeguro que deseas eliminar este producto?')) return;
     try {
@@ -236,44 +313,347 @@ async guardar(e, id) {
     }
   },
 
-  nuevaCategoria() {
+  // ===== Venta cruzada en el formulario de producto: versión grande, horario y qué incluye un combo =====
+  DIAS_CORTOS: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+  leerJSON(t) { try { return t ? (typeof t === 'string' ? JSON.parse(t) : t) : null; } catch (e) { return null; } },
+
+  htmlVentaCruzada(p) {
+    const h = this.leerJSON(p && p.horario);
+    const combo = this.leerJSON(p && p.combo);
+    const otros = this.productos.filter(x => !p || x.id !== p.id);
+    const algo = !!(p && (p.version_grande_id || h || combo));
+    return `<details class="form-group" ${algo ? 'open' : ''}>
+        <summary><i class="fas fa-bullhorn"></i> Para vender más (opcional)</summary>
+        <div class="form-group mt-10">
+          <label>Versión grande</label>
+          <select id="prodGrande"><option value="">— Ninguna —</option>${otros.map(x => `<option value="${Number(x.id)}" ${p && p.version_grande_id === x.id ? 'selected' : ''}>${esc(x.nombre)} (${fmtMoneda(x.precio_venta)})</option>`).join('')}</select>
+          <small class="form-hint">Al agregarlo, la carta y el punto de venta ofrecen "¿Lo querés grande?" por la diferencia.</small>
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label"><input type="checkbox" id="prodHorarioOn" ${h ? 'checked' : ''} onchange="document.getElementById('prodHorario').style.display = this.checked ? '' : 'none'"> Solo en un horario (por ejemplo, promos de 8 a 12)</label>
+          <div id="prodHorario" style="${h ? '' : 'display:none'}">
+            <div class="cierre-dias">${this.DIAS_CORTOS.map((d, i) => `<label class="checkbox-label"><input type="checkbox" class="prodDia" value="${i}" ${!h ? (i >= 1 && i <= 5 ? 'checked' : '') : (h.dias.includes(i) ? 'checked' : '')}> ${d}</label>`).join('')}</div>
+            <div class="grid grid-2 mt-10">
+              <input type="time" id="prodDesde" value="${h ? esc(h.desde) : '08:00'}">
+              <input type="time" id="prodHasta" value="${h ? esc(h.hasta) : '12:00'}">
+            </div>
+            <small class="form-hint">Fuera de horario el cliente lo ve pero no lo puede pedir; en el punto de venta solo avisa.</small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Si es un combo: qué incluye</label>
+          <div id="prodCombo">${(combo ? combo.componentes : []).map(c => this.filaCombo(c, p)).join('')}</div>
+          <button type="button" class="btn btn-outline btn-sm mt-10" onclick="document.getElementById('prodCombo').insertAdjacentHTML('beforeend', Productos.filaCombo(null, null))"><i class="fas fa-plus"></i> Agregar parte del combo</button>
+          <small class="form-hint">Ej.: 1 de "Cafetería caliente" + 2 "Medialuna". Si el cliente lo arma suelto y el combo sale más barato, se le avisa.</small>
+        </div>
+      </details>`;
+  },
+
+  // Una parte del combo: cantidad + "cualquiera de una categoría" o un producto
+  filaCombo(c, p) {
+    let valor = '';
+    if (c) {
+      const cat = this.categorias.find(k => {
+        const ids = this.productos.filter(x => x.categoria_id === k.id && (!p || x.id !== p.id)).map(x => x.id).sort();
+        return ids.length && ids.join(',') === c.productos.slice().sort().join(',');
+      });
+      valor = cat ? 'c:' + cat.id : c.productos.length === 1 ? 'p:' + c.productos[0] : 'l:' + c.productos.join(',');
+    }
+    const opcionesCat = this.categorias.map(k => `<option value="c:${Number(k.id)}" ${valor === 'c:' + k.id ? 'selected' : ''}>Cualquiera de: ${esc(k.nombre)}</option>`).join('');
+    const opcionesProd = this.productos.filter(x => !p || x.id !== p.id).map(x => `<option value="p:${Number(x.id)}" ${valor === 'p:' + x.id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('');
+    return `<div class="opcion-fila combo-fila">
+        <input type="number" class="comboCant" min="1" max="10" value="${c ? Number(c.cantidad) : 1}" title="Cantidad">
+        <select class="comboQue">
+          ${valor.startsWith('l:') ? `<option value="${esc(valor)}" selected>${c.productos.length} productos elegidos</option>` : ''}
+          <optgroup label="Categorías">${opcionesCat}</optgroup><optgroup label="Productos">${opcionesProd}</optgroup>
+        </select>
+        <button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.combo-fila').remove()" title="Quitar"><i class="fas fa-times"></i></button>
+      </div>`;
+  },
+
+  leerVentaCruzada(id) {
+    const on = document.getElementById('prodHorarioOn').checked;
+    const componentes = [...document.querySelectorAll('#prodCombo .combo-fila')].map(f => {
+      const [tipo, valor] = f.querySelector('.comboQue').value.split(':');
+      const productos = tipo === 'c' ? this.productos.filter(x => x.categoria_id === Number(valor) && x.id !== id).map(x => x.id)
+        : String(valor).split(',').map(Number);
+      return { productos, cantidad: Number(f.querySelector('.comboCant').value) || 1 };
+    }).filter(c => c.productos.length);
+    return {
+      version_grande_id: Number(document.getElementById('prodGrande').value) || null,
+      horario: on ? { dias: [...document.querySelectorAll('.prodDia')].filter(x => x.checked).map(x => Number(x.value)),
+        desde: document.getElementById('prodDesde').value, hasta: document.getElementById('prodHasta').value } : '',
+      combo: componentes.length ? { componentes } : ''
+    };
+  },
+
+  // ===== Opciones y adicionales ("¿Qué leche?", "Adicionales") =====
+  gruposOpciones: [],
+  htmlGruposOpciones() {
+    const botones = this.gruposOpciones.map(g => `
+      <button class="pos-cat-btn" onclick="Productos.formGrupo(${Number(g.id)})" title="Editar">
+        <i class="fas ${g.tipo === 'una' ? 'fa-dot-circle' : 'fa-plus-square'}"></i> ${esc(g.nombre)}
+        <span class="pos-cat-count">${g.opciones.length} opc. · ${g.productos.length} prod.</span>${g.activo ? '' : ' (apagado)'}
+      </button>`).join('');
+    return `
+      <div class="card mb-20">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-sliders-h"></i> Opciones y adicionales</span>
+          <button class="btn btn-outline btn-sm" onclick="Productos.formGrupo(null)"><i class="fas fa-plus"></i> Grupo</button>
+        </div>
+        <p class="text-muted">Lo que se pregunta al agregar un producto: "¿Qué leche?" (se elige una) o "Adicionales" (se eligen varios, cada uno con su precio).</p>
+        <div class="pos-categories">${botones || '<span class="text-muted">Todavía no hay opciones.</span>'}</div>
+      </div>`;
+  },
+
+  filaOpcion(o = {}) {
+    const t = o.traducciones || {};
+    return `
+      <div class="opcion-fila" data-id="${o.id ? Number(o.id) : ''}">
+        <input type="text" class="opNombre" maxlength="60" placeholder="Ej.: Leche vegetal" value="${esc(o.nombre || '')}" required>
+        <input type="number" class="opPrecio" min="0" step="0.01" placeholder="+ $" value="${o.precio ? Number(o.precio) : ''}" title="Recargo (vacío = sin cargo)">
+        <input type="text" class="opEn" maxlength="60" placeholder="Inglés" value="${esc((t.en && t.en.nombre) || '')}">
+        <input type="text" class="opPt" maxlength="60" placeholder="Portugués" value="${esc((t.pt && t.pt.nombre) || '')}">
+        <button type="button" class="btn btn-outline btn-sm" onclick="this.closest('.opcion-fila').remove()" title="Quitar"><i class="fas fa-times"></i></button>
+      </div>`;
+  },
+
+  formGrupo(id) {
+    const g = this.gruposOpciones.find(x => x.id === id) || null;
+    const t = (g && g.traducciones) || {};
+    const elegidos = new Set(g ? g.productos : []);
+    const porCategoria = [...this.categorias.map(c => ({ id: c.id, nombre: c.nombre, productos: this.productos.filter(p => p.categoria_id === c.id) })),
+      { id: 0, nombre: 'Sin categoría', productos: this.productos.filter(p => !this.categorias.some(c => c.id === p.categoria_id)) }]
+      .filter(c => c.productos.length);
     App.showModal(`
-      <form onsubmit="Productos.guardarCategoria(event)">
+      <form onsubmit="Productos.guardarGrupo(event, ${g ? Number(g.id) : 'null'})">
+        <div class="form-group"><label>Nombre (lo que se pregunta)</label>
+          <input type="text" id="grNombre" maxlength="60" value="${g ? esc(g.nombre) : ''}" placeholder="Ej.: ¿Qué leche?" required></div>
+        <div class="grid grid-2">
+          <div class="form-group"><label>Tipo</label>
+            <select id="grTipo" onchange="Productos.tipoGrupo()">
+              <option value="una" ${!g || g.tipo === 'una' ? 'selected' : ''}>Se elige una (tipo de leche, sabor)</option>
+              <option value="varias" ${g && g.tipo === 'varias' ? 'selected' : ''}>Adicionales (se pueden elegir varios)</option>
+            </select></div>
+          <div class="form-group" id="grUnaOpc"><label class="checkbox-label"><input type="checkbox" id="grObligatorio" ${!g || g.obligatorio ? 'checked' : ''}> Siempre hay que elegir (la primera va por defecto)</label></div>
+          <div class="form-group" id="grVariasOpc"><label>Máximo (0 = sin tope)</label><input type="number" id="grMaximo" min="0" value="${g ? Number(g.maximo) || 0 : 0}"></div>
+        </div>
+        <div class="form-group">
+          <label>Opciones (nombre, recargo y traducciones)</label>
+          <div id="grOpciones">${(g ? g.opciones : [{}]).map(o => this.filaOpcion(o)).join('')}</div>
+          <button type="button" class="btn btn-outline btn-sm mt-10" onclick="document.getElementById('grOpciones').insertAdjacentHTML('beforeend', Productos.filaOpcion())"><i class="fas fa-plus"></i> Agregar opción</button>
+        </div>
+        <div class="form-group">
+          <label>Productos que lo usan</label>
+          <div class="grupo-productos">${porCategoria.map(c => `
+            <div class="grupo-cat">
+              <label class="checkbox-label font-bold"><input type="checkbox" onchange="this.closest('.grupo-cat').querySelectorAll('.grProd').forEach(x => { x.checked = this.checked; })"> ${esc(c.nombre)} (toda)</label>
+              <div class="cierre-dias">${c.productos.map(p => `<label class="checkbox-label"><input type="checkbox" class="grProd" value="${Number(p.id)}" ${elegidos.has(p.id) ? 'checked' : ''}> ${esc(p.nombre)}</label>`).join('')}</div>
+            </div>`).join('')}</div>
+        </div>
+        <div class="grid grid-2">
+          <div class="form-group"><label>Inglés: pregunta</label><input type="text" id="grEn" maxlength="60" value="${esc((t.en && t.en.nombre) || '')}" placeholder="Which milk?"></div>
+          <div class="form-group"><label>Portugués: pregunta</label><input type="text" id="grPt" maxlength="60" value="${esc((t.pt && t.pt.nombre) || '')}" placeholder="Qual leite?"></div>
+        </div>
+        <div class="form-group"><label class="checkbox-label"><input type="checkbox" id="grActivo" ${!g || g.activo ? 'checked' : ''}> Activo</label></div>
+        <div class="modal-footer">
+          ${g ? `<button type="button" class="btn btn-danger" onclick="Productos.borrarGrupo(${Number(g.id)})"><i class="fas fa-trash"></i> Borrar</button>` : ''}
+          <button type="button" class="btn btn-outline" onclick="App.closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-success">Guardar</button>
+        </div>
+      </form>`, { title: g ? `Opciones: ${g.nombre}` : 'Nuevo grupo de opciones', large: true });
+    this.tipoGrupo();
+  },
+
+  tipoGrupo() {
+    const una = document.getElementById('grTipo').value === 'una';
+    document.getElementById('grUnaOpc').style.display = una ? '' : 'none';
+    document.getElementById('grVariasOpc').style.display = una ? 'none' : '';
+  },
+
+  async guardarGrupo(e, id) {
+    e.preventDefault();
+    const opciones = [...document.querySelectorAll('#grOpciones .opcion-fila')].map(f => ({
+      id: Number(f.dataset.id) || undefined,
+      nombre: f.querySelector('.opNombre').value,
+      precio: f.querySelector('.opPrecio').value || 0,
+      traducciones: { en: { nombre: f.querySelector('.opEn').value }, pt: { nombre: f.querySelector('.opPt').value } }
+    }));
+    const data = {
+      nombre: document.getElementById('grNombre').value,
+      tipo: document.getElementById('grTipo').value,
+      obligatorio: document.getElementById('grObligatorio').checked,
+      maximo: Number(document.getElementById('grMaximo').value) || 0,
+      activo: document.getElementById('grActivo').checked ? 1 : 0,
+      opciones,
+      productos: [...document.querySelectorAll('.grProd')].filter(x => x.checked).map(x => Number(x.value)),
+      orden: id ? (this.gruposOpciones.find(x => x.id === id) || {}).orden : this.gruposOpciones.length,
+      traducciones: { en: { nombre: document.getElementById('grEn').value }, pt: { nombre: document.getElementById('grPt').value } }
+    };
+    try {
+      if (id) await API.actualizarGrupoOpciones(id, data);
+      else await API.crearGrupoOpciones(data);
+      App.closeModal();
+      App.showToast('Opciones guardadas', 'success');
+      this.render();
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  async borrarGrupo(id) {
+    if (!confirm('¿Borrar este grupo de opciones? Los pedidos ya hechos no cambian.')) return;
+    try {
+      await API.borrarGrupoOpciones(id);
+      App.closeModal();
+      App.showToast('Grupo borrado', 'success');
+      this.render();
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  // ===== Momentos de la carta (Desayuno, Brunch, Almuerzo, Merienda) =====
+  momentos: [],
+  htmlMomentos() {
+    const botones = this.momentos.map(m => `
+      <button class="pos-cat-btn" onclick="Productos.formMomento(${Number(m.id)})" title="Editar">
+        ${m.icono ? esc(m.icono) + ' ' : ''}${esc(m.nombre)} <span class="pos-cat-count">${esc(m.desde)}–${esc(m.hasta)}</span>${m.activo ? '' : ' (apagado)'}
+      </button>`).join('');
+    return `
+      <div class="card mb-20">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-clock"></i> Momentos de la carta</span>
+          <button class="btn btn-outline btn-sm" onclick="Productos.formMomento(null)"><i class="fas fa-plus"></i> Momento</button>
+        </div>
+        <p class="text-muted">La carta del QR abre en el momento de la hora (por ejemplo, a las 9 en el Desayuno) y muestra los otros a un toque.</p>
+        <div class="pos-categories">${botones || '<span class="text-muted">Todavía no hay momentos: la carta muestra todo junto.</span>'}</div>
+      </div>`;
+  },
+
+  formMomento(id) {
+    const m = this.momentos.find(x => x.id === id) || null;
+    const elegidas = m ? m.categorias : [];
+    const t = (m && m.traducciones) || {};
+    // Primero las elegidas, en su orden; después las demás
+    const cats = [...elegidas.map(i => this.categorias.find(c => c.id === i)).filter(Boolean), ...this.categorias.filter(c => !elegidas.includes(c.id))];
+    App.showModal(`
+      <form onsubmit="Productos.guardarMomento(event, ${m ? Number(m.id) : 'null'})">
+        <div class="grid grid-2">
+          <div class="form-group"><label>Nombre</label><input type="text" id="momNombre" maxlength="40" value="${m ? esc(m.nombre) : ''}" placeholder="Ej.: Desayuno" required></div>
+          <div class="form-group"><label>Ícono (emoji)</label><input type="text" id="momIcono" maxlength="8" value="${m ? esc(m.icono) : ''}" placeholder="🌅"></div>
+        </div>
+        <div class="grid grid-2">
+          <div class="form-group"><label>Desde</label><input type="time" id="momDesde" value="${m ? esc(m.desde) : '08:00'}" required></div>
+          <div class="form-group"><label>Hasta</label><input type="time" id="momHasta" value="${m ? esc(m.hasta) : '12:00'}" required></div>
+        </div>
+        <div class="form-group">
+          <label>Categorías de este momento (en este orden)</label>
+          <div class="cierre-dias">${cats.map(c => `<label class="checkbox-label"><input type="checkbox" class="momCat" value="${Number(c.id)}" ${elegidas.includes(c.id) ? 'checked' : ''}> ${esc(c.nombre)}</label>`).join('')}</div>
+          <small class="form-hint">Una categoría puede estar en varios momentos (por ejemplo, los cafés en el desayuno y en la merienda).</small>
+        </div>
+        <div class="grid grid-2">
+          <div class="form-group"><label>Inglés: nombre</label><input type="text" id="momEn" maxlength="40" value="${esc((t.en && t.en.nombre) || '')}" placeholder="Breakfast"></div>
+          <div class="form-group"><label>Portugués: nombre</label><input type="text" id="momPt" maxlength="40" value="${esc((t.pt && t.pt.nombre) || '')}" placeholder="Café da manhã"></div>
+        </div>
+        <div class="form-group"><label class="checkbox-label"><input type="checkbox" id="momActivo" ${!m || m.activo ? 'checked' : ''}> Mostrar en la carta</label></div>
+        <div class="modal-footer">
+          ${m ? `<button type="button" class="btn btn-danger" onclick="Productos.borrarMomento(${Number(m.id)})"><i class="fas fa-trash"></i> Borrar</button>` : ''}
+          <button type="button" class="btn btn-outline" onclick="App.closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-success">Guardar</button>
+        </div>
+      </form>`, { title: m ? `Momento: ${m.nombre}` : 'Nuevo momento de la carta' });
+  },
+
+  async guardarMomento(e, id) {
+    e.preventDefault();
+    const data = {
+      nombre: document.getElementById('momNombre').value,
+      icono: document.getElementById('momIcono').value,
+      desde: document.getElementById('momDesde').value,
+      hasta: document.getElementById('momHasta').value,
+      categorias: [...document.querySelectorAll('.momCat')].filter(x => x.checked).map(x => Number(x.value)),
+      activo: document.getElementById('momActivo').checked ? 1 : 0,
+      orden: id ? (this.momentos.find(x => x.id === id) || {}).orden : this.momentos.length,
+      traducciones: { en: { nombre: document.getElementById('momEn').value }, pt: { nombre: document.getElementById('momPt').value } }
+    };
+    try {
+      if (id) await API.actualizarMomento(id, data);
+      else await API.crearMomento(data);
+      App.closeModal();
+      App.showToast('Momento guardado', 'success');
+      this.render();
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  async borrarMomento(id) {
+    if (!confirm('¿Borrar este momento de la carta? Las categorías y los productos no se borran.')) return;
+    try {
+      await API.borrarMomento(id);
+      App.closeModal();
+      App.showToast('Momento borrado', 'success');
+      this.render();
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+
+  nuevaCategoria() {
+    this.formCategoria(null);
+  },
+
+  editarCategoria(id) {
+    const c = this.categorias.find(x => x.id === id);
+    if (c) this.formCategoria(c);
+  },
+
+  // La descripci\u00f3n es una nota que se ve en la carta debajo del t\u00edtulo (opciones de leche, horarios de las promos...)
+  formCategoria(c) {
+    App.showModal(`
+      <form onsubmit="Productos.guardarCategoria(event, ${c ? Number(c.id) : 'null'})">
         <div class="form-group">
           <label>Nombre</label>
-          <input type="text" id="catNombre" required>
+          <input type="text" id="catNombre" value="${c ? esc(c.nombre) : ''}" required>
         </div>
         <div class="form-group">
-          <label>Descripci\u00f3n</label>
-          <textarea id="catDescripcion"></textarea>
+          <label>Nota en la carta (opcional)</label>
+          <textarea id="catDescripcion" rows="2" placeholder="Ej.: Opciones de leche: entera, descremada, deslactosada. Leche vegetal + $1300">${c ? esc(c.descripcion || '') : ''}</textarea>
+          <small class="form-hint">Se ve en un recuadro debajo del t\u00edtulo de la categor\u00eda, como en una carta impresa.</small>
+        </div>
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label>Color</label>
+            <input type="color" id="catColor" value="${c ? esc(c.color || '#64748b') : '#64748b'}">
+          </div>
+          <div class="form-group">
+            <label>Orden</label>
+            <input type="number" id="catOrden" value="${c ? Number(c.orden) || 0 : 0}">
+          </div>
         </div>
         <div class="form-group">
-          <label>Color</label>
-          <input type="color" id="catColor" value="#64748b">
+          <label>Acompañalo con (sugerencias al agregar algo de esta categoría)</label>
+          <div class="cierre-dias">${this.categorias.filter(k => !c || k.id !== c.id).map(k => `<label class="checkbox-label"><input type="checkbox" class="catSugerir" value="${Number(k.id)}" ${c && String(c.sugerir || '').split(',').map(Number).includes(k.id) ? 'checked' : ''}> ${esc(k.nombre)}</label>`).join('')}</div>
+          <small class="form-hint">Ej.: a los cafés, laminados y pastelería. La carta y el punto de venta los ofrecen (primero los recomendados).</small>
         </div>
-        <div class="form-group">
-          <label>Orden</label>
-          <input type="number" id="catOrden" value="0">
-        </div>
+        ${this.htmlTraducciones('cat', c && c.traducciones, true)}
         <div class="modal-footer">
           <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-success">Guardar</button>
         </div>
       </form>
-    `, { title: 'Nueva categor\u00eda' });
+    `, { title: c ? `Editar ${c.nombre}` : 'Nueva categor\u00eda' });
   },
 
-  async guardarCategoria(e) {
+  async guardarCategoria(e, id) {
     e.preventDefault();
+    const data = {
+      nombre: document.getElementById('catNombre').value,
+      descripcion: document.getElementById('catDescripcion').value,
+      color: document.getElementById('catColor').value,
+      orden: parseInt(document.getElementById('catOrden').value) || 0,
+      traducciones: this.leerTraducciones('cat', true),
+      sugerir: [...document.querySelectorAll('.catSugerir')].filter(x => x.checked).map(x => Number(x.value))
+    };
     try {
-      await API.createCategoria({
-        nombre: document.getElementById('catNombre').value,
-        descripcion: document.getElementById('catDescripcion').value,
-        color: document.getElementById('catColor').value,
-        orden: parseInt(document.getElementById('catOrden').value)
-      });
+      if (id) await API.updateCategoria(id, data);
+      else await API.createCategoria(data);
       App.closeModal();
-      App.showToast('Categor\u00eda creada', 'success');
+      App.showToast(id ? 'Categor\u00eda actualizada' : 'Categor\u00eda creada', 'success');
       this.render();
     } catch (err) {
       App.showToast(err.message, 'error');

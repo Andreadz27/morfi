@@ -658,7 +658,7 @@ const ConfigView = {
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || ''; };
       set('linkWA',    links.whatsapp  || window.location.origin + '/pedido.html?origen=whatsapp');
       set('linkIG',    links.instagram || window.location.origin + '/pedido.html?origen=instagram');
-      const urlCarta = links.carta || window.location.origin + '/menu.html';
+      const urlCarta = links.carta || window.location.origin + '/pedido.html?ver=1';
       set('linkCarta', urlCarta);
       // Generar QR
       const inp = document.getElementById('qrUrlInput');
@@ -671,7 +671,7 @@ const ConfigView = {
   generarQR() {
     const cont = document.getElementById('qrCanvas');
     if (!cont) return;
-    const url  = this._qrUrl || (window.location.origin + '/menu.html');
+    const url  = this._qrUrl || (window.location.origin + '/pedido.html?ver=1');
     const size = parseInt((document.getElementById('qrSize') || {}).value || '240');
     // QR generado por el propio sistema (funciona sin internet)
     const apiUrl = urlQr(url);

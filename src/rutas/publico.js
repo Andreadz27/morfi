@@ -1,7 +1,8 @@
 'use strict';
 const {
   rateLimit, urlPublica, urlCartaNube, get, all, errorInterno, crearPedidoOnline, mesaPorToken, estadoMesa, solicitarPedidoMesa, llamarMozo,
-  iniciarPagoMesa, verificarPagoMesa, pedirComprobanteMesa
+  iniciarPagoMesa, verificarPagoMesa, pedirComprobanteMesa, leerTraducciones, ORDEN_CARTA, cartaPorMomentos, listarGrupos, gruposPorProducto,
+  leerJSON, disponibleAhora, textoHorario
 } = require('../contexto');
 const QRCode = require('qrcode');
 
@@ -23,18 +24,36 @@ app.get('/api/publico/qr.svg', async (req, res) => {
 app.get('/api/publico/menu', async (req, res) => {
   try {
     const categorias = await all(`
-      SELECT c.id, c.nombre FROM categorias c
+      SELECT c.id, c.nombre, c.descripcion, c.traducciones, c.sugerir FROM categorias c
       WHERE c.activo = 1 AND EXISTS (SELECT 1 FROM productos p WHERE p.categoria_id = c.id AND p.activo = 1)
       ORDER BY c.orden, c.nombre
     `);
     const productos = await all(`
       SELECT p.id, p.nombre, p.descripcion, p.precio_venta, p.categoria_id,
-             p.tracking_stock, p.stock_actual, p.es_plato
+             p.tracking_stock, p.stock_actual, p.es_plato, p.traducciones, p.nuevo, p.recomendado,
+             p.version_grande_id, p.horario, p.combo
       FROM productos p
       WHERE p.activo = 1
-      ORDER BY p.nombre ASC
+      ORDER BY ${ORDEN_CARTA}
     `);
-    res.json({ categorias, productos });
+    // Traducciones de la carta (inglés y portugués): el navegador elige el idioma
+    for (const x of [...categorias, ...productos]) x.traducciones = leerTraducciones(x.traducciones);
+    // Venta cruzada: con qué se sugiere cada categoría; horario (y si se puede pedir ahora) y combos
+    for (const c of categorias) c.sugerir = c.sugerir ? c.sugerir.split(',').map(Number) : [];
+    for (const p of productos) {
+      p.disponible = disponibleAhora(p.horario);
+      p.horario_texto = textoHorario(p.horario);
+      p.horario = leerJSON(p.horario);
+      p.combo = leerJSON(p.combo);
+    }
+    // Opciones y adicionales: los grupos (con precios) y cuáles tiene cada producto
+    const porProducto = await gruposPorProducto();
+    for (const p of productos) p.grupos = porProducto[p.id] || [];
+    const usados = new Set(Object.values(porProducto).flat());
+    const grupos = (await listarGrupos({ soloActivos: true })).filter(g => usados.has(g.id) && g.opciones.length)
+      .map(({ id, nombre, tipo, obligatorio, maximo, traducciones, opciones }) => ({ id, nombre, tipo, obligatorio, maximo, traducciones, opciones }));
+    // Momentos del día (Desayuno, Brunch...), el de ahora y destacados (Nuevo, Recomendado, Lo más pedido)
+    res.json({ categorias, productos, grupos, ...await cartaPorMomentos(categorias, productos) });
   } catch (err) {
     errorInterno(res, err);
   }
@@ -60,7 +79,7 @@ app.get('/api/publico/info', async (req, res) => {
         whatsapp:  `${nube}/pedido.html?origen=whatsapp`,
         instagram: `${nube}/pedido.html?origen=instagram`
       } : base ? {
-        carta:     `${base}/menu.html`,
+        carta:     `${base}/pedido.html?ver=1`,
         whatsapp:  `${base}/pedido.html?origen=whatsapp`,
         instagram: `${base}/pedido.html?origen=instagram`
       } : {}

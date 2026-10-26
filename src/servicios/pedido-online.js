@@ -4,9 +4,10 @@
 const { run, get, transaccion } = require('../db');
 const { errorHttp } = require('../util');
 const { emitEvento } = require('../realtime');
-const { generarNumeroPedido, resolverItems, recalcularTotales } = require('./pedidos');
+const { generarNumeroPedido, resolverItems, insertarItemTx, recalcularTotales } = require('./pedidos');
 const { comandaAutomatica } = require('./impresion');
 const { validarPedidoOnline } = require('../validar-pedido-online');
+const { controlarHorarios } = require('./venta-cruzada');
 
 // nubeId: id del pedido en Morfi Nube. Si ya se trajo (se cortó antes de avisarle a la nube), no se duplica.
 async function crearPedidoOnline(datos, { nubeId = null } = {}) {
@@ -17,6 +18,9 @@ async function crearPedidoOnline(datos, { nubeId = null } = {}) {
   }
   const r = await transaccion(async () => {
     // Precio y nombre salen de la base (nunca del navegador ni de la nube); por la web no se venden insumos sin precio
+    // Las promos con horario (de 8 a 12) solo se piden en su horario. Lo que llega de Morfi Nube ya lo pidió el
+    // cliente antes (el local lo trae cada 10 s): no se rechaza por haberlo traído pasada la hora.
+    if (!nubeId) await controlarHorarios(d.items);
     const resueltos = await resolverItems(d.items);
     if (resueltos.some(i => !(i.precio > 0))) throw errorHttp(400, 'Producto no disponible');
     const numero = await generarNumeroPedido();
@@ -25,8 +29,7 @@ async function crearPedidoOnline(datos, { nubeId = null } = {}) {
        VALUES (?, ?, ?, NULL, ?, 0, 0, ?, ?)`,
       [numero, d.tipo, `${d.cliente} (${d.telefono})`, d.notas, d.origen, nubeId]);
     for (const item of resueltos) {
-      await run(`INSERT INTO pedido_items (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal, notas)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`, [pid, item.producto_id, item.nombre, item.cantidad, item.precio, item.subtotal, item.notas]);
+      await insertarItemTx(pid, item);
     }
     const { total } = await recalcularTotales(pid);
     // La entrega guarda el teléfono: con eso sale el aviso de WhatsApp "listo" o "en camino"

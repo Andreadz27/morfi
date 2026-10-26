@@ -14,6 +14,7 @@ const { emitEvento } = require('../realtime');
 const { ZONA_HORARIA, fechaLocal } = require('../tiempo');
 const { getIntCfg } = require('./integraciones');
 const { crearPedidoOnline } = require('./pedido-online');
+const { ORDEN_CARTA } = require('../util');
 
 const MODELO_POR_DEFECTO = 'claude-opus-5-5';
 const HORAS_CONVERSACION = 6;      // después de 6 h sin hablar, conversación nueva
@@ -108,7 +109,7 @@ async function verCarta() {
   const productos = await all(`SELECT p.id, p.nombre, p.descripcion, p.precio_venta, COALESCE(c.nombre, 'Otros') AS categoria
     FROM productos p LEFT JOIN categorias c ON c.id = p.categoria_id
     WHERE p.activo = 1 AND p.precio_venta > 0 AND NOT (p.tracking_stock = 1 AND p.stock_actual <= 0)
-    ORDER BY c.orden, c.nombre, p.nombre`);
+    ORDER BY c.orden, c.nombre, ${ORDEN_CARTA}`);
   if (!productos.length) return { carta: 'No hay productos cargados.' };
   const porCategoria = {};
   for (const p of productos) (porCategoria[p.categoria] = porCategoria[p.categoria] || [])

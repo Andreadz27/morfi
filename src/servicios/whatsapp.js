@@ -79,13 +79,23 @@ async function enviarPlantilla({ telefono, plantilla, parametros = [], motivo, r
   const clave = `${motivo}:${referencia}`;
   if (unico) {
     if (enCurso.has(clave)) return null;
-    const ya = await get("SELECT id FROM whatsapp_mensajes WHERE motivo = ? AND referencia = ? AND estado != 'error'", [motivo, referencia]);
-    if (ya) return null;
+    // Se marca ANTES de consultar la base: si se marcaba después, dos pasadas a la vez (dos recordatorios, o
+    // "listo" tocado dos veces) pasaban las dos el control y el cliente recibía el mismo mensaje dos veces
+    enCurso.add(clave);
+    let ya;
+    try { ya = await get("SELECT id FROM whatsapp_mensajes WHERE motivo = ? AND referencia = ? AND estado != 'error'", [motivo, referencia]); }
+    catch (e) { enCurso.delete(clave); throw e; }
+    if (ya) { enCurso.delete(clave); return null; }
   }
-  enCurso.add(clave);
-  const { id } = await run(
-    `INSERT INTO whatsapp_mensajes (telefono, plantilla, motivo, referencia, parametros, estado)
-     VALUES (?, ?, ?, ?, ?, 'enviando')`, [destino, plantilla, motivo, referencia, JSON.stringify(parametros)]);
+  let id;
+  try {
+    ({ id } = await run(
+      `INSERT INTO whatsapp_mensajes (telefono, plantilla, motivo, referencia, parametros, estado)
+       VALUES (?, ?, ?, ?, ?, 'enviando')`, [destino, plantilla, motivo, referencia, JSON.stringify(parametros)]));
+  } catch (e) {
+    if (unico) enCurso.delete(clave);
+    throw e;
+  }
   try {
     const r = await waRequest(cfg, {
       messaging_product: 'whatsapp',
@@ -105,7 +115,7 @@ async function enviarPlantilla({ telefono, plantilla, parametros = [], motivo, r
     await run("UPDATE whatsapp_mensajes SET estado = 'error', error = ? WHERE id = ?", [String(e.message).slice(0, 500), id]);
     throw e;
   } finally {
-    enCurso.delete(clave);
+    if (unico) enCurso.delete(clave);
   }
 }
 

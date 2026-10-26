@@ -364,6 +364,106 @@ async function migrarEsquema() {
 
   // Cuenta dividida por plato: cuánto de cada ítem ya pagó alguien (servicios/pedidos.js, marcarItemsPagadosTx)
   await agregarColumna('pedido_items', 'cantidad_pagada', 'REAL NOT NULL DEFAULT 0');
+
+  // Carta en inglés y portugués (src/traducciones.js): JSON { en: { nombre, descripcion }, pt: {...} }
+  await agregarColumna('productos', 'traducciones', 'TEXT DEFAULT NULL');
+  await agregarColumna('categorias', 'traducciones', 'TEXT DEFAULT NULL');
+
+  // Posición del producto en la carta (como la impresa); 0 = sin posición, va por nombre (util.js, ORDEN_CARTA)
+  await agregarColumna('productos', 'orden', 'INTEGER NOT NULL DEFAULT 0');
+
+  // Cierre del día (servicios/cierre-dia.js): automático a la hora elegida los días que abre el local.
+  // Si la caja sigue abierta se cierra "pendiente de arqueo" y el encargado carga después lo contado.
+  await agregarColumna('configuracion', 'cierre_auto_activo', 'INTEGER DEFAULT 0');
+  await agregarColumna('configuracion', 'cierre_hora', "TEXT DEFAULT '22:00'");
+  await agregarColumna('configuracion', 'cierre_dias', "TEXT DEFAULT '0,1,2,3,4,5,6'");
+  await agregarColumna('configuracion', 'cierre_propinas_usuarios', "TEXT DEFAULT ''");
+  await agregarColumna('caja', 'pendiente_arqueo', 'INTEGER NOT NULL DEFAULT 0');
+  await agregarColumna('caja', 'arqueo_por', 'INTEGER');
+  await agregarColumna('caja', 'arqueo_en', 'TEXT');
+  await run(`CREATE TABLE IF NOT EXISTS cierres_dia (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT NOT NULL UNIQUE,
+    automatico INTEGER NOT NULL DEFAULT 0,
+    usuario_id INTEGER,
+    resumen TEXT NOT NULL,
+    creado_en TEXT DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TEXT
+  )`);
+
+  // Carta por momentos del día y destacados (servicios/carta.js)
+  await run(`CREATE TABLE IF NOT EXISTS momentos_carta (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    icono TEXT NOT NULL DEFAULT '',
+    desde TEXT NOT NULL,
+    hasta TEXT NOT NULL,
+    orden INTEGER NOT NULL DEFAULT 0,
+    activo INTEGER NOT NULL DEFAULT 1,
+    traducciones TEXT DEFAULT NULL,
+    creado_en TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS momento_categorias (
+    momento_id INTEGER NOT NULL,
+    categoria_id INTEGER NOT NULL,
+    orden INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (momento_id, categoria_id)
+  )`);
+  await agregarColumna('productos', 'nuevo', 'INTEGER NOT NULL DEFAULT 0');
+  await agregarColumna('productos', 'recomendado', 'INTEGER NOT NULL DEFAULT 0');
+
+  // Opciones y adicionales de los productos (servicios/opciones.js): grupos con opciones y precios, asignados a
+  // productos. El ítem del pedido guarda lo elegido (JSON) y el nombre ya lo lleva ("Latte · Leche vegetal").
+  await run(`CREATE TABLE IF NOT EXISTS grupos_opciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL DEFAULT 'una',
+    obligatorio INTEGER NOT NULL DEFAULT 0,
+    maximo INTEGER NOT NULL DEFAULT 0,
+    orden INTEGER NOT NULL DEFAULT 0,
+    activo INTEGER NOT NULL DEFAULT 1,
+    traducciones TEXT DEFAULT NULL,
+    creado_en TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS opciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    grupo_id INTEGER NOT NULL,
+    nombre TEXT NOT NULL,
+    precio REAL NOT NULL DEFAULT 0,
+    orden INTEGER NOT NULL DEFAULT 0,
+    activo INTEGER NOT NULL DEFAULT 1,
+    traducciones TEXT DEFAULT NULL
+  )`);
+  await run('CREATE INDEX IF NOT EXISTS idx_opciones_grupo ON opciones(grupo_id)');
+  await run(`CREATE TABLE IF NOT EXISTS producto_grupos (
+    producto_id INTEGER NOT NULL,
+    grupo_id INTEGER NOT NULL,
+    orden INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (producto_id, grupo_id)
+  )`);
+  await agregarColumna('pedido_items', 'opciones', "TEXT DEFAULT ''");
+
+  // Venta cruzada (servicios/venta-cruzada.js): con qué se sugiere cada categoría, versión grande de un producto,
+  // horario (las promos de 8 a 12) y qué incluye un combo (para avisar "te conviene la promo")
+  await agregarColumna('categorias', 'sugerir', "TEXT NOT NULL DEFAULT ''");
+  await agregarColumna('productos', 'version_grande_id', 'INTEGER DEFAULT NULL');
+  await agregarColumna('productos', 'horario', "TEXT NOT NULL DEFAULT ''");
+  await agregarColumna('productos', 'combo', "TEXT NOT NULL DEFAULT ''");
+
+  // Facturas de compra adjuntas a los gastos (servicios/adjuntos-gastos.js). El archivo va en la base para que
+  // entre en las copias de seguridad. gasto_id NULL: subido desde el formulario y todavía sin guardar.
+  await run(`CREATE TABLE IF NOT EXISTS gasto_adjuntos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gasto_id INTEGER,
+    nombre TEXT NOT NULL DEFAULT '',
+    tipo TEXT NOT NULL,
+    tamano INTEGER NOT NULL DEFAULT 0,
+    datos BLOB NOT NULL,
+    usuario_id INTEGER,
+    creado_en TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (gasto_id) REFERENCES gastos(id)
+  )`);
+  await run('CREATE INDEX IF NOT EXISTS idx_gasto_adjuntos_gasto ON gasto_adjuntos(gasto_id)');
 }
 
 // ============ Migración segura (lo que usa server.js) ============

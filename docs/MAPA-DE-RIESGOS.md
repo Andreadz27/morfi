@@ -96,7 +96,14 @@ Pago, cierre del pedido, liberación de la mesa y descuento de stock son una sol
 El precio siempre sale de la base, nunca del navegador.
 - **Carta online · CORREGIDO (23/10/2026):** ahora usa `resolverItems`, con topes (30 ítems, 50 unidades por
   producto) y sin productos de precio 0. Antes un script podía mandar a imprimir 999.999.999 unidades.
-- **Lo protege:** `pedidos.test.js` (precio de la base), `flujos.test.js` (carta online), prueba de fuego.
+- **Opciones y adicionales (25/10/2026):** `resolverItems` suma el recargo de cada opción elegida con los precios
+  de la base (`servicios/opciones.js`, `resolverOpciones`) y valida que la opción sea de ese producto, que no se
+  elija más de una en "se elige una" y el tope de los adicionales. Si una obligatoria no llega (asistente, Tienda
+  Nube, celulares con la versión vieja) va la primera, sin recargo. Todos los ítems se guardan con
+  `insertarItemTx` (antes había cinco `INSERT` iguales). **Lo rompe:** guardar un ítem sin pasar por
+  `resolverItems`, o tomar el recargo del navegador.
+- **Lo protege:** `pedidos.test.js` (precio de la base), `flujos.test.js` (carta online), `opciones.test.js`
+  (recargos, validaciones, opción por defecto, pedidos viejos que no cambian, QR de mesa y pedido online), prueba de fuego.
 
 ### 3. Arqueo de caja — `src/rutas/caja.js` (`resumenCaja`) · riesgo ALTO
 Las ventas del turno se buscan por **rango de fechas** de `pagos.fecha` entre apertura y cierre, no por caja.
@@ -175,6 +182,17 @@ El descuento de stock del cobro pasa por `descontarStockItemTx` (dentro de la tr
   El intento se cuenta **antes** de comparar (si no, muchos pedidos en paralelo pasaban todos antes del primer fallo),
   y elegir PIN ("ya lo usa otra persona") cuenta igual. Test en `control-caja.test.js`.
 - **Lo protege:** `control-caja.test.js` y e2e (PIN encima del formulario, caja ciega).
+
+### 9f. Facturas de compra adjuntas — `src/servicios/adjuntos-gastos.js` · riesgo MEDIO
+- **Qué hace:** guarda la foto o el PDF de cada compra en la base (`gasto_adjuntos`) y la lee con Claude para
+  completar el gasto. La lectura solo sugiere: la persona revisa y guarda.
+- **Qué lo rompe:** decidir el formato por el `Content-Type` del navegador (se podría subir HTML y abrirlo en el
+  dominio del sistema: se decide por los primeros bytes y se sirve con `nosniff`); usar el CUIT del local (receptor)
+  como proveedor; poner IVA en algo que no es factura A; llamar a Claude dentro de una transacción.
+- **Tamaño:** los archivos van en la base para que entren en las copias. Las fotos se achican en el navegador
+  (~50-300 KB); tope 4 MB y 6 por gasto. Si la base crece mucho, mirar `SUM(tamano)` de `gasto_adjuntos`.
+- **Demo:** subir y leer están bloqueados (llenarían el disco y gastan saldo de Claude).
+- **Lo protege:** `adjuntos-gastos.test.js` (Claude simulado) y `demo.test.js`.
 
 ### 10. Copias de seguridad — `src/servicios/backups.js` · riesgo BAJO
 - **Bugs corregidos:** dos copias en el mismo segundo daban error 500 (nombre repetido); una copia con el sistema en
