@@ -35,6 +35,7 @@ module.exports = {
   ...require('./servicios/cierre-dia'),
   ...require('./servicios/carta'),
   ...require('./servicios/opciones'),
+  ...require('./servicios/venta-cruzada'),
   ...require('./servicios/fidelizacion'),
   ...require('./servicios/whatsapp'),
   ...require('./servicios/asistente'),

@@ -2350,3 +2350,13 @@ tr:hover td {
 .pos-buscador:focus-within { border-color: var(--info); }
 .pos-buscador i { color: var(--text-light); }
 .pos-buscador input { flex: 1; border: 0; outline: 0; font-size: 16px; background: transparent; min-width: 0; }
+
+/* Venta cruzada en el punto de venta (js/pos.js + js/venta-cruzada.js) */
+.pos-sugerencias { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 0 16px; }
+.pos-sugerencias:not(:empty) { padding: 10px 16px; background: #fffbeb; border-bottom: 1px solid #fde68a; }
+.pos-sug-titulo { font-size: 12px; font-weight: 700; color: #92400e; }
+.pos-sug-btn { border: 1px solid #fcd34d; background: var(--white); border-radius: 16px; padding: 5px 11px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.pos-sug-btn:hover { background: #fef3c7; }
+.pos-sug-grande { background: #92400e; color: #fff; border-color: #92400e; }
+.pos-combo-conviene { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0; padding: 10px 12px;
+  border-radius: 10px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 13px; }

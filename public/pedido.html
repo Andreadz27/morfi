@@ -103,6 +103,9 @@
   </main>
 
   <!-- Boton flotante carrito (mobile) -->
+  <!-- Venta cruzada: después de agregar algo (acompañalo con / ¿lo querés grande?) -->
+  <div class="sugerencias-carta" id="sugerenciasCarta" style="display:none" aria-live="polite"></div>
+
   <button class="carrito-flotante" id="carritoFlotante"
           onclick="PedidoOnline.toggleCarritoMobile()" style="display:none"
           aria-label="Ver carrito">
@@ -205,6 +208,7 @@
     </div>
   </div>
 
+  <script src="js/venta-cruzada.js"></script>
   <script src="js/pedido.js"></script>
 </body>
 </html>

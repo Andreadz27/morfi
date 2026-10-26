@@ -14,7 +14,7 @@ const { validarPedidoOnline } = require('../src/validar-pedido-online');
 const PUBLICO = path.join(__dirname, '..', 'public');
 const FONT_AWESOME = path.join(__dirname, '..', 'node_modules', '@fortawesome', 'fontawesome-free');
 // La página es la misma del local (public/pedido.html): se sirven solo estos archivos
-const ARCHIVOS = ['pedido.html', 'favicon.svg', 'css/styles.css', 'css/menu.css', 'css/pedido.css', 'css/carta-elegante.css', 'js/pedido.js'];
+const ARCHIVOS = ['pedido.html', 'favicon.svg', 'css/styles.css', 'css/menu.css', 'css/pedido.css', 'css/carta-elegante.css', 'js/venta-cruzada.js', 'js/pedido.js'];
 const SEG_LOCAL_ACTIVO = 60;       // el local busca cada 10 s: un minuto sin venir = no está
 const MIN_VENCE = 30;              // un pedido que el local no recibió en 30 min ya no sirve
 const MAX_PENDIENTES = 100;
