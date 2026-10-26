@@ -454,11 +454,37 @@ const Caja = {
         ${filas ? `<table><tbody>${filas}</tbody></table>` : `<p class="text-muted">${vacio}</p>`}</div>`;
     const comp = r.comparacion && r.comparacion.variacion !== null
       ? `<span class="badge ${r.comparacion.variacion >= 0 ? 'badge-green' : 'badge-red'}">${r.comparacion.variacion >= 0 ? '+' : ''}${r.comparacion.variacion}% vs. el ${fmtFecha(r.comparacion.fecha)}</span>` : '';
+    const hora = f => f ? parseFecha(f).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const sangria = '&nbsp;&nbsp;';
+    // Los cierres guardados antes de que el resumen trajera el detalle no tienen ventas_efectivo ni movimientos
     const cajas = r.cajas.map(c => `
-      ${fila(`Caja de ${esc(c.usuario || '-')} (${c.estado === 'abierta' ? 'abierta' : 'cerrada'})`, '')}
-      ${fila('&nbsp;&nbsp;Inicial + ventas en efectivo + ingresos − egresos', fmtMoneda(c.efectivo_esperado))}
-      ${fila('&nbsp;&nbsp;Contado', c.pendiente_arqueo ? '<span class="badge badge-orange">Falta contar</span>' : c.contado !== null ? fmtMoneda(c.contado) : '-')}
-      ${c.diferencia !== null ? fila('&nbsp;&nbsp;Resultado', this.fmtDiferencia(c.diferencia)) : ''}`).join('');
+      ${fila(`<strong>Caja de ${esc(c.usuario || '-')}</strong> (${c.estado === 'abierta' ? 'abierta' : 'cerrada'}${c.apertura ? ', desde las ' + hora(c.apertura) : ''})`, '')}
+      ${c.ventas_efectivo !== undefined ? `
+        ${fila(sangria + 'Inicial', fmtMoneda(c.monto_inicial))}
+        ${fila(sangria + '+ Ventas en efectivo', fmtMoneda(c.ventas_efectivo))}
+        ${fila(sangria + '+ Ingresos', fmtMoneda(c.ingresos))}
+        ${fila(sangria + '− Egresos', fmtMoneda(c.egresos))}
+        ${fila(sangria + '<strong>= Efectivo esperado</strong>', `<strong>${fmtMoneda(c.efectivo_esperado)}</strong>`)}`
+      : fila(sangria + 'Inicial + ventas en efectivo + ingresos − egresos', fmtMoneda(c.efectivo_esperado))}
+      ${fila(sangria + 'Contado', c.pendiente_arqueo ? '<span class="badge badge-orange">Falta contar</span>' : c.contado !== null ? fmtMoneda(c.contado) : '-')}
+      ${c.diferencia !== null ? fila(sangria + 'Resultado', this.fmtDiferencia(c.diferencia)) : ''}
+      ${(c.por_metodo || []).filter(m => m.metodo !== 'efectivo').map(m => fila(`${sangria}Cobrado con ${esc(this.nombreMetodo(m.metodo))} (${m.cantidad})`, fmtMoneda(m.total))).join('')}`).join('');
+    const movimientos = r.cajas.flatMap(c => (c.movimientos || []).map(m => ({ ...m, caja: c.usuario })));
+    const filasMov = movimientos.map(m => `<tr>
+      <td>${hora(m.fecha)}</td>
+      <td>${m.tipo === 'ingreso' ? '<span class="badge badge-green">Ingreso</span>' : '<span class="badge badge-red">Egreso</span>'}</td>
+      <td>${esc(m.concepto)}${m.usuario ? `<br><small class="text-muted">${esc(m.usuario)}</small>` : ''}</td>
+      <td class="text-right">${m.tipo === 'egreso' ? '− ' : ''}${fmtMoneda(m.monto)}</td></tr>`).join('');
+    const cobros = r.cobros || [];
+    const filasCobros = cobros.map(p => `<tr>
+      <td>${hora(p.fecha)}</td>
+      <td>${esc(p.numero_pedido)}<br><small class="text-muted">${esc(p.mesa || this.TIPOS[p.tipo] || p.tipo || '')}${p.usuario ? ' · ' + esc(p.usuario) : ''}</small></td>
+      <td>${esc(this.nombreMetodo(p.metodo))}${p.referencia ? `<br><small class="text-muted">${esc(p.referencia)}</small>` : ''}</td>
+      <td class="text-right">${fmtMoneda(p.monto)}</td></tr>`).join('');
+    const detalle = (titulo, icono, cab, filas, vacio) => `
+      <div class="cierre-bloque mt-10"><h4><i class="fas ${icono}"></i> ${titulo}</h4>
+        ${filas ? `<div class="table-wrap"><table class="cierre-detalle"><thead><tr>${cab}</tr></thead><tbody>${filas}</tbody></table></div>`
+          : `<p class="text-muted">${vacio}</p>`}</div>`;
     const pend = r.pendientes;
     const pendientes = [
       ...pend.pedidos_abiertos.map(p => fila(`Pedido ${esc(p.numero_pedido)} abierto${p.mesa ? ' (' + esc(p.mesa) + ')' : ''}`, fmtMoneda(p.total))),
@@ -491,6 +517,10 @@ const Caja = {
           ${tabla('Stock para reponer', 'fa-boxes', r.stock_bajo.map(p => fila(esc(p.nombre), `${p.stock_actual} ${esc(p.unidad || '')} (mín. ${p.stock_minimo})`)).join(''), 'Todo con stock')}
           ${tabla('Quedó pendiente', 'fa-exclamation-circle', pendientes, 'Nada pendiente')}
         </div>
+        ${detalle(`Movimientos de caja (${movimientos.length})`, 'fa-right-left',
+          '<th>Hora</th><th>Tipo</th><th>Concepto</th><th class="text-right">Monto</th>', filasMov, 'Sin ingresos ni egresos de caja')}
+        ${r.cobros ? detalle(`Todos los cobros (${cobros.length})`, 'fa-list',
+          '<th>Hora</th><th>Pedido</th><th>Medio de pago</th><th class="text-right">Monto</th>', filasCobros, 'Sin cobros') : ''}
         <p class="text-muted mt-10"><i class="fas fa-database"></i> ${r.copia ? `Copia de seguridad del día: ${esc(r.copia.nombre)}` : 'Todavía no hay copia de seguridad de este día'}</p>
       </div>`;
   },

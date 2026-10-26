@@ -2321,6 +2321,10 @@ tr:hover td {
 .cierre-bloque { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
 .cierre-bloque h4 { margin: 0 0 8px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
 .cierre-bloque table td { padding: 5px 4px; font-size: 13px; }
+.cierre-detalle { width: 100%; }
+.cierre-detalle th { padding: 6px 4px; font-size: 12px; text-align: left; }
+.cierre-detalle td { vertical-align: top; }
+.cierre-detalle td.text-right { white-space: nowrap; }
 .cierre-dias { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .caja-sin-contar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .caja-sin-contar > div { flex: 1; min-width: 220px; }
