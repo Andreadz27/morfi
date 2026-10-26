@@ -2,6 +2,10 @@
 const {
   run, get, all, transaccion, LOCAL, fechaLocal, errorHttp, errorInterno, autenticar, requiere, tienePermiso
 } = require('../contexto');
+const express = require('express');
+const {
+  MAX_BYTES, guardarAdjunto, vincularAdjuntos, adjuntosDe, obtenerAdjunto, borrarAdjunto, leerFactura, lecturaDisponible
+} = require('../servicios/adjuntos-gastos');
 
 module.exports = function registrarRutas(app) {
 
@@ -176,7 +180,8 @@ app.get('/api/contabilidad/opciones', autenticar, requiere('contabilidad'), asyn
   try {
     res.json({
       categorias: CATEGORIAS, comprobantes: COMPROBANTES, metodos: METODOS_GASTO,
-      tasa_iva: await tasaIva(), hoy: fechaLocal()
+      tasa_iva: await tasaIva(), hoy: fechaLocal(),
+      lectura_facturas: await lecturaDisponible(), max_adjunto: MAX_BYTES
     });
   } catch (err) {
     errorInterno(res, err);
@@ -192,7 +197,9 @@ app.get('/api/contabilidad/gastos', autenticar, requiere('contabilidad'), async 
     if (['pendiente', 'pagado'].includes(req.query.estado)) { where.push('g.estado = ?'); params.push(req.query.estado); }
     if (CATEGORIA[req.query.categoria]) { where.push('g.categoria = ?'); params.push(req.query.categoria); }
     if (req.query.proveedor_id) { where.push('g.proveedor_id = ?'); params.push(req.query.proveedor_id); }
-    res.json(await all(`${SELECT_GASTO} WHERE ${where.join(' AND ')} ORDER BY g.fecha DESC, g.id DESC LIMIT 1000`, params));
+    const gastos = await all(`${SELECT_GASTO} WHERE ${where.join(' AND ')} ORDER BY g.fecha DESC, g.id DESC LIMIT 1000`, params);
+    const adjuntos = await adjuntosDe(gastos.map(g => g.id));
+    res.json(gastos.map(g => ({ ...g, adjuntos: adjuntos[g.id] || [] })));
   } catch (err) {
     errorInterno(res, err);
   }
@@ -209,6 +216,7 @@ app.post('/api/contabilidad/gastos', autenticar, requiere('contabilidad'), async
           g.neto, g.iva, g.otros_impuestos, g.total, g.vencimiento, req.usuario.id]);
       await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)',
         [req.usuario.id, 'crear_gasto', `Gasto #${r.id}: ${g.descripcion} (${CATEGORIA[g.categoria].nombre}) ${g.total}`]);
+      await vincularAdjuntos(r.id, body.adjuntos);
       // Pagado en el momento
       if (body.pagado) await pagarGastoTx({ ...g, id: r.id }, body, req.usuario);
       return r.id;
@@ -239,6 +247,7 @@ app.put('/api/contabilidad/gastos/:id', autenticar, requiere('contabilidad'), as
           g.neto, g.iva, g.otros_impuestos, g.total, g.vencimiento, actual.id]);
       await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)',
         [req.usuario.id, 'editar_gasto', `Gasto #${actual.id}: ${g.descripcion} ${g.total}`]);
+      await vincularAdjuntos(actual.id, req.body && req.body.adjuntos);
     });
     res.json({ message: 'Gasto actualizado' });
   } catch (err) {
@@ -271,6 +280,61 @@ app.delete('/api/contabilidad/gastos/:id', autenticar, requiere('contabilidad'),
         [req.usuario.id, 'anular_gasto', `Gasto #${gasto.id} anulado: ${gasto.descripcion} ${gasto.total}`]);
     });
     res.json({ message: 'Gasto anulado' });
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// ----- Facturas adjuntas (servicios/adjuntos-gastos.js) -----
+// El archivo llega tal cual en el cuerpo (no JSON); el nombre, en X-Nombre-Archivo. ?gasto_id= para un gasto ya
+// guardado; sin él queda suelto hasta que se guarde el gasto del formulario.
+const cuerpoArchivo = express.raw({ type: () => true, limit: MAX_BYTES });
+const recibirArchivo = (req, res, next) => cuerpoArchivo(req, res, err => {
+  if (!err) return next();
+  res.status(err.type === 'entity.too.large' ? 413 : 400).json({ error: err.type === 'entity.too.large' ? 'El archivo es muy grande (hasta 4 MB)' : 'No llegó el archivo' });
+});
+
+app.post('/api/contabilidad/adjuntos', autenticar, requiere('contabilidad'), recibirArchivo, async (req, res) => {
+  try {
+    let nombre = '';
+    try { nombre = decodeURIComponent(req.get('X-Nombre-Archivo') || ''); } catch (e) { /* nombre mal codificado: va sin nombre */ }
+    const adjunto = await guardarAdjunto({
+      datos: Buffer.isBuffer(req.body) ? req.body : null, nombre,
+      gastoId: req.query.gasto_id ? Number(req.query.gasto_id) : null, usuarioId: req.usuario.id
+    });
+    res.status(201).json(adjunto);
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+app.get('/api/contabilidad/adjuntos/:id', autenticar, requiere('contabilidad'), async (req, res) => {
+  try {
+    const a = await obtenerAdjunto(req.params.id);
+    res.set({
+      'Content-Type': a.tipo, 'Content-Length': a.datos.length, 'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, no-store',
+      'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(a.nombre)}`
+    });
+    res.end(a.datos);
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// Lee la factura con Claude y devuelve los datos para completar el formulario (no guarda nada)
+app.post('/api/contabilidad/adjuntos/:id/leer', autenticar, requiere('contabilidad'), async (req, res) => {
+  try {
+    res.json(await leerFactura(req.params.id, { categorias: CATEGORIAS }));
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+app.delete('/api/contabilidad/adjuntos/:id', autenticar, requiere('contabilidad'), async (req, res) => {
+  try {
+    await borrarAdjunto(req.params.id, req.usuario.id);
+    res.json({ message: 'Archivo quitado' });
   } catch (err) {
     errorInterno(res, err);
   }
@@ -372,6 +436,8 @@ app.get('/api/contabilidad/iva', autenticar, requiere('contabilidad'), async (re
     const debito = ivaIncluido(ventasBrutas, tasa);
     const compras = await all(`${SELECT_GASTO} WHERE g.anulado = 0 AND g.fecha BETWEEN ? AND ? AND g.iva > 0
       ORDER BY g.fecha, g.id`, [desde, hasta]);
+    const adjuntos = await adjuntosDe(compras.map(g => g.id));
+    for (const g of compras) g.adjuntos = adjuntos[g.id] || [];
     const credito = r2(compras.reduce((s, g) => s + g.iva, 0));
     // Facturas electrónicas emitidas (creado_en está en hora local del servidor)
     const facturas = await all(`SELECT tipo_comprobante_nombre AS tipo, COUNT(*) AS cantidad, COALESCE(SUM(total), 0) AS total

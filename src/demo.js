@@ -32,7 +32,9 @@ const BLOQUEADAS = [
   // WhatsApp manda mensajes a teléfonos reales: en la demo no se envía nada
   [/^\/api\/whatsapp\//, ['POST']],
   // El asistente IA gasta saldo de la cuenta de Claude: en la demo no se prueba
-  [/^\/api\/asistente\//, ['POST']]
+  [/^\/api\/asistente\//, ['POST']],
+  // Facturas adjuntas: cualquier visitante podría llenar el disco de la demo con archivos (y leerlas gasta saldo de Claude)
+  [/^\/api\/contabilidad\/adjuntos(\/|$)/, ['POST']]
 ];
 
 function bloqueoDemo(req, res, next) {

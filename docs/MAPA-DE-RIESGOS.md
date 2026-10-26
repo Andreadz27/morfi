@@ -183,6 +183,17 @@ El descuento de stock del cobro pasa por `descontarStockItemTx` (dentro de la tr
   y elegir PIN ("ya lo usa otra persona") cuenta igual. Test en `control-caja.test.js`.
 - **Lo protege:** `control-caja.test.js` y e2e (PIN encima del formulario, caja ciega).
 
+### 9f. Facturas de compra adjuntas — `src/servicios/adjuntos-gastos.js` · riesgo MEDIO
+- **Qué hace:** guarda la foto o el PDF de cada compra en la base (`gasto_adjuntos`) y la lee con Claude para
+  completar el gasto. La lectura solo sugiere: la persona revisa y guarda.
+- **Qué lo rompe:** decidir el formato por el `Content-Type` del navegador (se podría subir HTML y abrirlo en el
+  dominio del sistema: se decide por los primeros bytes y se sirve con `nosniff`); usar el CUIT del local (receptor)
+  como proveedor; poner IVA en algo que no es factura A; llamar a Claude dentro de una transacción.
+- **Tamaño:** los archivos van en la base para que entren en las copias. Las fotos se achican en el navegador
+  (~50-300 KB); tope 4 MB y 6 por gasto. Si la base crece mucho, mirar `SUM(tamano)` de `gasto_adjuntos`.
+- **Demo:** subir y leer están bloqueados (llenarían el disco y gastan saldo de Claude).
+- **Lo protege:** `adjuntos-gastos.test.js` (Claude simulado) y `demo.test.js`.
+
 ### 10. Copias de seguridad — `src/servicios/backups.js` · riesgo BAJO
 - **Bugs corregidos:** dos copias en el mismo segundo daban error 500 (nombre repetido); una copia con el sistema en
   uso podía fallar. Tests en `fechas-backups.test.js` y `regresiones.test.js`.

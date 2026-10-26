@@ -2078,6 +2078,17 @@ tr:hover td {
 .cont-total-form { font-size: 17px; }
 .cont-check { display: flex !important; align-items: center; gap: 8px; margin-top: 30px; cursor: pointer; }
 .cont-check input { width: auto !important; }
+.cont-adjuntos { border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px; }
+.cont-adjuntos-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.cont-adjuntos-cab .btn { cursor: pointer; }
+.cont-adj-lista { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cont-adj-lista:empty { display: none; }
+.cont-adj { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; max-width: 100%; }
+.cont-adj span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+.cont-adj button { background: none; border: 0; padding: 2px 4px; cursor: pointer; color: var(--text-light); }
+.cont-lectura { margin-top: 10px; font-size: 14px; }
+.cont-lectura ul { margin: 6px 0 0 18px; }
+.cont-ver-adj { background: none; border: 0; padding: 0 2px; cursor: pointer; color: var(--primary); font-size: 13px; white-space: nowrap; }
 @media (max-width: 1023px) {
   .cont-pagar { grid-template-columns: 1fr; }
   .cont-check { margin-top: 0; }
