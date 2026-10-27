@@ -17,6 +17,7 @@
     "qa:reporte": "node qa/reportes/mochawesome.js",
     "demo": "node scripts/demo/iniciar-demo.js",
     "demo:video": "node scripts/demo/grabar-video.js",
+    "demo:promo": "node scripts/demo/grabar-promo.js",
     "demo:presentacion": "node scripts/demo/armar-presentacion.js",
     "demo:publica": "node scripts/demo/demo-publica.js",
     "usuario:prueba": "node scripts/crear-usuario-prueba.js",
