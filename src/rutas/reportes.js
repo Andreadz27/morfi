@@ -141,7 +141,7 @@ app.get('/api/reportes/rentabilidad', autenticar, requiere('reportes.costos'), a
         (SELECT COALESCE(SUM(pi.cantidad), 0) FROM pedido_items pi JOIN pedidos pd ON pi.pedido_id = pd.id 
          WHERE pi.producto_id = p.id AND pd.estado = 'pagado') as vendidos
       FROM productos p
-      WHERE p.activo = 1
+      WHERE p.activo = 1 AND p.clase = 'venta'
       ORDER BY margen DESC
     `);
     res.json(rentabilidad);
@@ -193,7 +193,7 @@ app.get('/api/insights', autenticar, requiere('reportes'), async (req, res) => {
         (SELECT COALESCE(SUM(pi.cantidad), 0) FROM pedido_items pi JOIN pedidos pd ON pi.pedido_id = pd.id
          WHERE pi.producto_id = p.id AND pd.estado = 'pagado') as vendidos
       FROM productos p
-      WHERE p.activo = 1
+      WHERE p.activo = 1 AND p.clase = 'venta'
       ORDER BY vendidos DESC, margen DESC
       LIMIT 10
     `);

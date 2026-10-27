@@ -31,7 +31,8 @@ const POS = {
     view.innerHTML = '<div class="text-center mt-20"><i class="fas fa-spinner fa-spin fa-3x"></i></div>';
     try {
       this.categorias = await API.getCategorias();
-      this.productos = await API.getProductos();
+      // Los insumos y las sub-recetas no se venden
+      this.productos = (await API.getProductos()).filter(p => (p.clase || 'venta') === 'venta');
       await Opciones.cargar();
       this.busqueda = '';
       this.cart = [];

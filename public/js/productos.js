@@ -27,14 +27,20 @@ const Productos = {
     return App.puede('catalogo');
   },
 
+  // Tipo de producto: 'venta' (carta y POS), 'insumo' o 'elaboracion' (sub-receta); los dos últimos no se venden
+  clase(p) { return p.clase || 'venta'; },
+  unidadDe(p) { return this.clase(p) === 'elaboracion' ? 'presentación' : (p.unidad || 'unidad'); },
+
   // Filtro de la vista: categoría elegida ('todas' o su id) y texto buscado
   filtroCat: 'todas',
   busqueda: '',
 
   paint(view) {
     const esAdmin = this.esAdmin();
-    const cuenta = id => this.productos.filter(p => p.categoria_id === id).length;
-    const sinCat = this.productos.filter(p => !this.categorias.some(c => c.id === p.categoria_id)).length;
+    const venta = this.productos.filter(p => this.clase(p) === 'venta');
+    const deClase = clase => this.productos.filter(p => this.clase(p) === clase).length;
+    const cuenta = id => venta.filter(p => p.categoria_id === id).length;
+    const sinCat = venta.filter(p => !this.categorias.some(c => c.id === p.categoria_id)).length;
     const chip = (id, nombre, n, color, icono) => `
       <button class="pos-cat-btn ${String(this.filtroCat) === String(id) ? 'active' : ''}" onclick="Productos.verCategoria('${id}')"
         ${color ? `style="--cat-color:${esc(color)}"` : ''}>
@@ -44,19 +50,23 @@ const Productos = {
     const chips = [
       chip('todas', 'Todas', this.productos.length, '', 'fa-th-large'),
       ...this.categorias.map(c => chip(c.id, c.nombre, cuenta(c.id), c.color)),
-      ...(sinCat ? [chip('sin', 'Sin categoría', sinCat, '#94a3b8')] : [])
+      ...(sinCat ? [chip('sin', 'Sin categoría', sinCat, '#94a3b8')] : []),
+      ...(esAdmin || deClase('insumo') ? [chip('insumo', 'Insumos', deClase('insumo'), '#0f766e', 'fa-carrot')] : []),
+      ...(esAdmin || deClase('elaboracion') ? [chip('elaboracion', 'Sub-recetas', deClase('elaboracion'), '#9333ea', 'fa-blender')] : [])
     ].join('');
 
     view.innerHTML = `
       <div class="page-header">
         <div>
           <h2><i class="fas fa-hamburger"></i> Productos</h2>
-          <p>${this.productos.length} productos en ${this.categorias.length} categorías</p>
+          <p>${venta.length} productos en ${this.categorias.length} categorías${venta.length < this.productos.length
+            ? ` · ${deClase('insumo')} insumos y ${deClase('elaboracion')} sub-recetas` : ''}</p>
         </div>
         <div>
           ${
             esAdmin ? `
             <button class="btn btn-primary" onclick="Productos.nuevaCategoria()"><i class="fas fa-tag"></i> Categoría</button>
+            <button class="btn btn-outline" onclick="Productos.verRecetario()"><i class="fas fa-book"></i> Recetario</button>
             <button class="btn btn-success" onclick="Productos.nuevo()"><i class="fas fa-plus"></i> Nuevo producto</button>
             ` : ''
           }
@@ -85,27 +95,37 @@ const Productos = {
     if (!this.productos.length) return `<div class="card"><div class="empty-state"><i class="fas fa-box-open"></i><p>Sin productos</p></div></div>`;
     const texto = this.busqueda.trim().toLowerCase();
     const coincide = p => !texto || p.nombre.toLowerCase().includes(texto) || String(p.descripcion || '').toLowerCase().includes(texto);
+    const venta = this.productos.filter(p => this.clase(p) === 'venta');
     const grupos = [
-      ...this.categorias.map(c => ({ id: c.id, nombre: c.nombre, color: c.color, nota: c.descripcion, productos: this.productos.filter(p => p.categoria_id === c.id) })),
-      { id: 'sin', nombre: 'Sin categoría', color: '#94a3b8', productos: this.productos.filter(p => !this.categorias.some(c => c.id === p.categoria_id)) }
+      ...this.categorias.map(c => ({ id: c.id, nombre: c.nombre, color: c.color, nota: c.descripcion, productos: venta.filter(p => p.categoria_id === c.id) })),
+      { id: 'sin', nombre: 'Sin categoría', color: '#94a3b8', productos: venta.filter(p => !this.categorias.some(c => c.id === p.categoria_id)) },
+      // Lo que no se vende va aparte, sin importar la categoría
+      { id: 'insumo', nombre: 'Insumos', color: '#0f766e', interna: 'No se venden: son los ingredientes de las recetas. El costo va por unidad (ej. por g).',
+        productos: this.productos.filter(p => this.clase(p) === 'insumo') },
+      { id: 'elaboracion', nombre: 'Sub-recetas', color: '#9333ea', interna: 'Salsas, cremas y preparaciones de la cocina. No se venden: los platos las usan por presentación.',
+        productos: this.productos.filter(p => this.clase(p) === 'elaboracion') }
     ].filter(g => this.filtroCat === 'todas' || String(g.id) === String(this.filtroCat))
       .map(g => ({ ...g, productos: g.productos.filter(coincide) }))
       .filter(g => g.productos.length);
     if (!grupos.length) return `<div class="card"><div class="empty-state"><i class="fas fa-search"></i><p>No hay productos${texto ? ` que coincidan con "${esc(this.busqueda.trim())}"` : ' en esta categoría'}</p></div></div>`;
 
+    const tipo = p => ({
+      insumo: '<span class="badge badge-gray">Insumo</span>',
+      elaboracion: `<span class="badge badge-blue">Sub-receta</span><br><small class="text-muted">rinde ${Number(p.rendimiento) || 1}</small>`
+    }[this.clase(p)] || (p.es_plato ? '<span class="badge badge-blue">Plato</span>' : '<span class="badge badge-gray">Producto</span>'));
     const fila = p => `
       <tr>
         <td><div class="font-bold">${esc(p.nombre)}</div>${p.descripcion ? `<small class="text-muted prod-desc">${esc(p.descripcion)}</small>` : ''}</td>
-        <td class="font-bold">${fmtMoneda(p.precio_venta)}</td>
-        <td>${fmtMoneda(p.costo)}</td>
+        <td class="font-bold">${this.clase(p) === 'venta' ? fmtMoneda(p.precio_venta) : '<span class="text-muted">No se vende</span>'}</td>
+        <td>${fmtMoneda(p.costo)}${this.clase(p) !== 'venta' ? `<br><small class="text-muted">por ${esc(this.unidadDe(p))}</small>` : ''}</td>
         <td>${p.tracking_stock
           ? `<span class="${p.stock_actual <= p.stock_minimo ? 'text-danger font-bold' : ''}">${p.stock_actual} ${esc(p.unidad || '')}</span>`
           : '<span class="text-muted">Sin control</span>'}</td>
-        <td>${p.es_plato ? '<span class="badge badge-blue">Plato</span>' : '<span class="badge badge-gray">Producto</span>'}</td>
+        <td>${tipo(p)}</td>
         ${esAdmin ? `
           <td class="prod-acciones">
-            <button class="btn btn-outline btn-sm" onclick="Productos.receta(${p.id})" title="Receta e ingredientes">
-              <i class="fas fa-blender"></i>${p.ingredientes_receta ? ` ${p.ingredientes_receta}` : ''}</button>
+            ${this.clase(p) === 'insumo' ? '' : `<button class="btn btn-outline btn-sm" onclick="Productos.receta(${p.id})" title="Receta e ingredientes">
+              <i class="fas fa-blender"></i>${p.ingredientes_receta ? ` ${p.ingredientes_receta}` : ''}</button>`}
             <button class="btn btn-outline btn-sm" onclick="Productos.editar(${p.id})" title="Editar"><i class="fas fa-edit"></i></button>
             <button class="btn btn-danger btn-sm" onclick="Productos.eliminar(${p.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
           </td>` : ''}
@@ -115,11 +135,12 @@ const Productos = {
         <div class="card-header">
           <span class="card-title"><span class="prod-cat-punto"></span> ${esc(g.nombre)}</span>
           <span>
-            ${esAdmin && g.id !== 'sin' ? `<button class="btn btn-outline btn-sm" onclick="Productos.editarCategoria(${Number(g.id)})" title="Editar categoría"><i class="fas fa-edit"></i></button>` : ''}
+            ${esAdmin && Number.isInteger(g.id) ? `<button class="btn btn-outline btn-sm" onclick="Productos.editarCategoria(${Number(g.id)})" title="Editar categoría"><i class="fas fa-edit"></i></button>` : ''}
             <span class="pos-cat-count">${g.productos.length}</span>
           </span>
         </div>
         ${g.nota ? `<div class="prod-nota-categoria"><i class="fas fa-info-circle"></i> ${esc(g.nota)} <small>(se ve en la carta)</small></div>` : ''}
+        ${g.interna ? `<div class="prod-nota-categoria"><i class="fas fa-info-circle"></i> ${esc(g.interna)}</div>` : ''}
         <div class="table-wrap">
           <table>
             <thead>
@@ -153,6 +174,7 @@ const Productos = {
   },
 
   abrirFormulario(p) {
+    const tipo = p && this.clase(p) !== 'venta' ? this.clase(p) : (!p || p.es_plato ? 'plato' : 'simple');
     const catOptions = this.categorias.map(c =>
       `<option value="${c.id}" ${p && p.categoria_id === c.id ? 'selected' : ''}>${esc(c.nombre)}</option>`
     ).join('');
@@ -169,37 +191,45 @@ const Productos = {
         </div>
         <div class="grid grid-2">
           <div class="form-group">
+            <label>Tipo</label>
+            <select id="prodTipo" onchange="Productos.ajustarFormulario()">
+              ${[['plato', 'Plato'], ['simple', 'Producto simple'], ['insumo', 'Insumo (ingrediente, no se vende)'], ['elaboracion', 'Sub-receta (salsa, crema... no se vende)']]
+                .map(([v, t]) => `<option value="${v}" ${tipo === v ? 'selected' : ''}>${t}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" id="prodCategoriaGrupo">
             <label>Categor\u00eda</label>
             <select id="prodCategoria">${catOptions}</select>
           </div>
-          <div class="form-group">
-            <label>Tipo</label>
-            <select id="prodTipo">
-              <option value="1" ${p && p.es_plato ? 'selected' : ''}>Plato</option>
-              <option value="0" ${p && !p.es_plato ? 'selected' : ''}>Producto simple</option>
-            </select>
+          <div class="form-group" id="prodRindeGrupo">
+            <label>Rinde (presentaciones)</label>
+            <input type="number" id="prodRendimiento" min="0.01" step="0.01" value="${p ? Number(p.rendimiento) || 1 : 1}">
+            <small class="form-hint">Cuántas porciones salen de la receta: el costo de la receta se divide por este número.</small>
           </div>
         </div>
+        <div id="prodSoloCarta">
         <div class="form-group">
           <label>Orden en la carta</label>
           <input type="number" id="prodOrden" min="0" step="1" value="${p && p.orden ? p.orden : ''}" placeholder="Ej: 1 = primero de su categoría">
           <small class="form-hint">Posición dentro de su categoría, como en la carta impresa. Vacío: va después, por nombre.</small>
         </div>
+        </div>
         <div class="grid grid-2">
-          <div class="form-group">
+          <div class="form-group" id="prodPrecioGrupo">
             <label>Precio de venta ($)</label>
             <input type="number" id="prodPrecio" min="0" step="0.01" value="${p ? p.precio_venta : ''}" required>
           </div>
           <div class="form-group">
             <label>Costo ($)</label>
             <input type="number" id="prodCosto" min="0" step="0.01" value="${p ? p.costo : '0'}" ${p && p.ingredientes_receta ? 'readonly' : ''}>
-            ${p && p.ingredientes_receta ? '<small class="form-hint">Lo calcula la receta: se actualiza solo cuando cambian los ingredientes.</small>' : ''}
+            ${p && p.ingredientes_receta ? '<small class="form-hint">Lo calcula la receta: se actualiza solo cuando cambian los ingredientes.</small>'
+              : '<small class="form-hint" id="prodCostoAyuda"></small>'}
           </div>
         </div>
         <div class="grid grid-2">
           <div class="form-group">
             <label>Unidad</label>
-            <input type="text" id="prodUnidad" value="${p ? esc(p.unidad || '') : ''}" placeholder="Ej: unidad, kg, lt">
+            <input type="text" id="prodUnidad" value="${p ? esc(p.unidad || '') : ''}" placeholder="Ej: unidad, g, kg, ml">
           </div>
           <div class="form-group">
             <label>Stock m\u00ednimo</label>
@@ -212,7 +242,7 @@ const Productos = {
             Controlar stock
           </label>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="prodDestacar">
           <label>Destacar en la carta</label>
           <label class="checkbox-label"><input type="checkbox" id="prodRecomendado" ${p && p.recomendado ? 'checked' : ''}> Recomendado de la casa</label>
           <label class="checkbox-label"><input type="checkbox" id="prodNuevo" ${p && p.nuevo ? 'checked' : ''}> Nuevo</label>
@@ -222,27 +252,47 @@ const Productos = {
           <label>Stock inicial</label>
           <input type="number" id="prodStockInicial" min="0" value="${p ? p.stock_actual : '0'}">
         </div>
+        <div id="prodSoloCarta2">
         ${this.htmlVentaCruzada(p)}
         ${this.htmlTraducciones('prod', p && p.traducciones, true)}
+        </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-success">Guardar</button>
         </div>
       </form>
     `, { title: p ? `Editar ${p.nombre}` : 'Nuevo producto' });
+    this.ajustarFormulario();
 
     document.getElementById('prodTracking').addEventListener('change', (e) => {
       document.getElementById('stockInicialGroup').style.display = e.target.checked ? 'block' : 'none';
     });
   },
-async guardar(e, id) {
+// Insumos y sub-recetas no se venden: sin precio, categoría ni datos de la carta; la sub-receta dice cuánto rinde
+  ajustarFormulario() {
+    const tipo = document.getElementById('prodTipo').value;
+    const seVende = tipo === 'plato' || tipo === 'simple';
+    const ver = (id, si) => { const el = document.getElementById(id); if (el) el.style.display = si ? '' : 'none'; };
+    ['prodCategoriaGrupo', 'prodPrecioGrupo', 'prodSoloCarta', 'prodSoloCarta2', 'prodDestacar'].forEach(id => ver(id, seVende));
+    ver('prodRindeGrupo', tipo === 'elaboracion');
+    document.getElementById('prodPrecio').required = seVende;
+    const ayuda = document.getElementById('prodCostoAyuda');
+    if (ayuda) ayuda.textContent = tipo === 'insumo' ? 'Por unidad de medida: si la unidad es g, el costo de 1 g.'
+      : tipo === 'elaboracion' ? 'Al cargarle la receta, se calcula solo (por presentación).' : '';
+  },
+
+  async guardar(e, id) {
     e.preventDefault();
+    const tipo = document.getElementById('prodTipo').value;
+    const seVende = tipo === 'plato' || tipo === 'simple';
     const data = {
       nombre: document.getElementById('prodNombre').value,
       descripcion: document.getElementById('prodDescripcion').value,
-      categoria_id: parseInt(document.getElementById('prodCategoria').value),
-      es_plato: document.getElementById('prodTipo').value === '1',
-      precio_venta: parseFloat(document.getElementById('prodPrecio').value),
+      categoria_id: seVende ? parseInt(document.getElementById('prodCategoria').value) : null,
+      es_plato: tipo === 'plato',
+      clase: seVende ? 'venta' : tipo,
+      ...(tipo === 'elaboracion' ? { rendimiento: parseFloat(document.getElementById('prodRendimiento').value || 1) } : {}),
+      precio_venta: seVende ? parseFloat(document.getElementById('prodPrecio').value) : 0,
       costo: parseFloat(document.getElementById('prodCosto').value || 0),
       unidad: document.getElementById('prodUnidad').value,
       stock_minimo: parseInt(document.getElementById('prodStockMin').value || 0),
@@ -672,14 +722,17 @@ async guardar(e, id) {
   },
 
   // ===== Receta: ingredientes del plato, su costo y el margen =====
+  // Una sub-receta (Salsa Ranch) se carga entera y rinde N presentaciones; un plato la usa por presentación.
   _receta: null,
 
   async receta(id) {
     try {
       const [r, productos] = await Promise.all([API.getReceta(id), API.getProductos()]);
-      // Ingredientes posibles: productos activos sin receta propia (sin recetas anidadas)
-      this._ingredientes = productos.filter(x => x.id !== id && !x.ingredientes_receta);
-      this._receta = { id, nombre: r.nombre, precio: r.precio_venta,
+      const esSub = r.clase === 'elaboracion';
+      // Ingredientes posibles: sin receta propia (sin recetas anidadas); un plato también puede usar sub-recetas
+      this._ingredientes = productos.filter(x => x.id !== id &&
+        (this.clase(x) === 'elaboracion' ? !esSub : !x.ingredientes_receta));
+      this._receta = { id, nombre: r.nombre, precio: r.precio_venta, clase: r.clase, rendimiento: Number(r.rendimiento) || 1,
         lineas: r.lineas.map(l => ({ ingrediente_id: l.ingrediente_id, cantidad: l.cantidad })) };
       if (!this._receta.lineas.length) this._receta.lineas.push({ ingrediente_id: '', cantidad: '' });
       this.pintarReceta();
@@ -691,33 +744,48 @@ async guardar(e, id) {
     return this._receta.lineas.reduce((s, l) => s + (Number(l.cantidad) || 0) * ((porId[l.ingrediente_id] || {}).costo || 0), 0);
   },
 
+  htmlTotalesReceta() {
+    const r = this._receta;
+    const costo = this.costoReceta();
+    if (r.clase === 'elaboracion') return `
+      <div><span>Costo de la receta</span><strong>${fmtMoneda(costo)}</strong></div>
+      <div><span>Rinde</span><strong>${r.rendimiento} presentaciones</strong></div>
+      <div class="cobro-saldo"><span>Costo por presentación</span><strong>${fmtMoneda(costo / r.rendimiento)}</strong></div>`;
+    const margen = r.precio > 0 ? Math.round((r.precio - costo) / r.precio * 1000) / 10 : null;
+    return `
+      <div><span>Costo del plato</span><strong>${fmtMoneda(costo)}</strong></div>
+      <div><span>Precio de venta</span><strong>${fmtMoneda(r.precio)}</strong></div>
+      <div class="cobro-saldo"><span>Margen</span><strong>${margen === null ? '-' : margen + ' %'}</strong></div>`;
+  },
+
   pintarReceta() {
     const r = this._receta;
     const porId = Object.fromEntries(this._ingredientes.map(i => [i.id, i]));
-    const opciones = sel => '<option value="">Elegí un ingrediente</option>' + this._ingredientes.map(i =>
-      `<option value="${i.id}" ${String(sel) === String(i.id) ? 'selected' : ''}>${esc(i.nombre)} (${esc(i.unidad || 'unidad')})</option>`).join('');
+    // Agrupados: insumos, sub-recetas y el resto de los productos
+    const grupos = [['insumo', 'Insumos'], ['elaboracion', 'Sub-recetas'], ['venta', 'Productos de la carta']]
+      .map(([clase, titulo]) => [titulo, this._ingredientes.filter(i => this.clase(i) === clase)]).filter(([, l]) => l.length);
+    const opciones = sel => '<option value="">Elegí un ingrediente</option>' + grupos.map(([titulo, lista]) => `<optgroup label="${titulo}">${lista.map(i =>
+      `<option value="${i.id}" ${String(sel) === String(i.id) ? 'selected' : ''}>${esc(i.nombre)} (${esc(this.unidadDe(i))})</option>`).join('')}</optgroup>`).join('');
     const filas = r.lineas.map((l, n) => {
       const ing = porId[l.ingrediente_id];
       return `<div class="receta-linea">
         <select onchange="Productos.setLinea(${n}, 'ingrediente_id', this.value)">${opciones(l.ingrediente_id)}</select>
         <input type="number" min="0" step="0.001" value="${l.cantidad}" placeholder="Cantidad" aria-label="Cantidad"
           oninput="Productos.setLinea(${n}, 'cantidad', this.value)">
-        <span class="text-muted">${ing ? esc(ing.unidad || 'unidad') + ' · ' + fmtMoneda((Number(l.cantidad) || 0) * (ing.costo || 0)) : ''}</span>
+        <span class="text-muted">${ing ? esc(this.unidadDe(ing)) + ' · ' + fmtMoneda((Number(l.cantidad) || 0) * (ing.costo || 0)) : ''}</span>
         <button type="button" class="btn btn-sm btn-outline" onclick="Productos.quitarLinea(${n})" aria-label="Quitar"><i class="fas fa-times"></i></button>
       </div>`;
     }).join('');
-    const costo = this.costoReceta();
-    const margen = r.precio > 0 ? Math.round((r.precio - costo) / r.precio * 1000) / 10 : null;
+    const ayuda = r.clase === 'elaboracion'
+      ? `Cargá la receta entera (lo que lleva una tanda) y cuántas presentaciones rinde: se cambia en Editar producto.
+        Los platos la usan por presentación y, al venderlos, se descuentan estos ingredientes en proporción.`
+      : `Al cobrar, se descuenta el stock de cada ingrediente según la cantidad vendida.
+        La cantidad va en la unidad del ingrediente (ej. 0.15 kg de carne); una sub-receta, en presentaciones.`;
     const html = `
-      <p class="text-muted">Al cobrar, se descuenta el stock de cada ingrediente según la cantidad vendida.
-        La cantidad va en la unidad del ingrediente (ej. 0.15 kg de carne).</p>
+      <p class="text-muted">${ayuda}</p>
       ${filas}
       <button type="button" class="btn btn-sm btn-outline mt-10" onclick="Productos.agregarLinea()"><i class="fas fa-plus"></i> Ingrediente</button>
-      <div class="cobro-totales mt-20">
-        <div><span>Costo del plato</span><strong>${fmtMoneda(costo)}</strong></div>
-        <div><span>Precio de venta</span><strong>${fmtMoneda(r.precio)}</strong></div>
-        <div class="cobro-saldo"><span>Margen</span><strong>${margen === null ? '-' : margen + ' %'}</strong></div>
-      </div>
+      <div class="cobro-totales mt-20" id="recetaTotales">${this.htmlTotalesReceta()}</div>
       <div class="modal-footer">
         <button type="button" class="btn btn-danger" onclick="Productos.guardarReceta(true)">Quitar receta</button>
         <button type="button" class="btn btn-outline" onclick="App.closeModal()">Cancelar</button>
@@ -725,15 +793,16 @@ async guardar(e, id) {
       </div>`;
     const cuerpo = document.getElementById('recetaCuerpo');
     if (cuerpo && cuerpo.dataset.producto === String(r.id)) { cuerpo.innerHTML = html; return; }
-    App.showModal(`<div id="recetaCuerpo" data-producto="${r.id}">${html}</div>`, { title: `Receta: ${r.nombre}`, large: true });
+    App.showModal(`<div id="recetaCuerpo" data-producto="${r.id}">${html}</div>`,
+      { title: `${r.clase === 'elaboracion' ? 'Sub-receta' : 'Receta'}: ${r.nombre}`, large: true });
   },
 
   setLinea(n, campo, valor) {
     this._receta.lineas[n][campo] = valor;
     // Al tipear la cantidad no se redibuja la fila (no se pierde el foco): solo los totales
     if (campo === 'ingrediente_id') return this.pintarReceta();
-    const totales = document.querySelector('#recetaCuerpo .cobro-totales strong');
-    if (totales) totales.textContent = fmtMoneda(this.costoReceta());
+    const totales = document.getElementById('recetaTotales');
+    if (totales) totales.innerHTML = this.htmlTotalesReceta();
   },
 
   agregarLinea() { this._receta.lineas.push({ ingrediente_id: '', cantidad: '' }); this.pintarReceta(); },
@@ -750,5 +819,78 @@ async guardar(e, id) {
       App.showToast(r.costo !== null && r.costo !== undefined ? `${r.message}. Costo: ${fmtMoneda(r.costo)}` : r.message, 'success');
       this.render();
     } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  // ===== Recetario: fichas técnicas de las recetas y sub-recetas, para consultar e imprimir =====
+  _recetario: [],
+  filtroRecetario: 'todas',
+
+  async verRecetario() {
+    try {
+      this._recetario = await API.getRecetario();
+      this.pintarRecetario();
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  recetarioFiltrado() {
+    const f = this.filtroRecetario;
+    return this._recetario.filter(r => f === 'todas' || (f === 'sub' ? r.clase === 'elaboracion' : r.clase !== 'elaboracion'));
+  },
+
+  htmlFicha(r) {
+    const esSub = r.clase === 'elaboracion';
+    const total = r.lineas.reduce((s, l) => s + l.subtotal, 0);
+    return `
+      <div class="ficha-tecnica">
+        <div class="ficha-titulo"><strong>${esc(r.nombre)}</strong> <span class="badge ${esSub ? 'badge-blue' : 'badge-gray'}">${esSub ? 'Sub-receta' : 'Receta'}</span></div>
+        ${esSub ? `<div class="text-muted">Rendimiento: ${Number(r.rendimiento) || 1} presentaciones</div>` : ''}
+        <table>
+          <tbody>${r.lineas.map(l => `<tr><td>${esc(l.nombre)}</td><td class="text-right">${Number(l.cantidad)} ${esc(this.unidadDe(l))}</td>
+            <td class="text-right text-muted">${fmtMoneda(l.subtotal)}</td></tr>`).join('')}</tbody>
+        </table>
+        <div class="text-muted">Costo: ${fmtMoneda(total)}${esSub ? ` · por presentación ${fmtMoneda(r.costo)}` : r.precio_venta > 0 ? ` · precio ${fmtMoneda(r.precio_venta)}` : ''}</div>
+      </div>`;
+  },
+
+  pintarRecetario() {
+    const boton = (id, texto) => `<button class="pos-cat-btn ${this.filtroRecetario === id ? 'active' : ''}"
+      onclick="Productos.filtroRecetario = '${id}'; Productos.pintarRecetario()">${texto}</button>`;
+    const lista = this.recetarioFiltrado();
+    const html = `
+      <div class="pos-categories mb-20">${boton('todas', 'Todas')}${boton('recetas', 'Recetas')}${boton('sub', 'Sub-recetas')}</div>
+      ${lista.length ? `<div class="recetario">${lista.map(r => this.htmlFicha(r)).join('')}</div>`
+        : '<div class="empty-state"><i class="fas fa-book"></i><p>Todavía no hay recetas. Se cargan con el botón <i class="fas fa-blender"></i> de cada producto.</p></div>'}
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="App.closeModal()">Cerrar</button>
+        ${lista.length ? '<button type="button" class="btn btn-primary" onclick="Productos.imprimirRecetario()"><i class="fas fa-print"></i> Imprimir</button>' : ''}
+      </div>`;
+    const cuerpo = document.getElementById('recetarioCuerpo');
+    if (cuerpo) { cuerpo.innerHTML = html; return; }
+    App.showModal(`<div id="recetarioCuerpo">${html}</div>`, { title: 'Recetario y fichas técnicas', large: true });
+  },
+
+  imprimirRecetario() {
+    const win = window.open('', '_blank', 'width=800,height=900');
+    if (!win) { App.showToast('Habilita las ventanas emergentes', 'warning'); return; }
+    const negocio = (App && App.nombreNegocio) ? App.nombreNegocio : 'Morfi';
+    win.document.write(`
+      <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recetario</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 30px; color:#222; }
+        h1 { margin: 0 0 20px; font-size: 20px; }
+        .ficha-tecnica { border: 1px solid #ccc; border-radius: 6px; padding: 12px; margin-bottom: 14px; page-break-inside: avoid; }
+        .ficha-titulo { font-size: 16px; margin-bottom: 4px; }
+        .badge { font-size: 11px; color: #555; border: 1px solid #ccc; border-radius: 4px; padding: 1px 6px; }
+        .text-muted { color: #666; font-size: 12px; }
+        .text-right { text-align: right; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        td { border-bottom: 1px solid #eee; padding: 4px 6px; font-size: 13px; }
+      </style></head><body>
+      <h1>${esc(negocio)} · Recetario</h1>
+      ${this.recetarioFiltrado().map(r => this.htmlFicha(r)).join('')}
+      <script>window.onload = function(){ window.print(); };<\/script>
+      </body></html>`);
+    win.document.close();
+    win.focus();
   }
 };

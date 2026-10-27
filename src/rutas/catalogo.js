@@ -1,6 +1,7 @@
 'use strict';
 const {
   run, get, all, errorHttp, actualizarParcial, errorInterno, autenticar, requiere, transaccion, obtenerReceta, guardarRecetaTx, recalcularCostosConIngrediente, costoReceta,
+  costoConReceta, validarClaseTx, recetario, CLASES,
   normalizarTraducciones, ORDEN_CARTA, listarMomentos, guardarMomento, borrarMomento, listarGrupos, guardarGrupo, borrarGrupo, gruposPorProducto,
   validarHorario, validarCombo, validarVersionGrande, validarSugerir
 } = require('../contexto');
@@ -136,8 +137,16 @@ async function datosProducto(body, actual = {}) {
     categoriaId = cat.id;
   }
 
+  // Tipo: se vende (carta y POS), insumo o sub-receta (servicios/recetas.js). Rinde: presentaciones de la sub-receta.
+  const clase = String(valor('clase', 'venta') || 'venta');
+  if (!CLASES.includes(clase)) throw errorHttp(400, 'Tipo de producto inválido');
+  const rendimiento = clase === 'elaboracion' ? numero('rendimiento', 1) : 1;
+  if (!(rendimiento > 0 && rendimiento <= 10000)) throw errorHttp(400, 'El rendimiento tiene que ser mayor a 0');
+
   return {
     nombre,
+    clase,
+    rendimiento,
     descripcion: String(valor('descripcion', '') || ''),
     categoria_id: categoriaId,
     precio_venta: numero('precio_venta'),
@@ -166,9 +175,9 @@ app.post('/api/productos', autenticar, requiere('catalogo'), async (req, res) =>
     const p = await datosProducto(req.body || {});
     const result = await run(
       `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo, traducciones, orden, nuevo, recomendado,
-         version_grande_id, horario, combo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo]
+         version_grande_id, horario, combo, clase, rendimiento)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo, p.clase, p.rendimiento]
     );
     res.status(201).json({ id: result.id, message: 'Producto creado' });
   } catch (err) {
@@ -182,16 +191,17 @@ app.put('/api/productos/:id', autenticar, requiere('catalogo'), async (req, res)
     if (!actual) return res.status(404).json({ error: 'Producto no encontrado' });
     const p = await datosProducto(req.body || {}, actual);
     await transaccion(async () => {
-      // Con receta, el costo es el de sus ingredientes (no se edita a mano)
+      if (p.clase !== actual.clase) await validarClaseTx(actual.id, p.clase);
+      // Con receta, el costo es el de sus ingredientes (no se edita a mano); el de una sub-receta, por presentación
       const receta = await obtenerReceta(actual.id);
-      if (receta.length) p.costo = costoReceta(receta);
+      if (receta.length) p.costo = costoConReceta(p, receta);
       await run(
         `UPDATE productos SET
          nombre = ?, descripcion = ?, categoria_id = ?, precio_venta = ?, costo = ?,
          es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?, traducciones = ?, orden = ?, nuevo = ?, recomendado = ?,
-         version_grande_id = ?, horario = ?, combo = ?
+         version_grande_id = ?, horario = ?, combo = ?, clase = ?, rendimiento = ?
          WHERE id = ?`,
-        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo, actual.id]
+        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo, p.clase, p.rendimiento, actual.id]
       );
       // Si es ingrediente y cambió su costo, se actualiza el costo de los platos que lo usan
       if (Number(p.costo) !== Number(actual.costo)) await recalcularCostosConIngrediente(actual.id);
@@ -205,12 +215,14 @@ app.put('/api/productos/:id', autenticar, requiere('catalogo'), async (req, res)
 // Receta del plato: ingredientes con cantidad, costo de cada uno, costo total y margen
 app.get('/api/productos/:id/receta', autenticar, requiere('catalogo', 'reportes.costos'), async (req, res) => {
   try {
-    const plato = await get('SELECT id, nombre, precio_venta, costo FROM productos WHERE id = ?', [req.params.id]);
+    const plato = await get('SELECT id, nombre, precio_venta, costo, clase, rendimiento FROM productos WHERE id = ?', [req.params.id]);
     if (!plato) return res.status(404).json({ error: 'Producto no encontrado' });
     const lineas = await obtenerReceta(plato.id);
-    const costo = lineas.length ? costoReceta(lineas) : Number(plato.costo) || 0;
+    // costo: el del producto (en una sub-receta, por presentación); costo_total: el de toda la receta
+    const costo = lineas.length ? costoConReceta(plato, lineas) : Number(plato.costo) || 0;
     const precio = Number(plato.precio_venta) || 0;
-    res.json({ plato_id: plato.id, nombre: plato.nombre, precio_venta: precio, lineas, costo,
+    res.json({ plato_id: plato.id, nombre: plato.nombre, clase: plato.clase, rendimiento: plato.rendimiento, precio_venta: precio, lineas, costo,
+      costo_total: lineas.length ? costoReceta(lineas) : costo,
       margen: precio > 0 ? Math.round((precio - costo) / precio * 1000) / 10 : null });
   } catch (err) { errorInterno(res, err); }
 });
@@ -219,8 +231,14 @@ app.get('/api/productos/:id/receta', autenticar, requiere('catalogo', 'reportes.
 app.put('/api/productos/:id/receta', autenticar, requiere('catalogo'), async (req, res) => {
   try {
     const lineas = await transaccion(() => guardarRecetaTx(Number(req.params.id), (req.body || {}).lineas));
-    res.json({ lineas, costo: lineas.length ? costoReceta(lineas) : null, message: lineas.length ? 'Receta guardada' : 'Receta quitada' });
+    const { costo } = await get('SELECT costo FROM productos WHERE id = ?', [req.params.id]);
+    res.json({ lineas, costo: lineas.length ? costo : null, message: lineas.length ? 'Receta guardada' : 'Receta quitada' });
   } catch (err) { errorInterno(res, err); }
+});
+
+// Recetario: fichas técnicas de los platos con receta y de las sub-recetas
+app.get('/api/recetario', autenticar, requiere('catalogo', 'reportes.costos'), async (req, res) => {
+  try { res.json(await recetario()); } catch (err) { errorInterno(res, err); }
 });
 
 app.delete('/api/productos/:id', autenticar, requiere('catalogo'), async (req, res) => {

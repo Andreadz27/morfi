@@ -334,7 +334,7 @@ app.post('/api/webhooks/:plataforma', async (req, res) => {
         const nombre = it.nombre || it.name || it.producto || 'Producto';
         const cantidad = parseFloat(it.cantidad || it.quantity || 1) || 1;
         const precio = parseFloat(it.precio || it.price || it.precio_unitario || 0) || 0;
-        const producto = await get('SELECT id FROM productos WHERE nombre = ? COLLATE NOCASE', [nombre]);
+        const producto = await get("SELECT id FROM productos WHERE nombre = ? COLLATE NOCASE AND clase = 'venta'", [nombre]);
         await run(
           `INSERT INTO pedido_items (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal, notas)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,

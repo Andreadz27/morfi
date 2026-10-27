@@ -261,7 +261,8 @@ async abrirPedidoDeMesa(mesaId) {
 
   agregarItem(pedidoId) {
     const self = this;
-    Promise.all([API.getProductos(), Opciones.cargar()]).then(([productos]) => {
+    Promise.all([API.getProductos(), Opciones.cargar()]).then(([todos]) => {
+      const productos = todos.filter(p => (p.clase || 'venta') === 'venta'); // insumos y sub-recetas no se venden
       self._productosItem = productos;
       const options = productos.map(p => `<option value="${p.id}" data-nombre="${esc(p.nombre)}" data-precio="${p.precio_venta}">${esc(p.nombre)} - ${fmtMoneda(p.precio_venta)}</option>`).join('');
       App.showModal(`
