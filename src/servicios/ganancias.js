@@ -355,7 +355,7 @@ async function costosDeLaCarta() {
       (SELECT COALESCE(SUM(pi.cantidad), 0) FROM pedido_items pi JOIN pedidos p ON p.id = pi.pedido_id
         WHERE pi.producto_id = pr.id AND p.estado = 'pagado' AND ${DIA()} BETWEEN ? AND ?) AS vendidos
     FROM productos pr LEFT JOIN categorias c ON c.id = pr.categoria_id
-    WHERE pr.activo = 1
+    WHERE pr.activo = 1 AND pr.clase = 'venta'
     ORDER BY COALESCE(pr.costo, 0) > 0, vendidos DESC, pr.nombre`, [desde, hasta]);
   const productos = filas.map(f => ({ id: f.id, nombre: f.nombre, categoria: f.categoria, precio_venta: r2(f.precio_venta), costo: r2(f.costo),
     con_receta: !!f.con_receta, vendidos: Number(f.vendidos) || 0,

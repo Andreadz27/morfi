@@ -108,7 +108,7 @@ function ahoraLocal(ms = Date.now()) {
 async function verCarta() {
   const productos = await all(`SELECT p.id, p.nombre, p.descripcion, p.precio_venta, COALESCE(c.nombre, 'Otros') AS categoria
     FROM productos p LEFT JOIN categorias c ON c.id = p.categoria_id
-    WHERE p.activo = 1 AND p.precio_venta > 0 AND NOT (p.tracking_stock = 1 AND p.stock_actual <= 0)
+    WHERE p.activo = 1 AND p.clase = 'venta' AND p.precio_venta > 0 AND NOT (p.tracking_stock = 1 AND p.stock_actual <= 0)
     ORDER BY c.orden, c.nombre, ${ORDEN_CARTA}`);
   if (!productos.length) return { carta: 'No hay productos cargados.' };
   const porCategoria = {};

@@ -466,6 +466,11 @@ async function migrarEsquema() {
     FOREIGN KEY (gasto_id) REFERENCES gastos(id)
   )`);
   await run('CREATE INDEX IF NOT EXISTS idx_gasto_adjuntos_gasto ON gasto_adjuntos(gasto_id)');
+
+  // Insumos y sub-recetas (servicios/recetas.js): productos que no se venden. 'venta' = en la carta y el POS,
+  // 'insumo' = ingrediente (mango, mayonesa), 'elaboracion' = sub-receta (Salsa Ranch) que rinde N presentaciones.
+  await agregarColumna('productos', 'clase', "TEXT NOT NULL DEFAULT 'venta'");
+  await agregarColumna('productos', 'rendimiento', 'REAL NOT NULL DEFAULT 1');
 }
 
 // ============ Migración segura (lo que usa server.js) ============

@@ -25,7 +25,7 @@ app.get('/api/publico/menu', async (req, res) => {
   try {
     const categorias = await all(`
       SELECT c.id, c.nombre, c.descripcion, c.traducciones, c.sugerir FROM categorias c
-      WHERE c.activo = 1 AND EXISTS (SELECT 1 FROM productos p WHERE p.categoria_id = c.id AND p.activo = 1)
+      WHERE c.activo = 1 AND EXISTS (SELECT 1 FROM productos p WHERE p.categoria_id = c.id AND p.activo = 1 AND p.clase = 'venta')
       ORDER BY c.orden, c.nombre
     `);
     const productos = await all(`
@@ -33,7 +33,7 @@ app.get('/api/publico/menu', async (req, res) => {
              p.tracking_stock, p.stock_actual, p.es_plato, p.traducciones, p.nuevo, p.recomendado,
              p.version_grande_id, p.horario, p.combo
       FROM productos p
-      WHERE p.activo = 1
+      WHERE p.activo = 1 AND p.clase = 'venta'
       ORDER BY ${ORDEN_CARTA}
     `);
     // Traducciones de la carta (inglés y portugués): el navegador elige el idioma

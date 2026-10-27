@@ -221,7 +221,7 @@ app.post('/api/integraciones/tiendanube/sync-productos', autenticar, esAdmin, as
     if (!cfg.store_id || !cfg.access_token)
       return res.status(400).json({ error: 'Configurá el ID de tienda y el token primero.' });
     // Solo productos de venta (con precio); los insumos no se publican en la tienda
-    const productos = await all('SELECT * FROM productos WHERE activo = 1 AND precio_venta > 0 ORDER BY id');
+    const productos = await all("SELECT * FROM productos WHERE activo = 1 AND clase = 'venta' AND precio_venta > 0 ORDER BY id");
     let creados = 0, actualizados = 0;
     const errores = [];
 

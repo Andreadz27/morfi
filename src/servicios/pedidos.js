@@ -15,7 +15,7 @@ async function generarNumeroPedido() {
 }
 
 // Valida los ítems recibidos y toma nombre y precio de la tabla productos:
-// nunca se confía en el precio que manda el navegador.
+// nunca se confía en el precio que manda el navegador. Los insumos y las sub-recetas no se venden.
 // Opciones y adicionales (item.opciones = ids, servicios/opciones.js): el recargo también sale de la base y el
 // nombre lleva lo elegido ("Latte · Leche vegetal"), así se ve igual en cocina, en el ticket y en la factura.
 async function resolverItems(items) {
@@ -25,7 +25,7 @@ async function resolverItems(items) {
     const cantidad = Number(item && item.cantidad);
     if (!Number.isFinite(cantidad) || cantidad <= 0 || cantidad > 1000)
       throw Object.assign(new Error('Cantidad inválida'), { status: 400 });
-    const prod = await get('SELECT id, nombre, precio_venta FROM productos WHERE id = ? AND activo = 1', [item.producto_id]);
+    const prod = await get("SELECT id, nombre, precio_venta FROM productos WHERE id = ? AND activo = 1 AND clase = 'venta'", [item.producto_id]);
     if (!prod) throw Object.assign(new Error('Producto no disponible'), { status: 400 });
     const opciones = await resolverOpciones(prod.id, item.opciones);
     const precio = centavos((Number(prod.precio_venta) || 0) + opciones.reduce((s, o) => s + o.precio, 0));

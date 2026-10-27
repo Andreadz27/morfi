@@ -171,9 +171,13 @@ Manda mensajes a teléfonos reales.
 ### 9d. Recetas — `src/servicios/recetas.js` · riesgo MEDIO
 El descuento de stock del cobro pasa por `descontarStockItemTx` (dentro de la transacción del cobro).
 - **Lo rompe:** descontar fuera de `cerrarPedidoTx` (con cuenta dividida se descontaría en cada parte), permitir
-  recetas anidadas (ciclos), o editar `productos.costo` de un plato con receta sin recalcular.
+  más de un nivel de sub-recetas (ciclos), o editar `productos.costo` de un plato con receta sin recalcular.
+- **Sub-recetas:** `productos.clase` = `venta` | `insumo` | `elaboracion`. Una sub-receta (elaboración) rinde
+  `rendimiento` presentaciones: su costo es el de la receta dividido eso, y un plato que la usa descuenta sus
+  insumos en proporción. Los insumos y las sub-recetas no se venden: toda consulta que arme la carta, el POS o un
+  pedido tiene que filtrar `clase = 'venta'` (carta pública, carta de la nube, `resolverItems`, asistente, Tienda Nube).
 - **Ojo:** el costo teórico de Contabilidad usa el costo *actual* de cada producto, no el del día de la venta.
-- **Lo protege:** `recetas.test.js`, e2e.
+- **Lo protege:** `recetas.test.js`, `sub-recetas.test.js`, e2e.
 
 ### 9e. PIN de autorización y arqueo ciego — `src/servicios/autorizacion.js` · riesgo ALTO
 - **Lo rompe:** una acción sensible nueva sin `requiereAutorizacion`/`autorizar`, mostrar `efectivo_esperado` o

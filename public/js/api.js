@@ -330,6 +330,7 @@ const API = {
   getMensajesWhatsApp()             { return this.request('GET',  '/whatsapp/mensajes'); },
   getReceta(productoId)             { return this.request('GET', `/productos/${productoId}/receta`); },
   guardarReceta(productoId, lineas) { return this.request('PUT', `/productos/${productoId}/receta`, { lineas }); },
+  getRecetario()                    { return this.request('GET', '/recetario'); },
   definirPin(password, pin)         { return this.request('PUT', '/auth/pin', { password, pin }); },
   consultarPadron(cuit)             { return this.request('GET',  `/integraciones/afip/padron/${encodeURIComponent(cuit)}`); },
   syncProductosTiendaNube()         { return this.request('POST', '/integraciones/tiendanube/sync-productos'); },
