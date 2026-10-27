@@ -24,14 +24,14 @@ app.get('/api/publico/qr.svg', async (req, res) => {
 app.get('/api/publico/menu', async (req, res) => {
   try {
     const categorias = await all(`
-      SELECT c.id, c.nombre, c.descripcion, c.traducciones, c.sugerir FROM categorias c
+      SELECT c.id, c.nombre, c.descripcion, c.traducciones, c.sugerir, c.nombre_para_llevar FROM categorias c
       WHERE c.activo = 1 AND EXISTS (SELECT 1 FROM productos p WHERE p.categoria_id = c.id AND p.activo = 1 AND p.clase = 'venta')
       ORDER BY c.orden, c.nombre
     `);
     const productos = await all(`
       SELECT p.id, p.nombre, p.descripcion, p.precio_venta, p.categoria_id,
              p.tracking_stock, p.stock_actual, p.es_plato, p.traducciones, p.nuevo, p.recomendado,
-             p.version_grande_id, p.horario, p.combo
+             p.version_grande_id, p.horario, p.combo, p.para_llevar
       FROM productos p
       WHERE p.activo = 1 AND p.clase = 'venta'
       ORDER BY ${ORDEN_CARTA}

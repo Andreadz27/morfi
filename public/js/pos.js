@@ -55,8 +55,11 @@ const POS = {
   },
 
   paint(view) {
+    const paraLlevar = this.productos.filter(p => p.para_llevar).length;
     const catBtns = [
-      `<button class="pos-cat-btn ${this.categoriaActiva === 'todas' ? 'active' : ''}" onclick="POS.setCategoria('todas')"><i class="fas fa-th-large"></i> Todas <span class="pos-cat-count">${this.productos.length}</span></button>`
+      `<button class="pos-cat-btn ${this.categoriaActiva === 'todas' ? 'active' : ''}" onclick="POS.setCategoria('todas')"><i class="fas fa-th-large"></i> Todas <span class="pos-cat-count">${this.productos.length}</span></button>`,
+      // Take Away: los productos del menú para llevar (se marcan en Productos)
+      ...(paraLlevar ? [`<button class="pos-cat-btn ${this.categoriaActiva === 'para_llevar' ? 'active' : ''}" onclick="POS.setCategoria('para_llevar')" style="--cat-color:#ea580c"><i class="fas fa-shopping-bag"></i> Take Away <span class="pos-cat-count">${paraLlevar}</span></button>`] : [])
     ].concat(this.categorias.map(c => {
       const icon = POS.catIcon(c.nombre);
       const count = this.productos.filter(p => p.categoria_id == c.id).length;
@@ -241,6 +244,7 @@ setCategoria(id) {
   filtrados() {
     const q = this.busqueda.trim().toLowerCase();
     if (q) return this.productos.filter(p => p.nombre.toLowerCase().includes(q) || String(p.descripcion || '').toLowerCase().includes(q));
+    if (this.categoriaActiva === 'para_llevar') return this.productos.filter(p => p.para_llevar);
     return this.categoriaActiva === 'todas' ? this.productos : this.productos.filter(p => p.categoria_id == this.categoriaActiva);
   },
   buscar(texto) {
@@ -566,6 +570,13 @@ checkout() {
       document.getElementById('checkoutDeliveryGroup').style.display = esDelivery ? 'grid' : 'none';
       document.getElementById('checkoutDeliveryExtra').style.display = esDelivery ? 'block' : 'none';
     });
+
+    // Desde el área Take Away el pedido sale como Take Away
+    if (this.categoriaActiva === 'para_llevar') {
+      const sel = document.getElementById('checkoutTipo');
+      sel.value = 'takeaway';
+      sel.dispatchEvent(new Event('change'));
+    }
 
     // Forzar selección de tipo si hay mesa preseleccionada (salón)
     const tipoInit = document.getElementById('checkoutTipo').value;

@@ -115,7 +115,7 @@ const Productos = {
     }[this.clase(p)] || (p.es_plato ? '<span class="badge badge-blue">Plato</span>' : '<span class="badge badge-gray">Producto</span>'));
     const fila = p => `
       <tr>
-        <td><div class="font-bold">${esc(p.nombre)}</div>${p.descripcion ? `<small class="text-muted prod-desc">${esc(p.descripcion)}</small>` : ''}</td>
+        <td><div class="font-bold">${esc(p.nombre)}${p.para_llevar ? ' <span class="badge badge-gray" title="En el menú Take Away">Take Away</span>' : ''}</div>${p.descripcion ? `<small class="text-muted prod-desc">${esc(p.descripcion)}</small>` : ''}</td>
         <td class="font-bold">${this.clase(p) === 'venta' ? fmtMoneda(p.precio_venta) : '<span class="text-muted">No se vende</span>'}</td>
         <td>${fmtMoneda(p.costo)}${this.clase(p) !== 'venta' ? `<br><small class="text-muted">por ${esc(this.unidadDe(p))}</small>` : ''}</td>
         <td>${p.tracking_stock
@@ -246,6 +246,7 @@ const Productos = {
           <label>Destacar en la carta</label>
           <label class="checkbox-label"><input type="checkbox" id="prodRecomendado" ${p && p.recomendado ? 'checked' : ''}> Recomendado de la casa</label>
           <label class="checkbox-label"><input type="checkbox" id="prodNuevo" ${p && p.nuevo ? 'checked' : ''}> Nuevo</label>
+          <label class="checkbox-label"><input type="checkbox" id="prodParaLlevar" ${p && p.para_llevar ? 'checked' : ''}> En el menú Take Away (para llevar)</label>
           <small class="form-hint">"Lo más pedido" se marca solo con las ventas de las últimas 4 semanas.</small>
         </div>
         <div class="form-group" id="stockInicialGroup" ${(!p && 'style="display:none"') || ''}>
@@ -300,6 +301,7 @@ const Productos = {
       orden: parseInt(document.getElementById('prodOrden').value || 0),
       recomendado: document.getElementById('prodRecomendado').checked ? 1 : 0,
       nuevo: document.getElementById('prodNuevo').checked ? 1 : 0,
+      para_llevar: seVende && document.getElementById('prodParaLlevar').checked ? 1 : 0,
       ...this.leerVentaCruzada(id),
       traducciones: this.leerTraducciones('prod', true)
     };
@@ -602,6 +604,10 @@ const Productos = {
           <div class="form-group"><label>Inglés: nombre</label><input type="text" id="momEn" maxlength="40" value="${esc((t.en && t.en.nombre) || '')}" placeholder="Breakfast"></div>
           <div class="form-group"><label>Portugués: nombre</label><input type="text" id="momPt" maxlength="40" value="${esc((t.pt && t.pt.nombre) || '')}" placeholder="Café da manhã"></div>
         </div>
+        <div class="form-group">
+          <label class="checkbox-label"><input type="checkbox" id="momParaLlevar" ${m && m.solo_para_llevar ? 'checked' : ''}> Menú Take Away: solo los productos marcados "para llevar"</label>
+          <small class="form-hint">Las categorías muestran su nombre para llevar si tienen uno (por ejemplo, "Cafetería mediana").</small>
+        </div>
         <div class="form-group"><label class="checkbox-label"><input type="checkbox" id="momActivo" ${!m || m.activo ? 'checked' : ''}> Mostrar en la carta</label></div>
         <div class="modal-footer">
           ${m ? `<button type="button" class="btn btn-danger" onclick="Productos.borrarMomento(${Number(m.id)})"><i class="fas fa-trash"></i> Borrar</button>` : ''}
@@ -620,6 +626,7 @@ const Productos = {
       hasta: document.getElementById('momHasta').value,
       categorias: [...document.querySelectorAll('.momCat')].filter(x => x.checked).map(x => Number(x.value)),
       activo: document.getElementById('momActivo').checked ? 1 : 0,
+      solo_para_llevar: document.getElementById('momParaLlevar').checked ? 1 : 0,
       orden: id ? (this.momentos.find(x => x.id === id) || {}).orden : this.momentos.length,
       traducciones: { en: { nombre: document.getElementById('momEn').value }, pt: { nombre: document.getElementById('momPt').value } }
     };
@@ -665,6 +672,11 @@ const Productos = {
           <textarea id="catDescripcion" rows="2" placeholder="Ej.: Opciones de leche: entera, descremada, deslactosada. Leche vegetal + $1300">${c ? esc(c.descripcion || '') : ''}</textarea>
           <small class="form-hint">Se ve en un recuadro debajo del t\u00edtulo de la categor\u00eda, como en una carta impresa.</small>
         </div>
+        <div class="form-group">
+          <label>Nombre en el menú Take Away (opcional)</label>
+          <input type="text" id="catNombreLlevar" maxlength="60" value="${c ? esc(c.nombre_para_llevar || '') : ''}" placeholder="Ej.: Cafetería mediana">
+          <small class="form-hint">Así se llama la categoría en el momento Take Away de la carta. Vacío: el nombre de siempre.</small>
+        </div>
         <div class="grid grid-2">
           <div class="form-group">
             <label>Color</label>
@@ -694,6 +706,7 @@ const Productos = {
     const data = {
       nombre: document.getElementById('catNombre').value,
       descripcion: document.getElementById('catDescripcion').value,
+      nombre_para_llevar: document.getElementById('catNombreLlevar').value,
       color: document.getElementById('catColor').value,
       orden: parseInt(document.getElementById('catOrden').value) || 0,
       traducciones: this.leerTraducciones('cat', true),

@@ -394,6 +394,9 @@ const PedidoOnline={
     return"fa-tag";
   },
 
+  // Take Away: el momento muestra solo los productos del menú para llevar, con el nombre de la categoría ahí
+  paraLlevar(){const m=this.momentos.find(x=>x.id===this.momentoActivo);return!!(m&&m.solo_para_llevar);},
+  nombreCat(c){return this.paraLlevar()&&c.nombre_para_llevar?c.nombre_para_llevar:pdTr(c,"nombre");},
   // Categorías del momento elegido, en el orden del momento (o todas, en el orden de la carta)
   catsMomento(){
     const m=this.momentos.find(x=>x.id===this.momentoActivo);
@@ -411,7 +414,7 @@ const PedidoOnline={
   buscar(t){this.busqueda=String(t||"");this.paintItems();},
   paintCats(){
     const mk=(id,lbl)=>`<button class="menu-cat-btn ${this.catActiva==id?"active":""}" onclick="PedidoOnline.setCat(${pdA(id)})">${pdE(lbl)}</button>`;
-    const h=[mk("todas",pdT("todas")),...this.catsMomento().map(c=>mk(c.id,pdTr(c,"nombre")))].join("");
+    const h=[mk("todas",pdT("todas")),...this.catsMomento().map(c=>mk(c.id,this.nombreCat(c)))].join("");
     ["menuCategorias","mobileCatScroll"].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=h;});
   },
 
@@ -447,19 +450,20 @@ const PedidoOnline={
 
   paintItems(){
     const el=document.getElementById("menuItems");
-    const vis=this.productos.filter(p=>this.visible(p));
+    const todos=this.productos.filter(p=>this.visible(p));
+    const vis=this.paraLlevar()?todos.filter(p=>p.para_llevar):todos;
     const sec=(cat,prods)=>{
       if(!prods.length)return"";
       // La descripción de la categoría es una nota de la carta (opciones de leche, horarios de las promos...)
       const nota=pdTr(cat,"descripcion");
-      return`<div class="menu-section"><div class="menu-section-title"><i class="fas ${this.catIcon(cat.nombre)}"></i> ${pdE(pdTr(cat,"nombre"))}</div>${nota?`<div class="carta-nota">${pdE(nota)}</div>`:""}${prods.map(p=>this.itemCard(p)).join("")}</div>`;
+      return`<div class="menu-section"><div class="menu-section-title"><i class="fas ${this.catIcon(cat.nombre)}"></i> ${pdE(this.nombreCat(cat))}</div>${nota?`<div class="carta-nota">${pdE(nota)}</div>`:""}${prods.map(p=>this.itemCard(p)).join("")}</div>`;
     };
     const vacio=k=>'<div class="menu-empty">'+pdE(pdT(k))+'</div>';
     // Buscando se mira toda la carta (en el idioma elegido y en español), no solo el momento
     const q=this.busqueda.trim().toLowerCase();
     if(q){
       const coincide=p=>[pdTr(p,"nombre"),pdTr(p,"descripcion"),p.nombre].some(x=>String(x||"").toLowerCase().includes(q));
-      el.innerHTML=this.categorias.map(c=>sec(c,vis.filter(p=>p.categoria_id==c.id&&coincide(p)))).join("")||vacio("sin_resultados");
+      el.innerHTML=this.categorias.map(c=>sec(c,todos.filter(p=>p.categoria_id==c.id&&coincide(p)))).join("")||vacio("sin_resultados");
       return;
     }
     if(this.catActiva==="todas"){

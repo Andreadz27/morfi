@@ -471,6 +471,12 @@ async function migrarEsquema() {
   // 'insumo' = ingrediente (mango, mayonesa), 'elaboracion' = sub-receta (Salsa Ranch) que rinde N presentaciones.
   await agregarColumna('productos', 'clase', "TEXT NOT NULL DEFAULT 'venta'");
   await agregarColumna('productos', 'rendimiento', 'REAL NOT NULL DEFAULT 1');
+
+  // Take Away (servicios/carta.js): qué productos están en el menú para llevar, cómo se llama la categoría ahí
+  // ("Cafetería mediana") y el momento de la carta que muestra solo eso
+  await agregarColumna('productos', 'para_llevar', 'INTEGER NOT NULL DEFAULT 0');
+  await agregarColumna('categorias', 'nombre_para_llevar', "TEXT NOT NULL DEFAULT ''");
+  await agregarColumna('momentos_carta', 'solo_para_llevar', 'INTEGER NOT NULL DEFAULT 0');
 }
 
 // ============ Migración segura (lo que usa server.js) ============

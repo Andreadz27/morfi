@@ -21,10 +21,11 @@ app.get('/api/categorias', autenticar, async (req, res) => {
 
 app.post('/api/categorias', autenticar, requiere('catalogo'), async (req, res) => {
   try {
-    const { nombre, descripcion, color, orden, traducciones, sugerir } = req.body;
+    const { nombre, descripcion, color, orden, traducciones, sugerir, nombre_para_llevar } = req.body;
     const result = await run(
-      'INSERT INTO categorias (nombre, descripcion, color, orden, traducciones, sugerir) VALUES (?, ?, ?, ?, ?, ?)',
-      [nombre, descripcion || '', color || '#4CAF50', orden || 0, normalizarTraducciones(traducciones), await validarSugerir(sugerir)]
+      'INSERT INTO categorias (nombre, descripcion, color, orden, traducciones, sugerir, nombre_para_llevar) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [nombre, descripcion || '', color || '#4CAF50', orden || 0, normalizarTraducciones(traducciones), await validarSugerir(sugerir),
+        String(nombre_para_llevar || '').trim().slice(0, 60)]
     );
     res.status(201).json({ id: result.id, message: 'Categoría creada' });
   } catch (err) {
@@ -37,7 +38,9 @@ app.put('/api/categorias/:id', autenticar, requiere('catalogo'), async (req, res
     const body = { ...(req.body || {}) };
     if (body.traducciones !== undefined) body.traducciones = normalizarTraducciones(body.traducciones);
     if (body.sugerir !== undefined) body.sugerir = await validarSugerir(body.sugerir, req.params.id);
-    await actualizarParcial('categorias', req.params.id, body, ['nombre', 'descripcion', 'color', 'orden', 'activo', 'traducciones', 'sugerir']);
+    if (body.nombre_para_llevar !== undefined) body.nombre_para_llevar = String(body.nombre_para_llevar || '').trim().slice(0, 60);
+    await actualizarParcial('categorias', req.params.id, body, ['nombre', 'descripcion', 'color', 'orden', 'activo', 'traducciones', 'sugerir',
+      'nombre_para_llevar']);
     res.json({ message: 'Categoría actualizada' });
   } catch (err) {
     errorInterno(res, err);
@@ -160,6 +163,8 @@ async function datosProducto(body, actual = {}) {
     orden: Math.trunc(numero('orden', 0)),
     // Destacados de la carta: "Nuevo" y "Recomendado de la casa"
     nuevo: bandera('nuevo', 0),
+    // En el menú Take Away (para llevar)
+    para_llevar: bandera('para_llevar', 0),
     recomendado: bandera('recomendado', 0),
     // Venta cruzada: versión grande, horario (promos de 8 a 12) y qué incluye un combo. Sin el campo, se conserva.
     version_grande_id: body.version_grande_id !== undefined ? await validarVersionGrande(body.version_grande_id, actual.id) : (actual.version_grande_id || null),
@@ -175,9 +180,9 @@ app.post('/api/productos', autenticar, requiere('catalogo'), async (req, res) =>
     const p = await datosProducto(req.body || {});
     const result = await run(
       `INSERT INTO productos (nombre, descripcion, categoria_id, precio_venta, costo, es_plato, tracking_stock, stock_actual, stock_minimo, unidad, activo, traducciones, orden, nuevo, recomendado,
-         version_grande_id, horario, combo, clase, rendimiento)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo, p.clase, p.rendimiento]
+         version_grande_id, horario, combo, clase, rendimiento, para_llevar)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo, p.clase, p.rendimiento, p.para_llevar]
     );
     res.status(201).json({ id: result.id, message: 'Producto creado' });
   } catch (err) {
@@ -199,9 +204,9 @@ app.put('/api/productos/:id', autenticar, requiere('catalogo'), async (req, res)
         `UPDATE productos SET
          nombre = ?, descripcion = ?, categoria_id = ?, precio_venta = ?, costo = ?,
          es_plato = ?, tracking_stock = ?, stock_actual = ?, stock_minimo = ?, unidad = ?, activo = ?, traducciones = ?, orden = ?, nuevo = ?, recomendado = ?,
-         version_grande_id = ?, horario = ?, combo = ?, clase = ?, rendimiento = ?
+         version_grande_id = ?, horario = ?, combo = ?, clase = ?, rendimiento = ?, para_llevar = ?
          WHERE id = ?`,
-        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo, p.clase, p.rendimiento, actual.id]
+        [p.nombre, p.descripcion, p.categoria_id, p.precio_venta, p.costo, p.es_plato, p.tracking_stock, p.stock_actual, p.stock_minimo, p.unidad, p.activo, p.traducciones, p.orden, p.nuevo, p.recomendado, p.version_grande_id, p.horario, p.combo, p.clase, p.rendimiento, p.para_llevar, actual.id]
       );
       // Si es ingrediente y cambió su costo, se actualiza el costo de los platos que lo usan
       if (Number(p.costo) !== Number(actual.costo)) await recalcularCostosConIngrediente(actual.id);
