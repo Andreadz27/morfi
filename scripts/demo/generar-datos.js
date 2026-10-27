@@ -60,7 +60,8 @@ const puertoLibre = () => new Promise((ok, mal) => {
   const port = await puertoLibre();
   const servidor = spawn(process.execPath, [path.join(RAIZ, 'server.js')], { env: { ...env, PORT: String(port) }, stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 100; i++) { try { if ((await fetch(base + '/')).ok) break; } catch (e) {} await esperar(100); }
+  // Arranque en frío (migraciones y primera copia) puede pasar los 10 s: hasta 30 s
+  for (let i = 0; i < 300; i++) { try { if ((await fetch(base + '/')).ok) break; } catch (e) {} await esperar(100); }
 
   const db = new sqlite3.Database(path.join(DESTINO, 'morfi.db'));
   db.configure('busyTimeout', 10000);
@@ -324,6 +325,31 @@ const puertoLibre = () => new Promise((ok, mal) => {
     for (const p of productos) {
       await q('UPDATE productos SET stock_actual = ? WHERE id = ?', [STOCK[p.nombre] !== undefined ? STOCK[p.nombre] : entre(Math.ceil(p.stock * 0.6), p.stock * 2), p.id]);
     }
+    // Recetas: insumos, dos sub-recetas (salsas que rinden varias presentaciones) y la hamburguesa que usa una.
+    // Van al final para no cambiar el stock de las ventas ya generadas.
+    const insumo = {};
+    for (const [nombre, unidad, costo, stock] of [
+      ['Pan de papa', 'unidad', 450, 60], ['Carne picada', 'g', 9, 12000], ['Queso cheddar', 'g', 14, 3000],
+      ['Mayonesa', 'g', 4, 5000], ['Ketchup', 'g', 3, 3000], ['Mostaza', 'g', 3, 2000], ['Pepinos en vinagre', 'g', 6, 1500],
+      ['Pimentón', 'g', 15, 500], ['Perejil', 'g', 8, 800], ['Ajo', 'g', 10, 600], ['Orégano', 'g', 25, 300],
+      ['Aceite de girasol', 'ml', 3, 5000], ['Vinagre', 'ml', 2, 2000], ['Ají molido', 'g', 20, 300]
+    ]) {
+      insumo[nombre] = (await api(A, 'POST', '/api/productos', { nombre, clase: 'insumo', unidad, costo, precio_venta: 0, categoria_id: null,
+        tracking_stock: 1, stock_actual: stock, stock_minimo: Math.round(stock / 5) })).id;
+    }
+    const linea = (nombre, cantidad) => ({ ingrediente_id: insumo[nombre], cantidad });
+    const subReceta = async (nombre, rendimiento, lineas) => {
+      const id = (await api(A, 'POST', '/api/productos', { nombre, clase: 'elaboracion', rendimiento, precio_venta: 0, categoria_id: null })).id;
+      await api(A, 'PUT', `/api/productos/${id}/receta`, { lineas });
+      return id;
+    };
+    const salsa = await subReceta('Salsa de la casa', 10, [linea('Mayonesa', 300), linea('Ketchup', 100), linea('Mostaza', 30),
+      linea('Pepinos en vinagre', 60), linea('Pimentón', 5)]);
+    await subReceta('Chimichurri', 12, [linea('Perejil', 60), linea('Ajo', 20), linea('Orégano', 10), linea('Aceite de girasol', 250),
+      linea('Vinagre', 100), linea('Ají molido', 5)]);
+    await api(A, 'PUT', `/api/productos/${productos.find(p => p.nombre === 'Hamburguesa artesanal').id}/receta`, { lineas: [
+      linea('Pan de papa', 1), linea('Carne picada', 180), linea('Queso cheddar', 40), { ingrediente_id: salsa, cantidad: 1 }] });
+
     await q("UPDATE auditoria SET fecha = datetime(fecha, '-1 minutes')");
 
     const [{ n }] = await q('SELECT COUNT(*) n FROM pedidos');

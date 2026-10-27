@@ -1,7 +1,8 @@
 // Graba un video del recorrido por el sistema (con subtítulos y voz) y toma capturas de cada pantalla.
 // Usa un navegador real (Edge o Chrome instalado) sobre un entorno de demo nuevo.
-// Voz: cada subtítulo se lee con edge-tts (pip install edge-tts; voz GM_DEMO_VOZ, por defecto es-AR-ElenaNeural)
-// y se mezcla en el MP4. Sin edge-tts (o con --sin-voz) el video sale mudo, como antes.
+// Voz: edge-tts (pip install edge-tts; voz GM_DEMO_VOZ, por defecto es-AR-ElenaNeural), mezclada en el MP4.
+// La voz no lee el subtítulo: dice su propio texto, escrito para hablar (con comas y pausas, como una charla),
+// a velocidad normal. Sin edge-tts (o con --sin-voz) el video sale mudo, como antes.
 //
 // Uso: npm run demo:video
 // Salida: demo/salida/recorrido.webm (mudo), recorrido.mp4 (con voz) y demo/salida/capturas/*.png
@@ -91,11 +92,14 @@ function buscarFfmpeg() {
   return null;
 }
 
-// edge-tts: variable EDGE_TTS o en el PATH
+// edge-tts: variable EDGE_TTS, en el PATH o como módulo de Python (pip install --user no siempre lo deja en el PATH)
 function buscarEdgeTts() {
   if (process.argv.includes('--sin-voz')) return null;
   for (const c of [process.env.EDGE_TTS, 'edge-tts'].filter(Boolean)) {
-    if (spawnSync(c, ['--help'], { stdio: 'ignore' }).status === 0) return c;
+    if (spawnSync(c, ['--help'], { stdio: 'ignore' }).status === 0) return [c];
+  }
+  for (const py of ['python', 'python3', 'py']) {
+    if (spawnSync(py, ['-m', 'edge_tts', '--help'], { stdio: 'ignore' }).status === 0) return [py, '-m', 'edge_tts'];
   }
   return null;
 }
@@ -133,7 +137,8 @@ const puertoLibre = () => new Promise((ok, mal) => {
   const servidor = spawn(process.execPath, [path.join(RAIZ, 'server.js')],
     { env: { ...process.env, GM_DATA_DIR: DATOS, PORT: String(port), SECRET_KEY: '', NODE_ENV: 'demo' }, stdio: 'ignore' });
   const base = `http://localhost:${port}`;
-  for (let i = 0; i < 100; i++) { try { if ((await fetch(base + '/')).ok) break; } catch (e) {} await esperar(100); }
+  // Arranque en frío (migraciones y primera copia) puede pasar los 10 s: hasta 30 s
+  for (let i = 0; i < 300; i++) { try { if ((await fetch(base + '/')).ok) break; } catch (e) {} await esperar(100); }
 
   console.log('2/3 Grabando el recorrido...');
   const navegador = await chromium.launch({ channel: CANAL, headless: true });
@@ -163,29 +168,31 @@ const puertoLibre = () => new Promise((ok, mal) => {
     for (let i = 1; !dur; i++) {
       fs.rmSync(archivo, { force: true });
       try {
-        execFileSync(edgeTts, ['--voice', VOZ, '--rate=+5%', '--text', texto, '--write-media', archivo], { stdio: 'ignore' });
+        execFileSync(edgeTts[0], [...edgeTts.slice(1), '--voice', VOZ, '--rate=-2%', '--text', texto, '--write-media', archivo], { stdio: 'ignore' });
         dur = duracionMs(ffmpeg, archivo);
       } catch (e) {
         if (i === 4) throw e;
       }
       if (!dur && i === 4) throw new Error(`edge-tts no generó el audio de: ${texto}`);
     }
-    return () => { voces.push({ archivo, ms: Date.now() - inicioVideo }); finVoz = Date.now() + dur + 350; return dur + 350; };
+    // Un respiro entre frase y frase, como cuando alguien cuenta algo
+    return () => { voces.push({ archivo, ms: Date.now() - inicioVideo }); finVoz = Date.now() + dur + 600; return dur + 600; };
   };
 
   // ---------- Helpers de la puesta en escena ----------
-  // ms: cuánto se queda quieta la escena; la voz sigue mientras pasan las acciones de después
-  const rotulo = async (titulo, texto, ms = 3800) => {
+  // ms: cuánto se queda quieta la escena; la voz sigue mientras pasan las acciones de después.
+  // dice: lo que cuenta la voz (más charlado que el subtítulo)
+  const rotulo = async (titulo, texto, ms = 3800, dice = `${titulo}. ${texto}`) => {
     await callarse();
-    const hablar = prepararVoz(`${titulo}. ${texto}`);
+    const hablar = prepararVoz(dice);
     await page.evaluate(([t, x]) => window.__gm.rotulo(t, x), [titulo, texto]);
     hablar();
     await esperar(ms);
   };
   // El subtítulo no se va mientras se lo está leyendo
   const sinRotulo = async () => { await callarse(); await page.evaluate(() => window.__gm.ocultarRotulo()); };
-  const placa = async (titulo, texto, chips, ms) => {
-    const hablar = prepararVoz(`${titulo}. ${texto}`);
+  const placa = async (titulo, texto, chips, ms, dice = `${titulo}. ${texto}`) => {
+    const hablar = prepararVoz(dice);
     await page.evaluate(([t, x, c]) => window.__gm.placa(t, x, c), [titulo, texto, chips]);
     await esperar(Math.max(ms, hablar()));
   };
@@ -227,14 +234,16 @@ const puertoLibre = () => new Promise((ok, mal) => {
   // ---------- Recorrido ----------
   await page.goto(base + '/');
   await placa('Morfi', 'El sistema de gestión para restaurantes, bares y cafeterías',
-    ['Punto de venta', 'Mesas y comandas', 'Delivery', 'Caja y arqueo', 'Contabilidad', 'Facturación ARCA'], 4200);
+    ['Punto de venta', 'Mesas y comandas', 'Delivery', 'Caja y arqueo', 'Recetas y costos', 'Facturación ARCA'], 4200,
+    'Hola. Te cuento cómo funciona Morfi, el sistema para restaurantes, bares y cafeterías. Vamos a recorrer un día de trabajo, de punta a punta.');
   await page.evaluate(() => window.__gm.ocultarPlaca());
   await esperar(700);
   await captura('01-ingreso');
 
   // 1. Ingreso
   capitulo("Ingreso con usuario y rol");
-  await rotulo('Cada persona con su usuario', 'Administrador, encargado, cajero, mozo y cocina: cada uno ve solo lo que necesita.', 1800);
+  await rotulo('Cada persona con su usuario', 'Administrador, encargado, cajero, mozo y cocina: cada uno ve solo lo que necesita.', 1800,
+    'Cada persona entra con su propio usuario. El mozo, la cocina, la caja... y cada uno ve solamente lo que necesita.');
   await clic('#loginEmail', 200);
   await page.type('#loginEmail', 'admin@labuenamesa.com', { delay: 45 });
   await clic('#loginPassword', 200);
@@ -245,23 +254,27 @@ const puertoLibre = () => new Promise((ok, mal) => {
 
   // 2. Dashboard
   capitulo("Dashboard en tiempo real");
-  await rotulo('Tu negocio en tiempo real', 'Ventas del día, ticket promedio y comparación con la semana, apenas entrás.', 3200);
+  await rotulo('Tu negocio en tiempo real', 'Ventas del día, ticket promedio y comparación con la semana, apenas entrás.', 3200,
+    'Apenas entrás, ya sabés cómo viene el día: cuánto vendiste, el ticket promedio, y cómo vas contra la semana pasada.');
   await captura('02-dashboard');
   await resaltar('#view-dashboard .stat-card', 1400);
-  await rotulo('Alertas y consejos automáticos', 'Te avisa qué reponer, cuáles son tus horas pico y cómo viene el día frente a tu promedio.', 4000);
+  await rotulo('Alertas y consejos automáticos', 'Te avisa qué reponer, cuáles son tus horas pico y cómo viene el día frente a tu promedio.', 4000,
+    'Y más abajo, Morfi te va avisando cosas: qué conviene reponer, cuáles son tus horas pico... Es como tener a alguien mirando los números por vos.');
   await desplazar('#view-dashboard .card:nth-of-type(3)', 2600);
   await arriba();
 
   // 3. Mesas
   capitulo("Mapa del salón");
   await ir('mesas');
-  await rotulo('El salón de un vistazo', 'Mesas libres, ocupadas y reservadas, con las reservas de la noche.', 3800);
+  await rotulo('El salón de un vistazo', 'Mesas libres, ocupadas y reservadas, con las reservas de la noche.', 3800,
+    'Este es el salón. De un vistazo ves qué mesas están libres, cuáles ocupadas, y las reservas de la noche.');
   await captura('03-mesas');
 
   // 4. Punto de venta
   capitulo("Tomar un pedido");
   await ir('pos');
-  await rotulo('Tomar un pedido lleva segundos', 'Tocás los productos, elegís la mesa y la comanda sale a cocina.', 1500);
+  await rotulo('Tomar un pedido lleva segundos', 'Tocás los productos, elegís la mesa y la comanda sale a cocina.', 1500,
+    'Tomar un pedido es rapidísimo. Tocás los platos, elegís la mesa, y la comanda sale sola para la cocina.');
   await clic('.pos-cat-btn:has-text("Platos Principales")', 900);
   await clic('.pos-product-btn:has-text("Bife de chorizo")', 500);
   await clic('.pos-product-btn:has-text("Bife de chorizo")', 500);
@@ -274,18 +287,22 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await clic('#view-pos .pos-checkout-btn', 1000);
   await page.selectOption('#checkoutMesa', '3');
   await esperar(500);
+  await rotulo('Notas para la cocina', 'Las aclaraciones del cliente viajan con la comanda.', 300,
+    'Y si el cliente pide algo especial, le dejás una nota a la cocina. Por ejemplo, cómo quiere la carne.');
   await clic('#checkoutNotas', 200);
   await page.type('#checkoutNotas', 'Un bife jugoso y otro a punto', { delay: 35 });
   await esperar(500);
   await clic('button[onclick="POS.confirmCheckout()"]', 1800);
   await page.waitForSelector('#view-mesas.active');
-  await rotulo('La mesa queda ocupada sola', 'Sin pasos extra: el pedido, la mesa y la cocina se actualizan juntos.', 3000);
+  await rotulo('La mesa queda ocupada sola', 'Sin pasos extra: el pedido, la mesa y la cocina se actualizan juntos.', 3000,
+    'Fijate que la mesa tres ya quedó ocupada. No tuviste que hacer nada más.');
   await resaltar('#view-mesas .mesa-card:nth-child(3)', 1200);
 
   // 5. Cocina
   capitulo("Comandas en cocina");
   await ir('cocina');
-  await rotulo('La comanda llega al instante', 'Cocina ve cada pedido con sus notas y el tiempo de espera en colores.', 2600);
+  await rotulo('La comanda llega al instante', 'Cocina ve cada pedido con sus notas y el tiempo de espera en colores.', 2600,
+    'En la cocina, el pedido aparece al instante, con las notas del mozo. Y los colores te dicen cuánto hace que está esperando.');
   await captura('05-cocina');
   await page.evaluate(() => { const c = [...document.querySelectorAll('#view-cocina .comanda-card')]; const n = c.find(x => x.textContent.includes('MESA 3')); n && n.scrollIntoView({ behavior: 'smooth', block: 'center' }); n && n.classList.add('gm-resaltado'); });
   await esperar(3000);
@@ -295,10 +312,12 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await page.evaluate(() => document.querySelectorAll('.gm-resaltado').forEach(e => e.classList.remove('gm-resaltado')));
   await ir('mesas');
   await clic(`button[onclick="Pedidos.abrirPedidoDeMesa('3')"]`, 1400);
-  await rotulo('Cobrar es igual de simple', 'Efectivo, tarjeta, Mercado Pago o transferencia, con el vuelto calculado.', 1800);
+  await rotulo('Cobrar es igual de simple', 'Efectivo, tarjeta, Mercado Pago o transferencia, con el vuelto calculado.', 1800,
+    'A la hora de cobrar, es igual de simple. Efectivo, tarjeta, Mercado Pago o transferencia... y el vuelto ya te lo calcula.');
   await captura('06-detalle-pedido');
   await clic('button[onclick^="Cobro.abrir("]', 1200);
-  await rotulo('Propina y cuenta dividida', 'Sumás la propina con un toque y dividís la cuenta en partes iguales o por plato.', 1200);
+  await rotulo('Propina y cuenta dividida', 'Sumás la propina con un toque y dividís la cuenta en partes iguales o por plato.', 1200,
+    'Si dejan propina, la sumás con un toque. Y si quieren dividir la cuenta, también se puede: en partes iguales, o por plato.');
   await clic('#cobroCuerpo .cobro-chips button:has-text("10%")', 900);
   await clic('#cobroCuerpo button[aria-label="Más personas"]', 600);
   await clic('#cobroCuerpo button[aria-label="Más personas"]', 1600);
@@ -306,6 +325,8 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await clic('#cobroCuerpo button[aria-label="Menos personas"]', 500);
   await clic('#cobroCuerpo button[aria-label="Menos personas"]', 900);
   const total = Number(await page.inputValue('#cobroCuerpo input[aria-label="Monto"]'));
+  await rotulo('El vuelto, calculado', 'Ponés con cuánto pagan y el sistema te dice cuánto devolver.', 300,
+    'Ponés con cuánto te pagan... y listo, ya sabés cuánto vuelto dar.');
   await clic('#cobroCuerpo input[aria-label="Efectivo recibido"]', 200);
   await page.keyboard.type(String(Math.ceil((total + 1) / 10000) * 10000), { delay: 90 });
   await esperar(1200);
@@ -315,48 +336,77 @@ const puertoLibre = () => new Promise((ok, mal) => {
   // 7. Delivery
   capitulo("Delivery y apps");
   await ir('delivery');
-  await rotulo('Todo el delivery en una pantalla', 'PedidosYa, Rappi y los pedidos de tu carta online por WhatsApp, con su estado.', 2600);
+  await rotulo('Todo el delivery en una pantalla', 'PedidosYa, Rappi y los pedidos de tu carta online por WhatsApp, con su estado.', 2600,
+    'El delivery está todo en una sola pantalla. PedidosYa, Rappi, y los pedidos que te llegan por WhatsApp desde tu carta.');
   await captura('07-delivery');
   await clic('#view-delivery button:has-text("Aceptar")', 2200);
 
   // 8. Caja
   capitulo("Caja y arqueo");
   await ir('caja');
-  await rotulo('Caja y arqueo automáticos', 'Ventas por medio de pago y el efectivo que tiene que haber en la caja.', 3200);
+  await rotulo('Caja y arqueo automáticos', 'Ventas por medio de pago y el efectivo que tiene que haber en la caja.', 3200,
+    'La caja se arma sola. Ves lo que vendiste con cada medio de pago, y cuánto efectivo tendría que haber.');
   await captura('08-caja');
   await desplazar('#view-caja .card:last-child', 1200);
-  await rotulo('Cada cierre queda registrado', 'Historial de cajas con faltantes y sobrantes, para saber siempre qué pasó.', 3200);
+  await rotulo('Cada cierre queda registrado', 'Historial de cajas con faltantes y sobrantes, para saber siempre qué pasó.', 3200,
+    'Y cada cierre queda guardado, con faltantes y sobrantes. Así siempre sabés qué pasó.');
   await arriba();
 
   // 9. Reportes
   capitulo("Rentabilidad por plato");
   await ir('reportes');
   await clic('#view-reportes button:has-text("Rentabilidad")', 1500);
-  await rotulo('Sabé qué te deja cada plato', 'Costo, margen y unidades vendidas para decidir precios con datos.', 3600);
+  await rotulo('Sabé qué te deja cada plato', 'Costo, margen y unidades vendidas para decidir precios con datos.', 3600,
+    'Esta es de mis partes favoritas: cuánto te deja cada plato. Costo, margen y lo que vendiste, para poner precios con datos, y no a ojo.');
   await captura('09-rentabilidad');
+
+  // 9b. Recetas y sub-recetas
+  capitulo("Recetas y sub-recetas");
+  await ir('productos');
+  await clic('#view-productos .pos-cat-btn:has-text("Sub-recetas")', 1200);
+  await rotulo('El costo sale de tus recetas', 'Salsas y preparaciones como sub-recetas, con lo que rinde cada tanda.', 1600,
+    'Y ese costo sale de tus recetas. Las salsas y preparaciones las cargás como sub-recetas, con lo que rinde cada tanda.');
+  await clic('#view-productos tr:has-text("Salsa de la casa") button[title="Receta e ingredientes"]', 1800);
+  await captura('09b-sub-receta');
+  await rotulo('Se actualiza solo', 'Los platos las usan por presentación: si sube un insumo, cambia el costo de todo lo que lo lleva.', 3800,
+    'Después las usás en tus platos. Si sube la mayonesa, el costo de la salsa, y el de cada plato que la lleva, se actualiza solo.');
+  await page.evaluate(() => App.closeModal());
+  await esperar(500);
+  await sinRotulo();
+  await clic('#view-productos button[onclick="Productos.verRecetario()"]', 1600);
+  await rotulo('Recetario para la cocina', 'Todas las fichas técnicas juntas, listas para imprimir.', 3200,
+    'Y tenés el recetario con todas las fichas técnicas, listo para imprimir y dejar en la cocina.');
+  await captura('09c-recetario');
+  await page.evaluate(() => App.closeModal());
+  await esperar(400);
 
   // 10. Contabilidad
   capitulo("Contabilidad");
   await ir('contabilidad');
   await clic('#view-contabilidad .cont-presets button:has-text("Últimos 7 días")', 1300);
-  await rotulo('La contabilidad se arma sola', 'Las ventas entran solas. Cargás compras y gastos y ves cuánto ganaste en la semana.', 3800);
+  await rotulo('La contabilidad se arma sola', 'Las ventas entran solas. Cargás compras y gastos y ves cuánto ganaste en la semana.', 3800,
+    'La contabilidad también se va armando sola. Las ventas entran automáticamente; vos cargás las compras y los gastos, y ves cuánto ganaste en la semana.');
   await captura('16-contabilidad-resultados');
   await resaltar('#view-contabilidad .cont-estado', 1600);
   await clic('#view-contabilidad .cont-tabs button:has-text("Cuentas a pagar")', 1300);
-  await rotulo('Lo que le debés a cada proveedor', 'Vencimientos en colores y el pago con un clic, también con el efectivo de la caja.', 3400);
+  await rotulo('Lo que le debés a cada proveedor', 'Vencimientos en colores y el pago con un clic, también con el efectivo de la caja.', 3400,
+    'Ves lo que le debés a cada proveedor, con los vencimientos en colores. Y lo pagás con un clic.');
   await captura('17-cuentas-a-pagar');
   await clic('#view-contabilidad .cont-tabs button:has-text("IVA del mes")', 1300);
-  await rotulo('El IVA del mes', 'Débito de las ventas, crédito de las facturas de compra y el saldo estimado a pagar.', 3200);
+  await rotulo('El IVA del mes', 'Débito de las ventas, crédito de las facturas de compra y el saldo estimado a pagar.', 3200,
+    'También tenés una estimación del IVA del mes, con lo de las ventas y lo de las facturas de compra.');
   await captura('18-iva');
   await clic('#view-contabilidad .cont-tabs button:has-text("Libro diario")', 1300);
-  await rotulo('Libro diario para tu contador', 'Cada venta, compra y pago queda asentado en partida doble y se exporta a Excel.', 3400);
+  await rotulo('Libro diario para tu contador', 'Cada venta, compra y pago queda asentado en partida doble y se exporta a Excel.', 3400,
+    'Y para tu contador, el libro diario: cada movimiento queda asentado, y lo bajás a Excel.');
   await captura('19-libro-diario');
   await arriba();
 
   // 11. Stock
   capitulo("Stock y alertas");
   await ir('stock');
-  await rotulo('Stock al día', 'Cada venta descuenta del inventario y el sistema avisa antes de que falte.', 3400);
+  await rotulo('Stock al día', 'Cada venta descuenta del inventario y el sistema avisa antes de que falte.', 3400,
+    'El stock se mantiene al día con cada venta. Y antes de que algo se termine, te avisa.');
   await captura('10-inventario');
 
   // 12. Roles
@@ -365,7 +415,8 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await clic('button[onclick="Usuarios.nuevo()"]', 800);
   await page.selectOption('#usuRol', 'mozo');
   await esperar(400);
-  await rotulo('Permisos por rol', 'El mozo toma pedidos pero no cobra ni hace descuentos: menos errores y menos pérdidas.', 3800);
+  await rotulo('Permisos por rol', 'El mozo toma pedidos pero no cobra ni hace descuentos: menos errores y menos pérdidas.', 3800,
+    'Los permisos van por rol. Por ejemplo, el mozo toma pedidos, pero no puede cobrar ni hacer descuentos. Menos errores, y menos pérdidas.');
   await captura('11-roles');
   await page.evaluate(() => App.closeModal());
   await esperar(500);
@@ -374,10 +425,12 @@ const puertoLibre = () => new Promise((ok, mal) => {
   capitulo("Impresoras y copias de seguridad");
   await ir('config');
   await desplazar('#listaImpresoras', 1500);
-  await rotulo('Comandas impresas por estación', 'La cocina recibe los platos y la barra las bebidas, en impresoras térmicas de red o USB.', 3600);
+  await rotulo('Comandas impresas por estación', 'La cocina recibe los platos y la barra las bebidas, en impresoras térmicas de red o USB.', 3600,
+    'Las comandas se imprimen por estación: los platos salen en la cocina, y las bebidas en la barra.');
   await captura('12-impresoras');
   await desplazar('#listaBackups', 1200);
-  await rotulo('Tus datos, siempre a salvo', 'Copias de seguridad automáticas todos los días.', 2800);
+  await rotulo('Tus datos, siempre a salvo', 'Copias de seguridad automáticas todos los días.', 2800,
+    'Y tus datos están siempre cuidados, con copias de seguridad todos los días.');
 
   // 14. Carta QR
   capitulo("Carta digital con QR");
@@ -385,7 +438,8 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await esperar(500);
   await page.goto(base + '/menu.html');
   await esperar(1200);
-  await rotulo('Carta digital con QR', 'Tus clientes ven la carta desde el celular y piden sin comisiones de terceros.', 2500);
+  await rotulo('Carta digital con QR', 'Tus clientes ven la carta desde el celular y piden sin comisiones de terceros.', 2500,
+    'Por último, la carta digital. Tus clientes escanean el QR, miran la carta en el celular, y te piden directo, sin pagarle comisión a nadie.');
   await captura('13-carta-qr');
   await page.mouse.wheel(0, 700);
   await esperar(1800);
@@ -395,7 +449,8 @@ const puertoLibre = () => new Promise((ok, mal) => {
   // Cierre
   await sinRotulo();
   await placa('Morfi', 'Todo tu restaurante en un solo sistema. Sin instalaciones complicadas.',
-    ['Pedidos', 'Cocina', 'Delivery', 'Caja', 'Contabilidad', 'Stock', 'Reportes', 'ARCA'], 4500);
+    ['Pedidos', 'Cocina', 'Delivery', 'Caja', 'Recetas', 'Contabilidad', 'Stock', 'ARCA'], 4500,
+    'Eso es Morfi: todo tu restaurante, en un solo sistema. ¡Gracias por mirar!');
 
   fs.writeFileSync(path.join(SALIDA, 'capitulos.json'), JSON.stringify(capitulos, null, 2));
 
