@@ -4,6 +4,8 @@
 // desayuno y en la merienda). La carta abre en el momento de la hora del local y muestra los otros a un toque.
 // Destacados: "Nuevo" y "Recomendado de la casa" los marca el local en cada producto; "Lo más pedido" sale
 // solo de las ventas de las últimas 4 semanas.
+// Take Away: un momento con solo_para_llevar muestra solo los productos del menú para llevar (productos.para_llevar),
+// con el nombre de la categoría para ese menú si tiene uno (Cafetería caliente -> "Cafetería mediana").
 const { run, get, all, transaccion } = require('../db');
 const { errorHttp } = require('../util');
 const { normalizarTraducciones, leerTraducciones } = require('../traducciones');
@@ -20,6 +22,7 @@ async function listarMomentos({ soloActivos = false } = {}) {
   const rel = await all('SELECT momento_id, categoria_id FROM momento_categorias ORDER BY orden, categoria_id');
   return momentos.map(m => ({
     id: m.id, nombre: m.nombre, icono: m.icono || '', desde: m.desde, hasta: m.hasta, orden: m.orden, activo: !!m.activo,
+    solo_para_llevar: !!m.solo_para_llevar,
     traducciones: leerTraducciones(m.traducciones),
     categorias: rel.filter(r => r.momento_id === m.id).map(r => r.categoria_id)
   }));
@@ -39,6 +42,7 @@ async function validarMomento(b) {
     icono: String(b.icono || '').slice(0, 8),
     orden: Number.isInteger(Number(b.orden)) ? Number(b.orden) : 0,
     activo: b.activo === undefined ? 1 : (b.activo ? 1 : 0),
+    solo_para_llevar: b.solo_para_llevar ? 1 : 0,
     traducciones: normalizarTraducciones(b.traducciones, ['nombre'])
   };
 }
@@ -47,14 +51,14 @@ async function guardarMomento(datos, id = null) {
   const m = await validarMomento(datos || {});
   return transaccion(async () => {
     if (id) {
-      const r = await run(`UPDATE momentos_carta SET nombre = ?, icono = ?, desde = ?, hasta = ?, orden = ?, activo = ?, traducciones = ?
-        WHERE id = ?`, [m.nombre, m.icono, m.desde, m.hasta, m.orden, m.activo, m.traducciones, id]);
+      const r = await run(`UPDATE momentos_carta SET nombre = ?, icono = ?, desde = ?, hasta = ?, orden = ?, activo = ?, traducciones = ?,
+        solo_para_llevar = ? WHERE id = ?`, [m.nombre, m.icono, m.desde, m.hasta, m.orden, m.activo, m.traducciones, m.solo_para_llevar, id]);
       if (!r.changes) throw errorHttp(404, 'Momento no encontrado');
       await run('DELETE FROM momento_categorias WHERE momento_id = ?', [id]);
     } else {
       if ((await get('SELECT COUNT(*) AS n FROM momentos_carta')).n >= MAX_MOMENTOS) throw errorHttp(400, `Hasta ${MAX_MOMENTOS} momentos`);
-      id = (await run(`INSERT INTO momentos_carta (nombre, icono, desde, hasta, orden, activo, traducciones) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [m.nombre, m.icono, m.desde, m.hasta, m.orden, m.activo, m.traducciones])).id;
+      id = (await run(`INSERT INTO momentos_carta (nombre, icono, desde, hasta, orden, activo, traducciones, solo_para_llevar)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [m.nombre, m.icono, m.desde, m.hasta, m.orden, m.activo, m.traducciones, m.solo_para_llevar])).id;
     }
     for (const [i, c] of m.categorias.entries())
       await run('INSERT INTO momento_categorias (momento_id, categoria_id, orden) VALUES (?, ?, ?)', [id, c, i]);
@@ -87,14 +91,17 @@ async function masPedidos() {
 // Lo que suma la carta pública: momentos (solo con categorías que tienen productos), el actual y destacados
 async function cartaPorMomentos(categoriasVisibles, productos) {
   const conProductos = new Set(categoriasVisibles.map(c => c.id));
+  const conParaLlevar = new Set(productos.filter(p => p.para_llevar).map(p => p.categoria_id));
   const momentos = (await listarMomentos({ soloActivos: true }))
     .map(m => ({ id: m.id, nombre: m.nombre, icono: m.icono, desde: m.desde, hasta: m.hasta, traducciones: m.traducciones,
-      categorias: m.categorias.filter(c => conProductos.has(c)) }))
+      solo_para_llevar: m.solo_para_llevar,
+      categorias: m.categorias.filter(c => (m.solo_para_llevar ? conParaLlevar : conProductos).has(c)) }))
     .filter(m => m.categorias.length);
   const top = await masPedidos();
   for (const p of productos) {
     p.nuevo = !!p.nuevo;
     p.recomendado = !!p.recomendado;
+    p.para_llevar = !!p.para_llevar;
     p.mas_pedido = top.has(p.id);
   }
   return { momentos, momento_actual: momentoActual(momentos) };
