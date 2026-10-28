@@ -251,7 +251,11 @@ Get-NetConnectionProfile -ErrorAction SilentlyContinue | Where-Object NetworkCat
   Write-Host "  La red '$($_.Name)' estaba como pública: ahora es privada."
 }
 
-$ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch '^(127\.|169\.254\.)' -and $_.PrefixOrigin -ne 'WellKnown' } | Select-Object -First 1).IPAddress
+# La de la placa que sale al router (tiene puerta de enlace): las redes virtuales de WSL/Hyper-V (172.x) no la tienen
+# y antes podían salir primeras, con una dirección a la que los celulares no llegan
+$ip = (Get-NetIPConfiguration -ErrorAction SilentlyContinue | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq 'Up' } |
+  Select-Object -First 1).IPv4Address.IPAddress | Select-Object -First 1
+if (-not $ip) { $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch '^(127\.|169\.254\.)' -and $_.PrefixOrigin -ne 'WellKnown' } | Select-Object -First 1).IPAddress }
 Write-Host "`nListo. Fadido está corriendo." -ForegroundColor Green
 Write-Host "  En esta PC:            http://localhost:$Puerto"
 Write-Host "  Tablets y celulares:   http://${ip}:$Puerto  (misma red WiFi)"
