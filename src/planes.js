@@ -63,6 +63,16 @@ const MANTENIMIENTO = [
   'Copia de seguridad en la nube y panel Morfi Nube'
 ];
 
+// Instalación (pago único, por local). A distancia no se cobra; presencial en AMBA tiene precio fijo y fuera de AMBA
+// se suman los viáticos. Comprando de contado, la presencial va bonificada.
+const INSTALACION = {
+  distancia: { nombre: 'A distancia', precio: 0,
+    incluye: 'Alta, carga de la carta y capacitación por videollamada' },
+  presencial: { nombre: 'Presencial (CABA y GBA)', precio: 89000,
+    incluye: 'Instalación en la PC del local, impresoras de comandas y tickets, QR de las mesas y capacitación al equipo en el local' },
+  nota: 'Fuera de CABA y GBA, se suman los viáticos. Comprando un plan de contado, la instalación presencial va bonificada.'
+};
+
 const DIAS_PRUEBA = 30;
 // Con el plan vencido sigue todo igual estos días; después quedan solo los módulos de Esencial
 const DIAS_GRACIA = 10;
@@ -90,4 +100,4 @@ function modulosDe(plan, extras = []) {
 // Plan más barato que incluye el módulo (o el extra que hay que sumar)
 const planMinimo = modulo => PLAN_MINIMO[modulo] || null;
 
-module.exports = { MODULOS, INCLUIDO, PLANES, EXTRAS, MANTENIMIENTO, DIAS_PRUEBA, DIAS_GRACIA, DIAS_AVISO, DESCUENTOS, VENTAS, modulosDe, planMinimo };
+module.exports = { MODULOS, INCLUIDO, PLANES, EXTRAS, MANTENIMIENTO, INSTALACION, DIAS_PRUEBA, DIAS_GRACIA, DIAS_AVISO, DESCUENTOS, VENTAS, modulosDe, planMinimo };

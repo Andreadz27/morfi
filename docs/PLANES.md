@@ -38,6 +38,15 @@ repite los precios a mano: si cambian, cambiarlos en los dos lugares.
 **Extra:** Asistente IA por WhatsApp, +$19.900/mes sobre cualquier plan. El consumo de la IA va en la cuenta de
 Anthropic del local (su propia clave), así el precio no depende de cuánto lo usen.
 
+**Instalación** (pago único, por local; en `INSTALACION` de `src/planes.js`):
+
+- A distancia (alta, carga de la carta, capacitación por videollamada): **sin cargo**.
+- Presencial en CABA y GBA (PC del local, impresoras de comandas y tickets, QR de las mesas, capacitación al equipo):
+  **$89.000**. Fuera de CABA y GBA, más viáticos. **Bonificada** si compra un plan de contado.
+- Por qué ese precio: Maxirest incluye la implementación en su abono de $89.000/mes y Fudo no publica la
+  instalación presencial. Equivale a ~2 meses de Esencial o ~1,8 de Pro: cubre media jornada de técnico sin
+  espantar al local chico, que igual tiene la opción a distancia gratis.
+
 **Condiciones:** 30 días de prueba con todo, sin tarjeta. Semestral 10 % menos; anual, 2 meses gratis. Alta remota,
 carga de la carta y capacitación sin cargo. Precios finales: si la facturación de Morfi pasa a discriminar IVA,
 revisar si se mantienen como precio final.

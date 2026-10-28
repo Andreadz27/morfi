@@ -112,6 +112,8 @@ test('de contado: vencido el mantenimiento el plan sigue completo; los extras me
   const d = await estado();
   assert.ok(d.planes.pro.contado > 0 && d.planes.pro.mantenimiento > 0);
   assert.ok(d.mantenimiento.length > 0);
+  assert.equal(d.instalacion.distancia.precio, 0, 'la instalación a distancia no se cobra');
+  assert.ok(d.instalacion.presencial.precio > 0);
   assert.ok(d.incluido.some(x => /Take Away/.test(x)), 'Tu plan lista lo que viene en todos los planes');
 });
 

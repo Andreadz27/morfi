@@ -147,8 +147,14 @@ const Plan = {
         <div class="card-header"><span class="card-title"><i class="fas fa-puzzle-piece"></i> Extras</span></div>
         ${Object.entries(d.extras_disponibles).map(([id, x]) => `<p><strong>${esc(x.nombre)}</strong>: + ${fmtMoneda(x.precio)} por mes.
           ${esc(x.nota || '')} ${d.modulos.includes(id) ? '<span class="badge badge-green">Activo</span>' : ''}</p>`).join('')}
-        <p class="text-muted">Pagando 6 meses juntos, 10 % menos; el año completo, 2 meses gratis. Alta, carga de la carta y capacitación a distancia sin cargo.</p>
+        <p class="text-muted">Pagando 6 meses juntos, 10 % menos; el año completo, 2 meses gratis.</p>
       </div>
+      ${d.instalacion ? `<div class="card mt-20">
+        <div class="card-header"><span class="card-title"><i class="fas fa-tools"></i> Instalación</span></div>
+        ${['distancia', 'presencial'].map(k => d.instalacion[k]).map(i => `<p><strong>${esc(i.nombre)}</strong>: ${i.precio ? `${fmtMoneda(i.precio)} por local, pago único` : 'sin cargo'}.
+          <span class="text-muted">${esc(i.incluye)}.</span></p>`).join('')}
+        <p class="text-muted">${esc(d.instalacion.nota)}</p>
+      </div>` : ''}
       <div class="card mt-20">
         <div class="card-header"><span class="card-title"><i class="fas fa-key"></i> Licencia</span></div>
         <p class="text-muted">Si el local está conectado a Morfi Nube, el plan se actualiza solo. Si no, pegá acá la licencia que te dio soporte.</p>
