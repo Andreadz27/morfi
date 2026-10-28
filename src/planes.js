@@ -15,12 +15,24 @@ const MODULOS = {
   whatsapp: 'WhatsApp Business: comprobantes, avisos y recordatorios de reservas',
   personal: 'Personal: fichadas, turnos y reparto de propinas',
   fidelizacion: 'Fidelización: puntos, cupones y gift cards',
-  costos: 'Ganancias detalladas (por día, mes, plato y canal), recetas y costos',
-  contabilidad: 'Contabilidad: gastos, cuentas a pagar, IVA, resultados y libro diario',
+  costos: 'Ganancias detalladas (por día, mes, plato y canal), recetas, sub-recetas y costo de cada plato',
+  contabilidad: 'Contabilidad: gastos, facturas de compra leídas con IA, cuentas a pagar, IVA, resultados y libro diario',
   panel_nube: 'Panel Morfi Nube: tus ventas desde el celular',
   multisucursal: 'Varias sucursales y precios centrales',
   asistente: 'Asistente IA que atiende WhatsApp (pedidos y reservas)'
 };
+
+// Lo que viene en TODOS los planes (para la pantalla "Tu plan"; la landing lo repite a mano)
+const INCLUIDO = [
+  'Pedidos, mesas, cocina en pantalla, caja y cobros',
+  'Factura electrónica ARCA, también cuando ARCA no responde (CAEA)',
+  'Funciona sin internet y los mozos toman pedidos aunque se corte el WiFi',
+  'Carta QR en español, inglés y portugués, y llamado al mozo desde la mesa',
+  'Opciones y adicionales, venta cruzada y menú Take Away',
+  'Cuenta dividida por plato y cierre del día automático',
+  'Stock, reportes y copia de seguridad en la nube',
+  'Usuarios ilimitados'
+];
 
 const PRO = ['mesa_qr', 'online', 'apps_delivery', 'whatsapp', 'personal', 'fidelizacion', 'costos', 'contabilidad', 'panel_nube'];
 
@@ -78,4 +90,4 @@ function modulosDe(plan, extras = []) {
 // Plan más barato que incluye el módulo (o el extra que hay que sumar)
 const planMinimo = modulo => PLAN_MINIMO[modulo] || null;
 
-module.exports = { MODULOS, PLANES, EXTRAS, MANTENIMIENTO, DIAS_PRUEBA, DIAS_GRACIA, DIAS_AVISO, DESCUENTOS, VENTAS, modulosDe, planMinimo };
+module.exports = { MODULOS, INCLUIDO, PLANES, EXTRAS, MANTENIMIENTO, DIAS_PRUEBA, DIAS_GRACIA, DIAS_AVISO, DESCUENTOS, VENTAS, modulosDe, planMinimo };

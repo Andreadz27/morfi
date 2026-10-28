@@ -108,12 +108,8 @@ const Plan = {
           <small>pago único + mantenimiento ${fmtMoneda(p.mantenimiento)}/mes${p.por_local ? ' por local' : ''}</small></div>` : ''}
         ${p.minimo_locales ? `<p class="text-muted">Desde ${p.minimo_locales} locales</p>` : ''}
         <ul class="plan-lista">
-          <li><i class="fas fa-check"></i> Pedidos, mesas, cocina, caja y cobros</li>
-          <li><i class="fas fa-check"></i> Factura electrónica ARCA incluida</li>
-          <li><i class="fas fa-check"></i> Funciona sin internet y copia en la nube</li>
-          <li><i class="fas fa-check"></i> Carta QR y llamado al mozo desde la mesa</li>
-          <li><i class="fas fa-check"></i> Usuarios ilimitados</li>
-          ${id === 'cadenas' ? '<li><i class="fas fa-check"></i> Todo lo del plan Pro</li>' : ''}
+          ${id === 'esencial' ? (d.incluido || []).map(x => `<li><i class="fas fa-check"></i> ${esc(x)}</li>`).join('')
+            : `<li><i class="fas fa-check"></i> Todo lo del plan ${id === 'cadenas' ? 'Pro' : 'Esencial'}</li>`}
           ${p.modulos.filter(m => id === 'pro' || !d.planes.pro.modulos.includes(m)).map(m => `<li><i class="fas fa-check"></i> ${esc(d.modulos_disponibles[m])}</li>`).join('')}
         </ul>
         ${id === actual ? '<button class="btn btn-outline" disabled>Tu plan</button>'

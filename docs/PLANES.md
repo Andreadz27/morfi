@@ -14,10 +14,13 @@ repite los precios a mano: si cambian, cambiarlos en los dos lugares.
 | + mantenimiento por mes | $7.900 | $14.900 | $12.900 por local |
 | Para | Café, bar, rotisería, local chico | Restaurante con salón, delivery y equipo | Cadenas |
 | Pedidos, mesas, cocina, caja, cobros | ✔ | ✔ | ✔ |
-| Factura electrónica ARCA y ticket fiscal | ✔ | ✔ | ✔ |
-| Funciona sin internet, copia cifrada en la nube | ✔ | ✔ | ✔ |
+| Factura electrónica ARCA y ticket fiscal; CAEA si ARCA no responde | ✔ | ✔ | ✔ |
+| Funciona sin internet, pedidos del mozo sin WiFi, copia cifrada en la nube | ✔ | ✔ | ✔ |
 | Stock, reportes, arqueo ciego, PIN del encargado | ✔ | ✔ | ✔ |
 | Carta QR y llamado al mozo desde la mesa | ✔ | ✔ | ✔ |
+| Carta QR en español, inglés y portugués, por momentos del día | ✔ | ✔ | ✔ |
+| Opciones y adicionales, venta cruzada, menú Take Away | ✔ | ✔ | ✔ |
+| Cuenta dividida por plato, cierre del día automático | ✔ | ✔ | ✔ |
 | Usuarios | ilimitados | ilimitados | ilimitados |
 | Pedido y pago con Mercado Pago desde la mesa | | ✔ | ✔ |
 | Carta online con link fijo, pedidos por WhatsApp/Instagram | | ✔ | ✔ |
@@ -27,8 +30,8 @@ repite los precios a mano: si cambian, cambiarlos en los dos lugares.
 | Fidelización: puntos, cupones, gift cards | | ✔ | ✔ |
 | "¿Cuánto gané hoy?" en el inicio | ✔ | ✔ | ✔ |
 | Ganancias por día/semana/mes/año, plato, canal, horario y mozo; fugas; punto de equilibrio | | ✔ | ✔ |
-| Recetas y costo de cada plato | | ✔ | ✔ |
-| Contabilidad: gastos, IVA, resultados, libro diario | | ✔ | ✔ |
+| Recetas, sub-recetas e insumos, recetario y costo de cada plato | | ✔ | ✔ |
+| Contabilidad: gastos, facturas de compra leídas con IA, IVA, resultados, libro diario | | ✔ | ✔ |
 | Panel Morfi Nube en el celular | | ✔ | ✔ |
 | Varias sucursales y precios centrales | | | ✔ |
 
@@ -73,6 +76,11 @@ Argumento de venta: en Morfi, mesas y factura electrónica vienen en el plan má
 plan intermedio de Fudo con sus módulos, y además funciona sin internet, cosa que ninguno de los dos ofrece.
 En la landing pública no se nombra a la competencia ("otros sistemas"): sus precios cambian y la comparación con
 nombre propio tiene que estar siempre actualizada y ser exacta.
+
+**Actualización 28/10/2026:** se sumaron a los planes las funciones nuevas (Take Away, carta en 3 idiomas, opciones
+y venta cruzada, cuenta dividida, pedidos sin WiFi, CAEA y cierre automático en todos; sub-recetas y facturas leídas
+con IA en Pro) **sin subir los precios**: el argumento de venta se hace más fuerte y seguimos por debajo del plan
+intermedio de Fudo con sus módulos. La lista de "todos los planes" está en `INCLUIDO` de `src/planes.js`.
 
 Revisar estos precios cada 2 o 3 meses (inflación) y actualizar `src/planes.js` y la landing.
 
