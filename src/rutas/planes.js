@@ -1,6 +1,6 @@
 'use strict';
 const { autenticar, esAdmin, errorInterno, requierePlan, tiene, estadoLicencia, guardarLicencia } = require('../contexto');
-const { PLANES, EXTRAS, MODULOS, DESCUENTOS, DIAS_PRUEBA, DIAS_GRACIA, VENTAS, planMinimo } = require('../planes');
+const { PLANES, EXTRAS, MODULOS, INCLUIDO, MANTENIMIENTO, INSTALACION, DESCUENTOS, DIAS_PRUEBA, DIAS_GRACIA, VENTAS, planMinimo } = require('../planes');
 
 module.exports = function registrarRutas(app) {
 
@@ -48,7 +48,7 @@ app.get('/api/licencia', autenticar, async (req, res) => {
   try {
     const estado = await estadoLicencia();
     res.json({ ...estado, planes: Object.fromEntries(Object.entries(PLANES).filter(([, p]) => !p.interno)),
-      extras_disponibles: EXTRAS, modulos_disponibles: MODULOS, plan_minimo: Object.fromEntries(Object.keys(MODULOS).map(m => [m, planMinimo(m)])),
+      incluido: INCLUIDO, extras_disponibles: EXTRAS, mantenimiento: MANTENIMIENTO, instalacion: INSTALACION, modulos_disponibles: MODULOS, plan_minimo: Object.fromEntries(Object.keys(MODULOS).map(m => [m, planMinimo(m)])),
       descuentos: DESCUENTOS, dias_prueba: DIAS_PRUEBA, dias_gracia: DIAS_GRACIA, ventas: VENTAS });
   } catch (err) { errorInterno(res, err); }
 });

@@ -10,12 +10,17 @@ repite los precios a mano: si cambian, cambiarlos en los dos lugares.
 |---|---|---|---|
 | Precio | $24.900 | $49.900 | $44.900 por local (desde 2) |
 | Anual (2 meses gratis) | $249.000 | $499.000 | $449.000 por local |
+| **De contado** (pago único) | $490.000 | $990.000 | $890.000 por local |
+| + mantenimiento por mes | $7.900 | $14.900 | $12.900 por local |
 | Para | Café, bar, rotisería, local chico | Restaurante con salón, delivery y equipo | Cadenas |
 | Pedidos, mesas, cocina, caja, cobros | ✔ | ✔ | ✔ |
-| Factura electrónica ARCA y ticket fiscal | ✔ | ✔ | ✔ |
-| Funciona sin internet, copia cifrada en la nube | ✔ | ✔ | ✔ |
+| Factura electrónica ARCA y ticket fiscal; CAEA si ARCA no responde | ✔ | ✔ | ✔ |
+| Funciona sin internet, pedidos del mozo sin WiFi, copia cifrada en la nube | ✔ | ✔ | ✔ |
 | Stock, reportes, arqueo ciego, PIN del encargado | ✔ | ✔ | ✔ |
 | Carta QR y llamado al mozo desde la mesa | ✔ | ✔ | ✔ |
+| Carta QR en español, inglés y portugués, por momentos del día | ✔ | ✔ | ✔ |
+| Opciones y adicionales, venta cruzada, menú Take Away | ✔ | ✔ | ✔ |
+| Cuenta dividida por plato, cierre del día automático | ✔ | ✔ | ✔ |
 | Usuarios | ilimitados | ilimitados | ilimitados |
 | Pedido y pago con Mercado Pago desde la mesa | | ✔ | ✔ |
 | Carta online con link fijo, pedidos por WhatsApp/Instagram | | ✔ | ✔ |
@@ -25,17 +30,33 @@ repite los precios a mano: si cambian, cambiarlos en los dos lugares.
 | Fidelización: puntos, cupones, gift cards | | ✔ | ✔ |
 | "¿Cuánto gané hoy?" en el inicio | ✔ | ✔ | ✔ |
 | Ganancias por día/semana/mes/año, plato, canal, horario y mozo; fugas; punto de equilibrio | | ✔ | ✔ |
-| Recetas y costo de cada plato | | ✔ | ✔ |
-| Contabilidad: gastos, IVA, resultados, libro diario | | ✔ | ✔ |
+| Recetas, sub-recetas e insumos, recetario y costo de cada plato | | ✔ | ✔ |
+| Contabilidad: gastos, facturas de compra leídas con IA, IVA, resultados, libro diario | | ✔ | ✔ |
 | Panel Fadido Nube en el celular | | ✔ | ✔ |
 | Varias sucursales y precios centrales | | | ✔ |
 
 **Extra:** Asistente IA por WhatsApp, +$19.900/mes sobre cualquier plan. El consumo de la IA va en la cuenta de
 Anthropic del local (su propia clave), así el precio no depende de cuánto lo usen.
 
+**Instalación** (pago único, por local; en `INSTALACION` de `src/planes.js`):
+
+- A distancia (alta, carga de la carta, capacitación por videollamada): **sin cargo**.
+- Presencial en CABA y GBA (PC del local, impresoras de comandas y tickets, QR de las mesas, capacitación al equipo):
+  **$89.000**. Fuera de CABA y GBA, más viáticos. **Bonificada** si compra un plan de contado.
+- Por qué ese precio: Maxirest incluye la implementación en su abono de $89.000/mes y Fudo no publica la
+  instalación presencial. Equivale a ~2 meses de Esencial o ~1,8 de Pro: cubre media jornada de técnico sin
+  espantar al local chico, que igual tiene la opción a distancia gratis.
+
 **Condiciones:** 30 días de prueba con todo, sin tarjeta. Semestral 10 % menos; anual, 2 meses gratis. Alta remota,
 carga de la carta y capacitación sin cargo. Precios finales: si la facturación de Fadido pasa a discriminar IVA,
 revisar si se mantienen como precio final.
+
+**De contado con mantenimiento:** el plan se paga una vez (≈ 20 meses de abono) y queda para siempre. El
+mantenimiento (≈ 30 % del abono; el año adelantado con 2 meses gratis) incluye actualizaciones, cambios de ARCA,
+soporte y copia en la nube/panel Fadido Nube. Si deja de pagarlo, el local **no pierde nada de su plan**: solo deja de
+tener actualizaciones y soporte (la pantalla lo avisa). Los extras siguen siendo mensuales y, sin pago, se apagan
+pasada la gracia. A 3 años: Pro mensual $1.796.400 contra Pro de contado + mantenimiento $1.526.400; conviene a quien
+puede pagar de una vez, y a Fadido le adelanta caja.
 
 ## Contra quién competimos (precios relevados el 23/10/2026)
 
@@ -65,6 +86,11 @@ plan intermedio de Fudo con sus módulos, y además funciona sin internet, cosa 
 En la landing pública no se nombra a la competencia ("otros sistemas"): sus precios cambian y la comparación con
 nombre propio tiene que estar siempre actualizada y ser exacta.
 
+**Actualización 28/10/2026:** se sumaron a los planes las funciones nuevas (Take Away, carta en 3 idiomas, opciones
+y venta cruzada, cuenta dividida, pedidos sin WiFi, CAEA y cierre automático en todos; sub-recetas y facturas leídas
+con IA en Pro) **sin subir los precios**: el argumento de venta se hace más fuerte y seguimos por debajo del plan
+intermedio de Fudo con sus módulos. La lista de "todos los planes" está en `INCLUIDO` de `src/planes.js`.
+
 Revisar estos precios cada 2 o 3 meses (inflación) y actualizar `src/planes.js` y la landing.
 
 ## Cómo funciona en el sistema
@@ -92,6 +118,8 @@ node nube/alta.js local --cuenta "La Buena Mesa" --nombre "Centro" --cliente la-
 node nube/alta.js plan --cliente la-buena-mesa-centro --plan pro --vence 2026-12-31
 # Con el asistente IA
 node nube/alta.js plan --cliente la-buena-mesa-centro --plan pro --vence 2026-12-31 --extras asistente
+# De contado: el plan queda para siempre; --vence es hasta cuándo está pago el mantenimiento
+node nube/alta.js plan --cliente la-buena-mesa-centro --plan pro --modalidad contado --vence 2027-10-31
 # Sin vencimiento (cortesía, local propio)
 node nube/alta.js plan --cliente mi-restaurante --plan pro
 ```

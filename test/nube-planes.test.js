@@ -73,7 +73,19 @@ test('soporte pasa el local a Pro: en unos segundos el local y el panel lo tiene
   assert.equal((await aNube('GET', '/l/bar-chico/api/publico/menu'))[0], 200);
 });
 
+test('soporte vende de contado: el plan queda aunque venza el mantenimiento', async () => {
+  assert.match(alta('plan', '--cliente', 'bar-chico', '--plan', 'pro', '--modalidad', 'contado', '--vence', '2000-01-31'),
+    /plan Pro, de contado, mantenimiento hasta el 2000-01-31/);
+  assert.ok(await esperarQue(async () => (await planLocal()).estado === 'mantenimiento_vencido'), 'el local no recibió la licencia de contado');
+  assert.equal((await planLocal()).plan, 'pro');
+  assert.equal((await s.llamar('GET', '/api/contabilidad/gastos', null, s.tokenAdmin))[0], 200);
+  const leo = (await aNube('POST', '/api/login', { email: 'leo@bar.com', password: 'clave-segura-1' }))[1].token;
+  assert.equal((await aNube('GET', '/api/panel/resumen', null, leo))[0], 200, 'el panel sigue (no es un extra)');
+  alta('plan', '--cliente', 'bar-chico', '--plan', 'pro', '--vence', '2099-01-31');
+});
+
 test('plan o extra inválidos no se asignan', () => {
+  assert.throws(() => alta('plan', '--cliente', 'bar-chico', '--plan', 'pro', '--modalidad', 'trueque'), /modalidad/);
   assert.throws(() => alta('plan', '--cliente', 'bar-chico', '--plan', 'oro'), /Plan inválido/);
   assert.throws(() => alta('plan', '--cliente', 'bar-chico', '--plan', 'pro', '--extras', 'robot'), /Extra inválido/);
   assert.throws(() => alta('plan', '--cliente', 'no-existe', '--plan', 'pro'), /No existe el local/);

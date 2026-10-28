@@ -20,20 +20,25 @@ const sumarDias = (fecha, dias) => new Date(Date.parse(fecha + 'T12:00:00Z') + d
 const extrasDe = l => { try { return JSON.parse(l.extras || '[]').filter(e => EXTRAS[e]); } catch (e) { return []; } };
 
 // Módulos que tiene hoy el local (vencido y pasada la gracia: los de Esencial)
+// De contado el plan no vence (vence es el mantenimiento): pasada la gracia solo se pierden los extras, que son mensuales
 function modulosLocal(l) {
-  if (l.vence && hoy() > sumarDias(l.vence, DIAS_GRACIA)) return modulosDe('esencial');
+  const vencido = l.vence && hoy() > sumarDias(l.vence, DIAS_GRACIA);
+  if (vencido && l.modalidad === 'contado') return modulosDe(l.plan);
+  if (vencido) return modulosDe('esencial');
   return modulosDe(l.plan || 'esencial', extrasDe(l));
 }
 const tieneModulo = (l, modulo) => modulosLocal(l).includes(modulo);
 
 // Validación de lo que asigna soporte
-function validarPlan({ plan, vence, extras }) {
+function validarPlan({ plan, vence, extras, modalidad }) {
   if (!PLANES[plan]) throw Object.assign(new Error(`Plan inválido: ${plan} (${Object.keys(PLANES).join(', ')})`), { status: 400 });
+  if (modalidad && !['mensual', 'contado'].includes(modalidad)) throw Object.assign(new Error('La modalidad es mensual o contado'), { status: 400 });
+  if (modalidad === 'contado' && !PLANES[plan].contado) throw Object.assign(new Error(`El plan ${plan} no se vende de contado`), { status: 400 });
   if (vence && !/^\d{4}-\d{2}-\d{2}$/.test(vence)) throw Object.assign(new Error('El vencimiento va como AAAA-MM-DD'), { status: 400 });
   const lista = String(extras || '').split(',').map(s => s.trim()).filter(Boolean);
   const malo = lista.find(e => !EXTRAS[e]);
   if (malo) throw Object.assign(new Error(`Extra inválido: ${malo} (${Object.keys(EXTRAS).join(', ')})`), { status: 400 });
-  return { plan, vence: vence || null, extras: JSON.stringify(lista) };
+  return { plan, vence: vence || null, extras: JSON.stringify(lista), modalidad: modalidad || 'mensual' };
 }
 
 const venceDePrueba = () => sumarDias(hoy(), DIAS_PRUEBA);
@@ -44,7 +49,7 @@ function registrarLicencias(app, { ruta, errorHttp, autenticarLocal }) {
     if (!clave) throw errorHttp(503, 'Esta nube no tiene configurada la clave de licencias (NUBE_CLAVE_LICENCIAS)');
     const l = await get('SELECT * FROM locales WHERE id = ?', [req.local.id]);
     res.json({ licencia: firmarLicencia({ cliente: l.cliente, plan: l.plan || 'esencial', extras: extrasDe(l),
-      vence: l.vence || null, local: l.token_hash.slice(0, 16), emitida: new Date().toISOString() }, clave) });
+      vence: l.vence || null, modalidad: l.modalidad || 'mensual', local: l.token_hash.slice(0, 16), emitida: new Date().toISOString() }, clave) });
   }));
 }
 

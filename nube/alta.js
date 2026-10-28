@@ -4,6 +4,8 @@
 //   node nube/alta.js usuario --cuenta "La Buena Mesa" --nombre "Ana" --email ana@x.com --password ********
 //   node nube/alta.js soporte --nombre "Soporte Fadido" --email soporte@fadido.com.ar --password ********
 //   node nube/alta.js plan    --cliente la-buena-mesa-centro --plan pro --vence 2026-12-31 [--extras asistente]
+//   node nube/alta.js plan    --cliente la-buena-mesa-centro --plan pro --modalidad contado --vence 2027-10-31
+//     (de contado: el plan queda para siempre y --vence es hasta cuándo está pago el mantenimiento)
 // El token del local se muestra UNA vez: va en el .env del local como NUBE_TOKEN (en la nube solo queda su hash).
 // Planes: esencial, pro, cadenas (ver src/planes.js). Un local nuevo sin --plan arranca con 30 días de prueba.
 // --vence es la fecha hasta la que está pagado (sin --vence: sin vencimiento). El local lo recibe en unos minutos.
@@ -18,7 +20,8 @@ function opciones(args) {
 }
 
 const describir = p => `${PLANES[p.plan].nombre}${JSON.parse(p.extras).length ? ' + ' + JSON.parse(p.extras).join(', ') : ''}` +
-  (p.vence ? `, vence el ${p.vence}` : ', sin vencimiento');
+  (p.modalidad === 'contado' ? `, de contado, ${p.vence ? `mantenimiento hasta el ${p.vence}` : 'mantenimiento sin vencimiento'}`
+    : p.vence ? `, vence el ${p.vence}` : ', sin vencimiento');
 
 async function main() {
   const [accion, ...resto] = process.argv.slice(2);

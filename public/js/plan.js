@@ -83,12 +83,15 @@ const Plan = {
     const d = this.datos;
     if (!d) { view.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>No se pudo cargar el plan</p></div>'; return; }
     const negocio = (App.config && App.config.nombre_negocio) || 'mi local';
-    const estado = {
+    let estado = {
       activo: d.vence ? `Al día hasta el ${fmtFecha(d.vence)}` : 'Activo',
       por_vencer: `Vence el ${fmtFecha(d.vence)}`, gracia: `Venció: en gracia hasta el ${fmtFecha(d.gracia_hasta)}`,
       vencido: 'Pausado por falta de pago', prueba: `Prueba gratis hasta el ${fmtFecha(d.vence)} (${d.dias} días)`,
-      prueba_terminada: 'Terminó la prueba gratis'
+      prueba_terminada: 'Terminó la prueba gratis',
+      mantenimiento_por_vencer: `Mantenimiento hasta el ${fmtFecha(d.vence)}`, mantenimiento_vencido: 'Mantenimiento vencido'
     }[d.estado] || '';
+    const contado = d.modalidad === 'contado';
+    if (contado && d.estado === 'activo') estado = d.vence ? `Comprado de contado · mantenimiento hasta el ${fmtFecha(d.vence)}` : 'Comprado de contado';
     const actual = d.origen === 'licencia' ? d.contratado : d.plan;
     const tarjeta = ([id, p]) => {
       const pedido = `Hola, quiero el plan ${p.nombre} de Fadido para ${negocio}.`;
@@ -101,19 +104,18 @@ const Plan = {
         <p class="text-muted">${esc(p.para)}</p>
         <div class="plan-precio">${fmtMoneda(p.precio)}<small>/mes${p.por_local ? ' por local' : ''}</small></div>
         <p class="text-muted plan-anual">o ${fmtMoneda(anual)} por año${p.por_local ? ' por local' : ''} (2 meses gratis)</p>
+        ${p.contado ? `<div class="plan-contado"><span>De contado</span> <strong>${fmtMoneda(p.contado)}</strong>${p.por_local ? ' por local' : ''}
+          <small>pago único + mantenimiento ${fmtMoneda(p.mantenimiento)}/mes${p.por_local ? ' por local' : ''}</small></div>` : ''}
         ${p.minimo_locales ? `<p class="text-muted">Desde ${p.minimo_locales} locales</p>` : ''}
         <ul class="plan-lista">
-          <li><i class="fas fa-check"></i> Pedidos, mesas, cocina, caja y cobros</li>
-          <li><i class="fas fa-check"></i> Factura electrónica ARCA incluida</li>
-          <li><i class="fas fa-check"></i> Funciona sin internet y copia en la nube</li>
-          <li><i class="fas fa-check"></i> Carta QR y llamado al mozo desde la mesa</li>
-          <li><i class="fas fa-check"></i> Usuarios ilimitados</li>
-          ${id === 'cadenas' ? '<li><i class="fas fa-check"></i> Todo lo del plan Pro</li>' : ''}
+          ${id === 'esencial' ? (d.incluido || []).map(x => `<li><i class="fas fa-check"></i> ${esc(x)}</li>`).join('')
+            : `<li><i class="fas fa-check"></i> Todo lo del plan ${id === 'cadenas' ? 'Pro' : 'Esencial'}</li>`}
           ${p.modulos.filter(m => id === 'pro' || !d.planes.pro.modulos.includes(m)).map(m => `<li><i class="fas fa-check"></i> ${esc(d.modulos_disponibles[m])}</li>`).join('')}
         </ul>
         ${id === actual ? '<button class="btn btn-outline" disabled>Tu plan</button>'
           : link ? `<a class="btn btn-primary" href="${esc(link)}" target="_blank" rel="noopener">Quiero este plan</a>`
             : '<p class="text-muted">Pedíselo a quien te instaló Fadido.</p>'}
+        ${id !== actual && link && p.contado ? `<a class="btn btn-outline btn-sm mt-10" href="${esc(this.linkVentas(`Hola, quiero el plan ${p.nombre} de Fadido de contado, con mantenimiento, para ${negocio}.`))}" target="_blank" rel="noopener">Lo quiero de contado</a>` : ''}
       </div>`;
     };
     view.innerHTML = `
@@ -130,11 +132,29 @@ const Plan = {
       </div>
       <div class="planes-grid mt-20">${Object.entries(d.planes).map(tarjeta).join('')}</div>
       <div class="card mt-20">
+        <div class="card-header"><span class="card-title"><i class="fas fa-handshake"></i> De contado con mantenimiento</span></div>
+        <p>Pagás el plan una sola vez y es tuyo para siempre. El mantenimiento mensual incluye:</p>
+        <ul class="plan-lista">${(d.mantenimiento || []).map(m => `<li><i class="fas fa-check"></i> ${esc(m)}</li>`).join('')}</ul>
+        <div class="table-container"><table class="table">
+          <thead><tr><th>Plan</th><th>Pago único</th><th>Mantenimiento por mes</th><th>Mantenimiento por año</th></tr></thead>
+          <tbody>${Object.values(d.planes).filter(p => p.contado).map(p => `<tr><td>${esc(p.nombre)}${p.por_local ? ' (por local)' : ''}</td>
+            <td><strong>${fmtMoneda(p.contado)}</strong></td><td>${fmtMoneda(p.mantenimiento)}</td>
+            <td>${fmtMoneda(Math.round(p.mantenimiento * 12 * (1 - d.descuentos.anual)))}</td></tr>`).join('')}</tbody>
+        </table></div>
+        <p class="text-muted">Si dejás de pagar el mantenimiento, Fadido sigue funcionando con todo lo de tu plan: solo dejás de recibir actualizaciones, cambios de ARCA y soporte. Los extras (como el Asistente IA) siguen siendo mensuales.</p>
+      </div>
+      <div class="card mt-20">
         <div class="card-header"><span class="card-title"><i class="fas fa-puzzle-piece"></i> Extras</span></div>
         ${Object.entries(d.extras_disponibles).map(([id, x]) => `<p><strong>${esc(x.nombre)}</strong>: + ${fmtMoneda(x.precio)} por mes.
           ${esc(x.nota || '')} ${d.modulos.includes(id) ? '<span class="badge badge-green">Activo</span>' : ''}</p>`).join('')}
-        <p class="text-muted">Pagando 6 meses juntos, 10 % menos; el año completo, 2 meses gratis. Alta, carga de la carta y capacitación a distancia sin cargo.</p>
+        <p class="text-muted">Pagando 6 meses juntos, 10 % menos; el año completo, 2 meses gratis.</p>
       </div>
+      ${d.instalacion ? `<div class="card mt-20">
+        <div class="card-header"><span class="card-title"><i class="fas fa-tools"></i> Instalación</span></div>
+        ${['distancia', 'presencial'].map(k => d.instalacion[k]).map(i => `<p><strong>${esc(i.nombre)}</strong>: ${i.precio ? `${fmtMoneda(i.precio)} por local, pago único` : 'sin cargo'}.
+          <span class="text-muted">${esc(i.incluye)}.</span></p>`).join('')}
+        <p class="text-muted">${esc(d.instalacion.nota)}</p>
+      </div>` : ''}
       <div class="card mt-20">
         <div class="card-header"><span class="card-title"><i class="fas fa-key"></i> Licencia</span></div>
         <p class="text-muted">Si el local está conectado a Fadido Nube, el plan se actualiza solo. Si no, pegá acá la licencia que te dio soporte.</p>
