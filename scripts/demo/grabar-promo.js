@@ -37,7 +37,7 @@ const ESCENAS = [
   { tipo: 'celular', min: 4.2, kicker: 'Carta QR', titulo: 'Tus clientes piden<br><em>desde la mesa</em>', captura: '15-carta-celular',
     voz: 'Tus clientes piden desde el QR, sin pagarle comisión a nadie.' },
   { tipo: 'pantalla', min: 4.2, kicker: 'Cobro y caja', titulo: 'Cobrás fácil.<br>La caja <em>cierra sola</em>', captura: '06b-cobro', extra: '08-caja',
-    voz: 'Cobrás con efectivo, tarjeta o Mercado Pago, y la caja cierra sola.' },
+    voz: 'Cobrás con efectivo, tarjeta, Mercado Pago, MODO o Cuenta DNI, y la caja cierra sola.' },
   { tipo: 'pantalla', min: 4.2, kicker: 'Recetas y costos', titulo: 'Sabés cuánto te deja<br><em>cada plato</em>', captura: '09b-sub-receta', extra: '09-rentabilidad',
     voz: 'Sabés cuánto te cuesta cada plato... y cuánto te deja.', lado: 'izq' },
   { tipo: 'pantalla', min: 4.2, kicker: 'Dashboard y contabilidad', titulo: 'Tus números,<br><em>en tiempo real</em>', captura: '02-dashboard', extra: '16-contabilidad-resultados',
@@ -93,8 +93,8 @@ function voz(edgeTts, ffmpeg, texto) {
 // Cada logo con su propio degradado: si dos comparten id y el primero está oculto, el segundo sale sin fondo
 const LOGO = id => `<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fb923c"/>
   <stop offset=".55" stop-color="#f97316"/><stop offset="1" stop-color="#e11d48"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#${id})"/>
-  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><path d="M15 46V32a8.5 8.5 0 0 1 17 0v14M32 32a8.5 8.5 0 0 1 17 0v14" stroke-width="6.5"/>
-  <path d="M10 50.5h44" stroke-width="4"/><path class="vapor" d="M23.5 17c-2-2 2-3.5 0-5.5M40.5 17c-2-2 2-3.5 0-5.5" stroke-width="2.6"/></g></svg>`;
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><path d="M24 51V26a10.5 10.5 0 0 1 18.5-6.5M16 33.5h16" stroke-width="6.5"/>
+  <path d="M37 51h17" stroke-width="4"/><path class="vapor" d="M42 45c-2.2-2.2 2.2-3.8 0-6.5M49 45c-2.2-2.2 2.2-3.8 0-6.5" stroke-width="2.6"/></g></svg>`;
 
 function htmlEscena(e, i) {
   const a = (t, anim, extra = '') => `data-t="${t}" data-a="${anim}" ${extra}`;
