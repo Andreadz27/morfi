@@ -17,7 +17,7 @@ const PD_TEXTOS={
     enviando:"Enviando...",todas:"Todas",agregar:"Agregar",item:"item",items:"items",resumen:"Resumen del pedido",la_cuenta:"La cuenta",total_mesa:"Total de la mesa",ya_pagado:"Ya pagado",
     falta_pagar:"Falta pagar",mp_titulo:"Pagar ahora con Mercado Pago",toda_cuenta:"Toda la cuenta",mi_parte:"Mi parte: dividir entre",personas:"personas",propina_equipo:"Propina para el equipo",
     sin_propina:"Sin propina",otra:"Otra",cuenta:"Cuenta",tu_parte:"Tu parte",propina:"Propina",pagas:"Pagás",pagar_mp:"Pagar {m} con Mercado Pago",abriendo_mp:"Abriendo Mercado Pago...",
-    otra_forma:"¿Pagás de otra forma? Te traemos la cuenta",como_pagas:"¿Cómo pagás? Te traemos la cuenta",efectivo:"Efectivo",tarjeta:"Tarjeta",cuenta_en_camino:"Listo: el mozo te trae la cuenta.",
+    otra_forma:"¿Pagás de otra forma? Te traemos la cuenta",como_pagas:"¿Cómo pagás? Te traemos la cuenta",efectivo:"Efectivo",tarjeta:"Tarjeta",transferencia:"Transferencia",transferi_a:"Transferí a este alias",titular:"Titular",copiar:"Copiar",copiado:"Copiado",aviso_transferi:"Ya transferí: avisar al mozo",cuenta_en_camino:"Listo: el mozo te trae la cuenta.",
     tus_pedidos:"Tus pedidos",tu_cuenta:"Tu cuenta",total:"Total",descuento:"Descuento",pagado:"Pagado",
     est_pendiente:"Esperando al mozo",est_confirmada:"Confirmado, en preparación",est_rechazada:"No se pudo tomar",est_atendida:"El mozo ya viene",avisado:"Avisado",
     tit_pedido:"Pedido",tit_mozo:"Llamaste al mozo",tit_cuenta:"Pediste la cuenta",sin_productos:"No hay productos.",sin_productos_cat:"Sin productos en esta categoría.",
@@ -34,7 +34,7 @@ const PD_TEXTOS={
     enviando:"Sending...",todas:"All",agregar:"Add",item:"item",items:"items",resumen:"Order summary",la_cuenta:"The bill",total_mesa:"Table total",ya_pagado:"Already paid",
     falta_pagar:"Left to pay",mp_titulo:"Pay now with Mercado Pago",toda_cuenta:"The whole bill",mi_parte:"My share: split between",personas:"people",propina_equipo:"Tip for the team",
     sin_propina:"No tip",otra:"Other",cuenta:"Bill",tu_parte:"Your share",propina:"Tip",pagas:"You pay",pagar_mp:"Pay {m} with Mercado Pago",abriendo_mp:"Opening Mercado Pago...",
-    otra_forma:"Paying another way? We'll bring you the bill",como_pagas:"How will you pay? We'll bring you the bill",efectivo:"Cash",tarjeta:"Card",cuenta_en_camino:"Done: the waiter is bringing your bill.",
+    otra_forma:"Paying another way? We'll bring you the bill",como_pagas:"How will you pay? We'll bring you the bill",efectivo:"Cash",tarjeta:"Card",transferencia:"Bank transfer",transferi_a:"Transfer to this alias",titular:"Account holder",copiar:"Copy",copiado:"Copied",aviso_transferi:"I've transferred: let the waiter know",cuenta_en_camino:"Done: the waiter is bringing your bill.",
     tus_pedidos:"Your orders",tu_cuenta:"Your bill",total:"Total",descuento:"Discount",pagado:"Paid",
     est_pendiente:"Waiting for the waiter",est_confirmada:"Confirmed, being prepared",est_rechazada:"Couldn't be taken",est_atendida:"The waiter is on the way",avisado:"Notified",
     tit_pedido:"Order",tit_mozo:"You called the waiter",tit_cuenta:"You asked for the bill",sin_productos:"No items.",sin_productos_cat:"No items in this category.",
@@ -51,7 +51,7 @@ const PD_TEXTOS={
     enviando:"Enviando...",todas:"Todas",agregar:"Adicionar",item:"item",items:"itens",resumen:"Resumo do pedido",la_cuenta:"A conta",total_mesa:"Total da mesa",ya_pagado:"Já pago",
     falta_pagar:"Falta pagar",mp_titulo:"Pagar agora com Mercado Pago",toda_cuenta:"A conta toda",mi_parte:"Minha parte: dividir entre",personas:"pessoas",propina_equipo:"Gorjeta para a equipe",
     sin_propina:"Sem gorjeta",otra:"Outra",cuenta:"Conta",tu_parte:"Sua parte",propina:"Gorjeta",pagas:"Você paga",pagar_mp:"Pagar {m} com Mercado Pago",abriendo_mp:"Abrindo o Mercado Pago...",
-    otra_forma:"Vai pagar de outro jeito? Levamos a conta",como_pagas:"Como vai pagar? Levamos a conta",efectivo:"Dinheiro",tarjeta:"Cartão",cuenta_en_camino:"Pronto: o garçom já leva a conta.",
+    otra_forma:"Vai pagar de outro jeito? Levamos a conta",como_pagas:"Como vai pagar? Levamos a conta",efectivo:"Dinheiro",tarjeta:"Cartão",transferencia:"Transferência",transferi_a:"Transfira para este alias",titular:"Titular",copiar:"Copiar",copiado:"Copiado",aviso_transferi:"Já transferi: avisar o garçom",cuenta_en_camino:"Pronto: o garçom já leva a conta.",
     tus_pedidos:"Seus pedidos",tu_cuenta:"Sua conta",total:"Total",descuento:"Desconto",pagado:"Pago",
     est_pendiente:"Aguardando o garçom",est_confirmada:"Confirmado, em preparo",est_rechazada:"Não foi possível aceitar",est_atendida:"O garçom já vem",avisado:"Avisado",
     tit_pedido:"Pedido",tit_mozo:"Você chamou o garçom",tit_cuenta:"Você pediu a conta",sin_productos:"Não há produtos.",sin_productos_cat:"Sem produtos nesta categoria.",
@@ -261,8 +261,30 @@ const PedidoOnline={
         <div class="mesa-acciones">
           <button class="btn btn-outline" onclick="PedidoOnline.cuentaAlMozo('efectivo')"><i class="fas fa-money-bill-wave"></i> ${pdE(pdT("efectivo"))}</button>
           <button class="btn btn-outline" onclick="PedidoOnline.cuentaAlMozo('tarjeta')"><i class="fas fa-credit-card"></i> ${pdE(pdT("tarjeta"))}</button>
+          ${e.pago&&e.pago.transferencia?`<button class="btn btn-outline" onclick="PedidoOnline.verTransferencia()"><i class="fas fa-university"></i> ${pdE(pdT("transferencia"))}</button>`:""}
         </div>
+        <div id="pagoTransferencia"></div>
       </div>`;
+  },
+  // Transferencia: el alias para copiar y, cuando transfirió, avisa al mozo (que lo verifica antes de cerrar la mesa)
+  verTransferencia(){
+    const tr=this.mesa.pago.transferencia,c=this.mesa.cuenta;
+    document.getElementById("pagoTransferencia").innerHTML=`
+      <div class="form-resumen mt-10">
+        <div class="resumen-row"><span>${pdE(pdT("transferi_a"))}</span></div>
+        <div class="resumen-total"><strong id="aliasTransferencia">${pdE(tr.alias)}</strong>
+          <button type="button" class="btn btn-outline btn-sm" onclick="PedidoOnline.copiarAlias(this)"><i class="fas fa-copy"></i> ${pdE(pdT("copiar"))}</button></div>
+        ${tr.titular?`<div class="resumen-row"><span>${pdE(pdT("titular"))}</span><strong>${pdE(tr.titular)}</strong></div>`:""}
+        <div class="resumen-row"><span>${pdE(pdT("falta_pagar"))}</span><strong>${pdM(c.saldo)}</strong></div>
+        <button class="btn btn-primary btn-block mt-10" onclick="PedidoOnline.cuentaAlMozo('transferencia')"><i class="fas fa-check"></i> ${pdE(pdT("aviso_transferi"))}</button>
+      </div>`;
+  },
+  async copiarAlias(btn){
+    const alias=this.mesa.pago.transferencia.alias;
+    try{await navigator.clipboard.writeText(alias);}catch(e){
+      const r=document.createRange();r.selectNodeContents(document.getElementById("aliasTransferencia"));const s=getSelection();s.removeAllRanges();s.addRange(r);
+    }
+    btn.innerHTML='<i class="fas fa-check"></i> '+pdE(pdT("copiado"));
   },
   // Tocar la cantidad de personas elige "Mi parte" (si no, seguía cobrando la cuenta entera)
   elegirPartes(){

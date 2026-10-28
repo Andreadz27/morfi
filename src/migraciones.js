@@ -380,6 +380,9 @@ async function migrarEsquema() {
   await agregarColumna('configuracion', 'cierre_propinas_usuarios', "TEXT DEFAULT ''");
   // Eslogan del local (ej. "Café & cosas ricas"): va debajo del nombre en la carta y en el ticket
   await agregarColumna('configuracion', 'eslogan', "TEXT DEFAULT ''");
+  // Cobro por transferencia: alias o CBU/CVU del local (en la pantalla de cobro, la precuenta y el QR de la mesa)
+  await agregarColumna('configuracion', 'alias_transferencia', "TEXT DEFAULT ''");
+  await agregarColumna('configuracion', 'titular_transferencia', "TEXT DEFAULT ''");
   await agregarColumna('caja', 'pendiente_arqueo', 'INTEGER NOT NULL DEFAULT 0');
   await agregarColumna('caja', 'arqueo_por', 'INTEGER');
   await agregarColumna('caja', 'arqueo_en', 'TEXT');

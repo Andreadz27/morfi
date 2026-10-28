@@ -70,13 +70,22 @@ app.put('/api/config', autenticar, esAdmin, async (req, res) => {
       b.eslogan = String(b.eslogan || '').trim();
       if (b.eslogan.length > MAX_ESLOGAN) throw errorHttp(400, `El eslogan puede tener hasta ${MAX_ESLOGAN} caracteres`);
     }
+    // Alias: 6 a 20 letras, números, puntos o guiones (BCRA). CBU/CVU: 22 números.
+    if (b.alias_transferencia !== undefined) {
+      b.alias_transferencia = String(b.alias_transferencia || '').trim();
+      const a = b.alias_transferencia.replace(/\s/g, '');
+      if (a && !/^\d{22}$/.test(a) && !/^[A-Za-z0-9.-]{6,20}$/.test(a))
+        throw errorHttp(400, 'El alias tiene de 6 a 20 letras, números, puntos o guiones (o un CBU/CVU de 22 números)');
+      b.alias_transferencia = /^\d{22}$/.test(a) ? a : a.toLowerCase();
+    }
+    if (b.titular_transferencia !== undefined) b.titular_transferencia = String(b.titular_transferencia || '').trim().slice(0, 60);
     if (b.qr_mesa_modo !== undefined && !MODOS_QR_MESA.includes(b.qr_mesa_modo)) throw errorHttp(400, 'Modo de pedido por QR inválido');
     // Programa de puntos: cada cuántos pesos se gana un punto, cuánto vale al canjear y desde cuántos se canjea
     for (const c of ['puntos_cada', 'puntos_valor']) if (b[c] !== undefined && !(Number(b[c]) > 0)) throw errorHttp(400, 'Los valores de los puntos tienen que ser mayores a cero');
     if (b.puntos_minimo !== undefined && !(Number(b.puntos_minimo) >= 0)) throw errorHttp(400, 'Mínimo de puntos inválido');
     // Cierre del día: hora HH:MM, días que abre (0 = domingo) y quiénes reparten las propinas
     validarConfigCierre(b);
-    await actualizarParcial('configuracion', 1, b, ['nombre_negocio', 'eslogan', 'direccion', 'telefono', 'email', 'cuit', 'tasa_iva',
+    await actualizarParcial('configuracion', 1, b, ['nombre_negocio', 'eslogan', 'direccion', 'telefono', 'email', 'cuit', 'alias_transferencia', 'titular_transferencia', 'tasa_iva',
       'moneda', 'activar_impresion', 'tipo_negocio', 'modulos_activos', 'terminologia', 'setup_completado', 'mozo_cobra_mesa', 'pin_autorizacion', 'arqueo_ciego',
       'qr_mesa_modo', 'puntos_activo', 'puntos_cada', 'puntos_valor', 'puntos_minimo',
       'cierre_auto_activo', 'cierre_hora', 'cierre_dias', 'cierre_propinas_usuarios']);
