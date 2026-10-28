@@ -71,8 +71,15 @@ const App = {
         if (App.currentView === 'pedidos') Pedidos.render();
       });
 
+      // Pedidos de mostrador y barra para retirar (pedido nuevo, listo, pagado, aviso de transferencia)
+      this.socket.on('retiro:actualizar', (data) => {
+        if (App.currentView === 'pos') POS.actualizarBadgeRetiro();
+        if (data && data.aviso === 'transferencia' && App.puede('pedidos.cobrar')) this.showToast('Un cliente de la barra avisó que transfirió: confirmalo en Venta → Para retirar', 'warning', 8000);
+      });
+
       // Cocina: nueva comanda o cambio de estado
       this.socket.on('cocina:actualizar', () => {
+        if (App.currentView === 'pos') POS.actualizarBadgeRetiro();
         if (App.currentView === 'cocina') {
           Cocina.refresh();
         } else {

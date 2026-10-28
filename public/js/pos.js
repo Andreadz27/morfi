@@ -84,6 +84,7 @@ const POS = {
         <div class="pos-products">
           <div class="pos-products-head">
             <h3><i class="fas fa-utensils"></i> Productos</h3>
+            ${App.puede('pedidos.ver') ? `<button class="btn btn-outline btn-sm" onclick="POS.verRetiro()" title="Pedidos de mostrador y barra: en preparación, listos y cobro"><i class="fas fa-bell-concierge"></i> Para retirar <span class="pos-action-badge" id="posRetiroBadge"></span></button>` : ''}
             <span class="pos-products-count">${filtered.length} disponibles</span>
           </div>
           <div class="pos-buscador">
@@ -140,13 +141,12 @@ const POS = {
                 <span id="posTotal">${fmtMoneda(this.cartFinal())}</span>
               </div>
             </div>
-            <button class="pos-checkout-btn" onclick="POS.checkout()" ${this.cart.length === 0 ? 'disabled' : ''}>
-              <i class="fas fa-check-circle"></i> Procesar pedido
-            </button>
+            ${this.htmlBotonesCobro()}
           </div>
         </div>
       </div>
     `;
+    this.actualizarBadgeRetiro();
   },
 
   renderCartItems() {
@@ -470,9 +470,7 @@ setCategoria(id) {
             <span>${fmtMoneda(this.cartFinal())}</span>
           </div>
         </div>
-        <button class="pos-checkout-btn" onclick="POS.checkout()" ${this.cart.length === 0 ? 'disabled' : ''}>
-          <i class="fas fa-check-circle"></i> Procesar pedido
-        </button>
+        ${this.htmlBotonesCobro()}
       `;
     }
   },
@@ -584,6 +582,157 @@ checkout() {
       document.getElementById('checkoutDeliveryGroup').style.display = 'grid';
       document.getElementById('checkoutDeliveryExtra').style.display = 'block';
     }
+  },
+
+  // ===== Cobrar y enviar en un toque (mostrador / barra) =====
+  // Un solo paso: se crea el pedido de mostrador, va a la cocina y se cobra. Para mesas, delivery o take away con
+  // teléfono sigue "Procesar pedido".
+  htmlBotonesCobro() {
+    const vacio = this.cart.length === 0 ? 'disabled' : '';
+    return `${App.puede('pedidos.cobrar') ? `<button class="pos-rapido-btn" onclick="POS.cobroRapido()" ${vacio}>
+        <i class="fas fa-bolt"></i> Cobrar y enviar (mostrador)
+      </button>` : ''}
+      <button class="pos-checkout-btn" onclick="POS.checkout()" ${vacio} ${App.puede('pedidos.cobrar') ? 'style="background:#475569"' : ''}>
+        <i class="fas fa-check-circle"></i> Procesar pedido
+      </button>`;
+  },
+
+  cobroRapido() {
+    if (this.cart.length === 0) return;
+    const metodos = Object.entries(Cobro.METODOS).filter(([v]) => v !== 'giftcard');
+    const total = this.cartFinal();
+    const alias = App.config && App.config.alias_transferencia;
+    App.showModal(`
+      <form onsubmit="POS.confirmarCobroRapido(event)">
+        <p class="cont-total-form mb-10">Total: <strong>${fmtMoneda(total)}</strong></p>
+        <div class="form-group">
+          <label>Nombre <small class="text-muted">(con él lo llaman cuando está listo; opcional)</small></label>
+          <input type="text" id="rapidoNombre" maxlength="40" placeholder="Ej.: Ana">
+        </div>
+        <div class="form-group">
+          <label>Cómo paga</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px" id="rapidoMetodos">
+            ${metodos.map(([v, t], i) => `<label class="btn btn-outline btn-sm" style="cursor:pointer"><input type="radio" name="rapidoMetodo" value="${v}" ${i === 0 ? 'checked' : ''} onchange="POS.cambiarMetodoRapido()"> ${esc(t)}</label>`).join('')}
+          </div>
+        </div>
+        <div class="form-group" id="rapidoEfectivo">
+          <label>Recibido <small class="text-muted">(para calcular el vuelto; opcional)</small></label>
+          <input type="number" id="rapidoRecibido" min="0" step="0.01" placeholder="${total}" oninput="POS.vueltoRapido()">
+          <small id="rapidoVuelto" class="text-muted"></small>
+        </div>
+        ${alias ? `<p class="text-muted" id="rapidoAlias" style="display:none"><i class="fas fa-university"></i> Alias: <strong>${esc(alias)}</strong></p>` : ''}
+        <div class="form-group">
+          <label>Notas para cocina</label>
+          <input type="text" id="rapidoNotas" maxlength="300" placeholder="Ej.: sin hielo">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-success"><i class="fas fa-bolt"></i> Cobrar y enviar a cocina</button>
+        </div>
+      </form>`, { title: 'Cobrar y enviar' });
+    this.cambiarMetodoRapido();
+    setTimeout(() => { const i = document.getElementById('rapidoNombre'); if (i) i.focus(); }, 50);
+  },
+
+  metodoRapido() {
+    const r = document.querySelector('input[name="rapidoMetodo"]:checked');
+    return r ? r.value : 'efectivo';
+  },
+
+  cambiarMetodoRapido() {
+    const m = this.metodoRapido();
+    const ef = document.getElementById('rapidoEfectivo');
+    if (ef) ef.style.display = m === 'efectivo' ? '' : 'none';
+    const al = document.getElementById('rapidoAlias');
+    if (al) al.style.display = m === 'transferencia' ? '' : 'none';
+  },
+
+  vueltoRapido() {
+    const recibido = Number(document.getElementById('rapidoRecibido').value) || 0;
+    const v = Math.round((recibido - this.cartFinal()) * 100) / 100;
+    document.getElementById('rapidoVuelto').textContent = recibido ? (v >= 0 ? `Vuelto: ${fmtMoneda(v)}` : `Faltan ${fmtMoneda(-v)}`) : '';
+  },
+
+  confirmarCobroRapido(e) {
+    e.preventDefault();
+    return App.sinDobleEnvio('pos.cobroRapido', () => this._cobroRapido());
+  },
+
+  async _cobroRapido() {
+    const metodo = this.metodoRapido();
+    const cliente = document.getElementById('rapidoNombre').value.trim();
+    const notas = document.getElementById('rapidoNotas').value.trim();
+    const recibidoTxt = metodo === 'efectivo' ? document.getElementById('rapidoRecibido').value : '';
+    if (recibidoTxt && Number(recibidoTxt) < this.cartFinal() - 0.009) return App.showToast('El efectivo recibido no cubre el total', 'warning');
+    const items = this.cart.map(item => ({ producto_id: item.producto_id, nombre: item.nombre, cantidad: item.cantidad, precio: item.precio, opciones: item.opciones || [] }));
+    let pedido;
+    try {
+      pedido = await API.createPedido({ tipo: 'mostrador', cliente, items, notas, descuento: this.descuento, propina: this.propina },
+        `Pedido ${cliente}`.trim());
+    } catch (err) { return App.showToast(err.message, 'error'); }
+    this.cart = []; this.descuento = 0; this.propina = 0;
+    App.closeModal();
+    this.paint(document.getElementById('view-pos'));
+    if (pedido.encolado) return App.showToast('Sin WiFi: el pedido quedó guardado y se envía solo al volver la conexión. Cobralo desde Pedidos.', 'warning', 9000);
+    try {
+      const r = await API.cobrarEnMesa(pedido.id, { pagos: [{ metodo, monto: pedido.total, ...(recibidoTxt ? { recibido: Number(recibidoTxt) } : {}) }] });
+      App.showToast(`Pedido ${pedido.numero_pedido} cobrado y en la cocina${r && r.vuelto > 0 ? ` · vuelto ${fmtMoneda(r.vuelto)}` : ''}`, 'success', 7000);
+    } catch (err) {
+      // El pedido ya está en la cocina: el cobro se hace desde Pedidos (no se crea de nuevo)
+      App.showToast(`Pedido ${pedido.numero_pedido} enviado a la cocina, pero no se pudo cobrar: ${err.message}. Cobralo desde Pedidos.`, 'error', 10000);
+    }
+    this.actualizarBadgeRetiro();
+  },
+
+  // ===== Para retirar: pedidos de mostrador y barra en preparación y listos =====
+  async actualizarBadgeRetiro() {
+    const b = document.getElementById('posRetiroBadge');
+    if (!b) return;
+    try {
+      const t = await API.getRetiro();
+      const avisos = [...t.preparando, ...t.listos].filter(p => p.aviso_pago).length;
+      b.textContent = t.listos.length ? `${t.listos.length} listo${t.listos.length > 1 ? 's' : ''}` : (t.preparando.length || '');
+      b.style.background = avisos ? '#dc2626' : '';
+      if (avisos) b.textContent += ' · $';
+    } catch (e) { b.textContent = ''; }
+  },
+
+  async verRetiro() {
+    try {
+      const t = await API.getRetiro();
+      const fila = (p, listo) => `<tr>
+        <td><strong>#${esc(p.numero_corto)}</strong> ${esc(p.nombre || '')} <small class="text-muted">${esc(p.numero_pedido)}</small>${p.origen === 'barra' ? ' <span class="badge badge-orange">QR</span>' : ''}</td>
+        <td>${listo ? '<span class="badge badge-green">Listo</span>' : '<span class="badge badge-gray">En preparación</span>'}</td>
+        <td>${p.pagado ? '<span class="text-success">Pagado</span>' : `Falta ${fmtMoneda(p.saldo)}${p.aviso_pago === 'transferencia' ? ' <span class="badge badge-red">Avisó transferencia</span>' : ''}`}</td>
+        <td style="white-space:nowrap">
+          ${!p.pagado && p.aviso_pago === 'transferencia' && App.puede('pedidos.cobrar') ? `<button class="btn btn-success btn-sm" onclick="POS.transferenciaRecibida(${p.id})"><i class="fas fa-university"></i> Transferencia recibida</button>` : ''}
+          ${!p.pagado && App.puede('pedidos.cobrar') ? `<button class="btn btn-outline btn-sm" onclick="App.closeModal();Cobro.abrir(${p.id})"><i class="fas fa-cash-register"></i> Cobrar</button>` : ''}
+          <button class="btn btn-primary btn-sm" onclick="POS.entregado(${p.id}, ${p.pagado})"><i class="fas fa-check"></i> Entregado</button>
+        </td></tr>`;
+      const filas = t.listos.map(p => fila(p, true)).join('') + t.preparando.map(p => fila(p, false)).join('');
+      App.showModal(filas ? `<div class="table-wrap"><table>
+        <thead><tr><th>Pedido</th><th>Estado</th><th>Pago</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>
+        <p class="text-muted mt-10">Los listos salen de la pantalla de retiro al tocar <strong>Entregado</strong> (o solos a los 45 minutos).</p>`
+        : '<div class="empty-state"><i class="fas fa-bell-concierge"></i><p>No hay pedidos de mostrador ni de barra pendientes</p></div>',
+        { title: 'Para retirar', large: true });
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  async transferenciaRecibida(id) {
+    if (!confirm('¿Ya viste la transferencia en la cuenta? Se cobra lo que falta.')) return;
+    try {
+      const r = await API.cobrarTransferencia(id);
+      App.showToast(`${r.numero_pedido}: cobrado ${fmtMoneda(r.monto)} por transferencia`, 'success');
+    } catch (err) { App.showToast(err.message, 'error'); }
+    this.verRetiro();
+    this.actualizarBadgeRetiro();
+  },
+
+  async entregado(id, pagado) {
+    if (!pagado && !confirm('Este pedido todavía no está pago. ¿Lo entregás igual?')) return;
+    try { await API.marcarRetirado(id); } catch (err) { App.showToast(err.message, 'error'); }
+    this.verRetiro();
+    this.actualizarBadgeRetiro();
   },
 
   confirmCheckout() {

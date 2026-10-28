@@ -131,6 +131,11 @@ const API = {
   atenderSolicitudMesa(id) { return this.request('POST', `/mesas/solicitudes/${id}/atender`); },
   getQrMesas(base) { return this.request('GET', `/mesas/qr?base=${encodeURIComponent(base)}`); },
   nuevoQrMesa(id) { return this.request('POST', `/mesas/${id}/qr`); },
+  getQrBarra(base, nuevo) { return this.request('GET', `/barra/qr?base=${encodeURIComponent(base)}${nuevo ? '&nuevo=1' : ''}`); },
+  getRetiro() { return this.request('GET', '/retiro'); },
+  marcarRetirado(id) { return this.request('POST', `/pedidos/${id}/retirado`); },
+  cobrarTransferencia(id) { return this.request('POST', `/pedidos/${id}/cobrar-transferencia`); },
+  cobrarTransferenciaMesa(solicitudId) { return this.request('POST', `/mesas/solicitudes/${solicitudId}/cobrar-transferencia`); },
   getRedLocal() { return this.request('GET', '/red-local'); },
 
   // ===== Reservas =====
