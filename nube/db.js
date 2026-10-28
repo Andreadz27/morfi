@@ -57,6 +57,8 @@ const listo = (async () => {
     await run('ALTER TABLE locales ADD COLUMN vence TEXT');
     await run("UPDATE locales SET vence = date('now', '+30 days')");
   }
+  // De contado (pago único + mantenimiento): ahí vence es hasta cuándo está pago el mantenimiento
+  if (!cols.includes('modalidad')) await run("ALTER TABLE locales ADD COLUMN modalidad TEXT NOT NULL DEFAULT 'mensual'");
   await run(`CREATE TABLE IF NOT EXISTS cartas (
     local_id INTEGER PRIMARY KEY, datos TEXT NOT NULL, actualizado_en TEXT DEFAULT CURRENT_TIMESTAMP)`);
   // datos (nombre, teléfono, dirección del cliente) se borra apenas el local recibe el pedido

@@ -24,13 +24,14 @@ const MODULOS = {
 
 const PRO = ['mesa_qr', 'online', 'apps_delivery', 'whatsapp', 'personal', 'fidelizacion', 'costos', 'contabilidad', 'panel_nube'];
 
+// precio: abono mensual. contado: pago único (licencia de por vida del plan) + mantenimiento por mes (ver MANTENIMIENTO)
 const PLANES = {
-  esencial: { nombre: 'Esencial', precio: 24900, modulos: [],
+  esencial: { nombre: 'Esencial', precio: 24900, contado: 490000, mantenimiento: 7900, modulos: [],
     para: 'Cafés, bares, rotiserías y locales chicos' },
-  pro: { nombre: 'Pro', precio: 49900, modulos: PRO,
+  pro: { nombre: 'Pro', precio: 49900, contado: 990000, mantenimiento: 14900, modulos: PRO,
     para: 'Restaurantes con salón, delivery y equipo' },
-  cadenas: { nombre: 'Cadenas', precio: 44900, por_local: true, minimo_locales: 2, modulos: [...PRO, 'multisucursal'],
-    para: 'Dos o más sucursales' },
+  cadenas: { nombre: 'Cadenas', precio: 44900, contado: 890000, mantenimiento: 12900, por_local: true, minimo_locales: 2,
+    modulos: [...PRO, 'multisucursal'], para: 'Dos o más sucursales' },
   // Prueba gratis de una instalación nueva (y de un local nuevo en la nube): todo incluido
   prueba: { nombre: 'Prueba gratis', precio: 0, modulos: Object.keys(MODULOS), interno: true }
 };
@@ -40,6 +41,15 @@ const EXTRAS = {
   asistente: { nombre: 'Asistente IA por WhatsApp', precio: 19900,
     nota: 'El consumo de IA va en la cuenta de Anthropic del local (su propia clave)' }
 };
+
+// De contado: el plan se paga una vez y queda para siempre, aunque se deje de pagar el mantenimiento.
+// El mantenimiento (mensual; el año adelantado con los mismos descuentos) incluye esto:
+const MANTENIMIENTO = [
+  'Actualizaciones y mejoras nuevas',
+  'Cambios de ARCA y de la factura electrónica al día',
+  'Soporte por WhatsApp y a distancia',
+  'Copia de seguridad en la nube y panel Morfi Nube'
+];
 
 const DIAS_PRUEBA = 30;
 // Con el plan vencido sigue todo igual estos días; después quedan solo los módulos de Esencial
@@ -68,4 +78,4 @@ function modulosDe(plan, extras = []) {
 // Plan más barato que incluye el módulo (o el extra que hay que sumar)
 const planMinimo = modulo => PLAN_MINIMO[modulo] || null;
 
-module.exports = { MODULOS, PLANES, EXTRAS, DIAS_PRUEBA, DIAS_GRACIA, DIAS_AVISO, DESCUENTOS, VENTAS, modulosDe, planMinimo };
+module.exports = { MODULOS, PLANES, EXTRAS, MANTENIMIENTO, DIAS_PRUEBA, DIAS_GRACIA, DIAS_AVISO, DESCUENTOS, VENTAS, modulosDe, planMinimo };

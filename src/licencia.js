@@ -46,8 +46,19 @@ async function estadoLicencia(hoy = fechaLocal()) {
   if (lic) {
     const extras = (Array.isArray(lic.extras) ? lic.extras : []).filter(e => EXTRAS[e]);
     const base = { origen: 'licencia', contratado: lic.plan, cliente: lic.cliente || null, vence: lic.vence || null };
+    if (lic.modalidad === 'contado') base.modalidad = 'contado';
     if (!lic.vence) return resultado(lic.plan, extras, { ...base, estado: 'activo', aviso: '' });
     const dias = diasEntre(hoy, lic.vence);
+    // De contado el plan es suyo para siempre: vence solo el mantenimiento (y, pasada la gracia, los extras, que son mensuales)
+    if (lic.modalidad === 'contado') {
+      if (dias >= 0) {
+        const pronto = dias <= DIAS_AVISO;
+        return resultado(lic.plan, extras, { ...base, estado: pronto ? 'mantenimiento_por_vencer' : 'activo', dias,
+          aviso: pronto ? `El mantenimiento de Morfi vence ${dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`} (${fechaAR(lic.vence)}). Tu plan sigue siendo tuyo; renovalo para seguir con actualizaciones, cambios de ARCA y soporte.` : '' });
+      }
+      return resultado(lic.plan, hoy <= sumarDias(lic.vence, DIAS_GRACIA) ? extras : [], { ...base, estado: 'mantenimiento_vencido',
+        aviso: `El mantenimiento venció el ${fechaAR(lic.vence)}. Tu plan ${(PLANES[lic.plan] || PLANES.esencial).nombre} sigue completo, pero sin actualizaciones, cambios de ARCA ni soporte hasta que lo renueves.` });
+    }
     const gracia = sumarDias(lic.vence, DIAS_GRACIA);
     const nombre = (PLANES[lic.plan] || PLANES.esencial).nombre;
     if (dias >= 0) {

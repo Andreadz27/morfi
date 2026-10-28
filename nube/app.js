@@ -225,7 +225,7 @@ async function estadoLocales(locales) {
     const precios = await cartaCentral.cambiosTrabados(l.id);
     return { id: l.id, nombre: l.nombre, cliente: l.cliente, cuenta: cuenta && cuenta.nombre, ultima_sync: l.ultima_sync,
       minutos_sin_sync: minutos, estado, carta_online: carta && licencias.tieneModulo(l, 'online') ? `/l/${encodeURIComponent(l.cliente)}` : null,
-      plan: { plan: l.plan, extras: licencias.extrasDe(l), vence: l.vence, modulos: licencias.modulosLocal(l) },
+      plan: { plan: l.plan, modalidad: l.modalidad || 'mensual', extras: licencias.extrasDe(l), vence: l.vence, modulos: licencias.modulosLocal(l) },
       alertas: alertas(l, estado, minutos, trabados, precios) };
   }));
 }
@@ -246,21 +246,23 @@ app.get('/api/soporte/locales', autenticarUsuario, ruta(async (req, res) => {
 // ============ ALTAS (las usa nube/alta.js) ============
 
 // Un local nuevo arranca en prueba gratis (todo incluido) por 30 días, salvo que se indique el plan
-async function altaLocal({ cuenta, nombre, cliente, plan = 'prueba', vence, extras }) {
+async function altaLocal({ cuenta, nombre, cliente, plan = 'prueba', vence, extras, modalidad }) {
   if (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(String(cliente || ''))) throw errorHttp(400, 'El cliente va en minúsculas y sin espacios (ej. la-buena-mesa)');
-  const p = licencias.validarPlan({ plan, vence: vence || (plan === 'prueba' ? licencias.venceDePrueba() : null), extras });
+  const p = licencias.validarPlan({ plan, vence: vence || (plan === 'prueba' ? licencias.venceDePrueba() : null), extras, modalidad });
   let c = await get('SELECT id FROM cuentas WHERE nombre = ?', [cuenta]);
   if (!c) c = { id: (await run('INSERT INTO cuentas (nombre) VALUES (?)', [cuenta])).id };
   const token = 'mnl_' + crypto.randomBytes(24).toString('hex');
-  const { id } = await run('INSERT INTO locales (cuenta_id, nombre, cliente, token_hash, plan, vence, extras) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [c.id, nombre, cliente, hashToken(token), p.plan, p.vence, p.extras]);
+  const { id } = await run('INSERT INTO locales (cuenta_id, nombre, cliente, token_hash, plan, vence, extras, modalidad) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [c.id, nombre, cliente, hashToken(token), p.plan, p.vence, p.extras, p.modalidad]);
   return { id, cuenta_id: c.id, token, ...p };
 }
 
-// Plan contratado de un local (soporte, al cobrar): vence = pagado hasta (vacío = sin vencimiento)
-async function asignarPlan({ cliente, plan, vence, extras }) {
-  const p = licencias.validarPlan({ plan, vence, extras });
-  const { changes } = await run('UPDATE locales SET plan = ?, vence = ?, extras = ? WHERE cliente = ?', [p.plan, p.vence, p.extras, String(cliente || '')]);
+// Plan contratado de un local (soporte, al cobrar): vence = pagado hasta (vacío = sin vencimiento).
+// De contado (--modalidad contado), vence = mantenimiento pagado hasta: el plan no se pierde al vencer.
+async function asignarPlan({ cliente, plan, vence, extras, modalidad }) {
+  const p = licencias.validarPlan({ plan, vence, extras, modalidad });
+  const { changes } = await run('UPDATE locales SET plan = ?, vence = ?, extras = ?, modalidad = ? WHERE cliente = ?',
+    [p.plan, p.vence, p.extras, p.modalidad, String(cliente || '')]);
   if (!changes) throw errorHttp(404, `No existe el local "${cliente}"`);
   return p;
 }

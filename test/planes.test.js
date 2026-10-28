@@ -96,6 +96,24 @@ test('vencido: aviso antes, gracia de 10 días con todo, después solo Esencial'
   assert.match(r.error, /pausado/);
 });
 
+test('de contado: vencido el mantenimiento el plan sigue completo; los extras mensuales se apagan pasada la gracia', async () => {
+  let e = (await ponerLicencia({ plan: 'pro', modalidad: 'contado', extras: ['asistente'], vence: sumarDias(fechaLocal(), 3) }))[1];
+  assert.equal(e.modalidad, 'contado');
+  assert.equal(e.estado, 'mantenimiento_por_vencer');
+  assert.match(e.aviso, /mantenimiento de Morfi vence en 3 días/);
+
+  e = (await ponerLicencia({ plan: 'pro', modalidad: 'contado', extras: ['asistente'], vence: fechaLocal(30) }))[1];
+  assert.equal(e.estado, 'mantenimiento_vencido');
+  assert.equal(e.plan, 'pro');
+  assert.match(e.aviso, /sigue completo/);
+  assert.equal((await gastos())[0], 200, 'lo comprado no se apaga');
+  assert.ok(!e.modulos.includes('asistente'), 'el extra es mensual');
+
+  const d = await estado();
+  assert.ok(d.planes.pro.contado > 0 && d.planes.pro.mantenimiento > 0);
+  assert.ok(d.mantenimiento.length > 0);
+});
+
 test('una licencia mal firmada o editada no se acepta; solo el admin la carga', async () => {
   const otra = crypto.generateKeyPairSync('ed25519').privateKey;
   const falsa = firmarLicencia({ plan: 'cadenas', vence: null }, otra);

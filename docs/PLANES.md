@@ -10,6 +10,8 @@ repite los precios a mano: si cambian, cambiarlos en los dos lugares.
 |---|---|---|---|
 | Precio | $24.900 | $49.900 | $44.900 por local (desde 2) |
 | Anual (2 meses gratis) | $249.000 | $499.000 | $449.000 por local |
+| **De contado** (pago único) | $490.000 | $990.000 | $890.000 por local |
+| + mantenimiento por mes | $7.900 | $14.900 | $12.900 por local |
 | Para | Café, bar, rotisería, local chico | Restaurante con salón, delivery y equipo | Cadenas |
 | Pedidos, mesas, cocina, caja, cobros | ✔ | ✔ | ✔ |
 | Factura electrónica ARCA y ticket fiscal | ✔ | ✔ | ✔ |
@@ -36,6 +38,13 @@ Anthropic del local (su propia clave), así el precio no depende de cuánto lo u
 **Condiciones:** 30 días de prueba con todo, sin tarjeta. Semestral 10 % menos; anual, 2 meses gratis. Alta remota,
 carga de la carta y capacitación sin cargo. Precios finales: si la facturación de Morfi pasa a discriminar IVA,
 revisar si se mantienen como precio final.
+
+**De contado con mantenimiento:** el plan se paga una vez (≈ 20 meses de abono) y queda para siempre. El
+mantenimiento (≈ 30 % del abono; el año adelantado con 2 meses gratis) incluye actualizaciones, cambios de ARCA,
+soporte y copia en la nube/panel Morfi Nube. Si deja de pagarlo, el local **no pierde nada de su plan**: solo deja de
+tener actualizaciones y soporte (la pantalla lo avisa). Los extras siguen siendo mensuales y, sin pago, se apagan
+pasada la gracia. A 3 años: Pro mensual $1.796.400 contra Pro de contado + mantenimiento $1.526.400; conviene a quien
+puede pagar de una vez, y a Morfi le adelanta caja.
 
 ## Contra quién competimos (precios relevados el 23/10/2026)
 
@@ -92,6 +101,8 @@ node nube/alta.js local --cuenta "La Buena Mesa" --nombre "Centro" --cliente la-
 node nube/alta.js plan --cliente la-buena-mesa-centro --plan pro --vence 2026-12-31
 # Con el asistente IA
 node nube/alta.js plan --cliente la-buena-mesa-centro --plan pro --vence 2026-12-31 --extras asistente
+# De contado: el plan queda para siempre; --vence es hasta cuándo está pago el mantenimiento
+node nube/alta.js plan --cliente la-buena-mesa-centro --plan pro --modalidad contado --vence 2027-10-31
 # Sin vencimiento (cortesía, local propio)
 node nube/alta.js plan --cliente mi-restaurante --plan pro
 ```
