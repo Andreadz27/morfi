@@ -1,10 +1,10 @@
 'use strict';
-// Morfi Nube: copia de seguridad de su base (cuentas, locales y sus tokens, ventas, cartas), como la del local.
+// Fadido Nube: copia de seguridad de su base (cuentas, locales y sus tokens, ventas, cartas), como la del local.
 // Cada 24 h en NUBE_DATOS/copias (se conservan las últimas NUBE_COPIAS_CONSERVAR, 30 por defecto). Además:
 // - NUBE_COPIA_DIR (o BACKUP_COPIA_DIR): un duplicado en otra carpeta, por ejemplo una sincronizada con Drive.
 // - BACKUP_S3_* (como el local, src/servicios/copia-nube.js): se sube al bucket en la carpeta "nube", cifrada
 //   con BACKUP_CLAVE si está.
-// Restaurar: detener la nube (pm2 stop morfi-nube), copiar la copia elegida sobre NUBE_DATOS/nube.db, borrar
+// Restaurar: detener la nube (pm2 stop fadido-nube), copiar la copia elegida sobre NUBE_DATOS/nube.db, borrar
 // nube.db-wal y nube.db-shm, y volver a iniciarla. Si se pierde, los locales mandan lo que tengan sin enviar, pero
 // las cuentas, los usuarios del panel y los tokens de los locales solo están acá.
 const fs = require('fs');

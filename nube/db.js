@@ -1,5 +1,5 @@
 'use strict';
-// Morfi Nube: base de datos (SQLite). Cuentas (un dueño o empresa), sus locales, los usuarios del panel
+// Fadido Nube: base de datos (SQLite). Cuentas (un dueño o empresa), sus locales, los usuarios del panel
 // y las ventas que manda cada local (solo productos e importes), la carta pública de cada local y los pedidos online
 // en camino al local. Los datos del cliente de un pedido online se borran apenas el local lo recibe.
 const fs = require('fs');

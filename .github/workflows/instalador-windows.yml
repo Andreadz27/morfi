@@ -1,5 +1,5 @@
 # Prueba el instalador en un Windows limpio, como en la PC de un cliente: baja solo instalar.ps1, lo corre como
-# administrador con Windows PowerShell 5.1 (con -BaseLimpia, sin datos de ejemplo), revisa que Morfi quede andando y
+# administrador con Windows PowerShell 5.1 (con -BaseLimpia, sin datos de ejemplo), revisa que Fadido quede andando y
 # arrancando solo, simula un reinicio y lo vuelve a correr (no tiene que romper ni pisar nada). Corre a mano, cuando
 # cambia el instalador y los lunes.
 name: Instalador (Windows limpio)
@@ -11,7 +11,7 @@ on:
   push:
     paths:
       - 'scripts/windows/**'
-      - 'iniciar-morfi.bat'
+      - 'iniciar-fadido.bat'
       - 'ecosystem.config.js'
       - '.github/workflows/instalador-windows.yml'
 
@@ -36,7 +36,7 @@ jobs:
         shell: powershell
         run: |
           $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-          powershell -ExecutionPolicy Bypass -File "$env:RUNNER_TEMP\instalar.ps1" -Cliente prueba-ci -BaseLimpia -Repo "https://github.com/${{ github.repository }}.git"
+          powershell -ExecutionPolicy Bypass -File "$env:RUNNER_TEMP\instalar.ps1" -Cliente prueba-ci -BaseLimpia -Repo "https://github.com/${{ github.repository }}.git" -Rama "${{ github.head_ref || github.ref_name }}"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
       - name: Quedó todo andando
@@ -46,17 +46,20 @@ jobs:
           $s = Invoke-RestMethod http://127.0.0.1:3000/api/salud -SkipHttpErrorCheck
           "salud: $($s | ConvertTo-Json -Compress)"
           if ($s.base -ne 'ok') { throw 'la base no responde' }
-          $login = Invoke-RestMethod -Method Post http://127.0.0.1:3000/api/auth/login -ContentType 'application/json' -Body '{"email":"admin@morfi.local","password":"admin123"}'
+          $login = Invoke-RestMethod -Method Post http://127.0.0.1:3000/api/auth/login -ContentType 'application/json' -Body '{"email":"admin@fadido.local","password":"admin123"}'
           if (-not $login.token) { throw 'no se pudo iniciar sesión con el administrador inicial' }
-          $productos = @(Invoke-RestMethod http://127.0.0.1:3000/api/productos -Headers @{ Authorization = "Bearer $($login.token)" })
+          # La clave inicial obliga a cambiarla antes de usar el sistema (como hace el dueño al entrar la primera vez)
+          $cambio = Invoke-RestMethod -Method Put http://127.0.0.1:3000/api/auth/password -ContentType 'application/json' -Headers @{ Authorization = "Bearer $($login.token)" } -Body '{"actual":"admin123","nueva":"prueba-ci-1234"}'
+          $login = @{ token = $cambio.token }
+          $productos = Invoke-RestMethod http://127.0.0.1:3000/api/productos -Headers @{ Authorization = "Bearer $($login.token)" }   # sin @(): Invoke-RestMethod devuelve la lista entera como un solo objeto
           if ($productos.Count) { throw "con -BaseLimpia la base trae $($productos.Count) productos de ejemplo" }
-          if (-not (Get-ScheduledTask -TaskName 'Morfi')) { throw 'falta la tarea de inicio' }
-          if (-not (Get-NetFirewallRule -DisplayName 'Morfi')) { throw 'falta la regla del firewall' }
+          if (-not (Get-ScheduledTask -TaskName 'Fadido')) { throw 'falta la tarea de inicio' }
+          if (-not (Get-NetFirewallRule -DisplayName 'Fadido')) { throw 'falta la regla del firewall' }
           $pm2Home = [Environment]::GetEnvironmentVariable('PM2_HOME', 'Machine'); "PM2_HOME=$pm2Home"
           if (-not $pm2Home) { throw 'falta PM2_HOME' }
-          if (-not (Select-String -Path C:\Morfi\.env -Pattern '^BACKUP_CLAVE=[0-9a-f]{64}$' -Quiet)) { throw 'falta la clave de las copias' }
-          if (-not (Test-Path C:\Morfi\data\morfi.db)) { throw 'falta la base' }
-          (Select-String -Path C:\Morfi\.env -Pattern '^BACKUP_CLAVE=').Line | Set-Content "$env:RUNNER_TEMP\clave.txt"
+          if (-not (Select-String -Path C:\Fadido\.env -Pattern '^BACKUP_CLAVE=[0-9a-f]{64}$' -Quiet)) { throw 'falta la clave de las copias' }
+          if (-not (Test-Path C:\Fadido\data\fadido.db)) { throw 'falta la base' }
+          (Select-String -Path C:\Fadido\.env -Pattern '^BACKUP_CLAVE=').Line | Set-Content "$env:RUNNER_TEMP\clave.txt"
 
       - name: Simular un reinicio de la PC (pm2 detenido, arranca la tarea de inicio)
         shell: pwsh
@@ -65,11 +68,26 @@ jobs:
           $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
           pm2 kill
           Start-Sleep 3
-          Start-ScheduledTask -TaskName 'Morfi'
+          Start-ScheduledTask -TaskName 'Fadido'
           $ok = $false
           for ($i = 0; $i -lt 40 -and -not $ok; $i++) { Start-Sleep 3; try { $ok = (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/api/salud -SkipHttpErrorCheck).StatusCode -gt 0 } catch {} }
-          if (-not $ok) { Get-Content C:\Morfi\logs\pm2-error.log -Tail 40 -ErrorAction SilentlyContinue; throw 'después del reinicio Morfi no volvió solo' }
+          if (-not $ok) { Get-Content C:\Fadido\logs\pm2-error.log -Tail 40 -ErrorAction SilentlyContinue; throw 'después del reinicio Fadido no volvió solo' }
           'volvió solo después del reinicio'
+
+      - name: Se cae en pleno día (sin reiniciar la PC) y el vigilante lo levanta
+        shell: pwsh
+        run: |
+          $env:PM2_HOME = [Environment]::GetEnvironmentVariable('PM2_HOME', 'Machine')
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+          if (-not (Get-ScheduledTask -TaskName 'Fadido - vigilar')) { throw 'falta la tarea del vigilante' }
+          pm2 kill
+          Start-Sleep 3
+          Start-ScheduledTask -TaskName 'Fadido - vigilar'
+          $ok = $false
+          for ($i = 0; $i -lt 50 -and -not $ok; $i++) { Start-Sleep 3; try { $ok = (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/api/salud -SkipHttpErrorCheck).StatusCode -gt 0 } catch {} }
+          Get-Content C:\Fadido\logs\vigilante.log -ErrorAction SilentlyContinue
+          if (-not $ok) { Get-ScheduledTaskInfo -TaskName 'Fadido - vigilar' | Format-List; throw 'el vigilante no levantó Fadido' }
+          'el vigilante lo levantó'
 
       - name: Volver a correr el instalador (no rompe ni pisa nada)
         shell: powershell
@@ -78,7 +96,7 @@ jobs:
           powershell -ExecutionPolicy Bypass -File "$env:RUNNER_TEMP\instalar.ps1" -Cliente prueba-ci -Repo "https://github.com/${{ github.repository }}.git"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           $antes = Get-Content "$env:RUNNER_TEMP\clave.txt"
-          $ahora = (Select-String -Path C:\Morfi\.env -Pattern '^BACKUP_CLAVE=').Line
+          $ahora = (Select-String -Path C:\Fadido\.env -Pattern '^BACKUP_CLAVE=').Line
           if ($antes -ne $ahora) { throw 'la segunda instalación cambió la clave de las copias' }
           'segunda instalación sin cambios'
 
@@ -86,6 +104,6 @@ jobs:
         if: failure()
         shell: pwsh
         run: |
-          Get-Content C:\Morfi\logs\pm2-error.log -Tail 60 -ErrorAction SilentlyContinue
-          Get-Content C:\Morfi\logs\pm2-out.log -Tail 30 -ErrorAction SilentlyContinue
-          Get-ScheduledTaskInfo -TaskName 'Morfi' -ErrorAction SilentlyContinue | Format-List
+          Get-Content C:\Fadido\logs\pm2-error.log -Tail 60 -ErrorAction SilentlyContinue
+          Get-Content C:\Fadido\logs\pm2-out.log -Tail 30 -ErrorAction SilentlyContinue
+          Get-ScheduledTaskInfo -TaskName 'Fadido' -ErrorAction SilentlyContinue | Format-List

@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Tu plan
+// FADIDO - Tu plan
 // Plan del local, lo que incluye cada plan y los candados del menú (los módulos que el plan no incluye).
 // El servidor igual controla cada operación (402 si el plan no la incluye); esto es para mostrarlo claro.
 // =============================================
@@ -72,7 +72,7 @@ const Plan = {
   linkVentas(texto) {
     const v = (this.datos && this.datos.ventas) || {};
     if (v.whatsapp) return `https://wa.me/${encodeURIComponent(v.whatsapp)}?text=${encodeURIComponent(texto)}`;
-    if (v.email) return `mailto:${v.email}?subject=${encodeURIComponent('Plan de Morfi')}&body=${encodeURIComponent(texto)}`;
+    if (v.email) return `mailto:${v.email}?subject=${encodeURIComponent('Plan de Fadido')}&body=${encodeURIComponent(texto)}`;
     return '';
   },
 
@@ -94,7 +94,7 @@ const Plan = {
     if (contado && d.estado === 'activo') estado = d.vence ? `Comprado de contado · mantenimiento hasta el ${fmtFecha(d.vence)}` : 'Comprado de contado';
     const actual = d.origen === 'licencia' ? d.contratado : d.plan;
     const tarjeta = ([id, p]) => {
-      const pedido = `Hola, quiero el plan ${p.nombre} de Morfi para ${negocio}.`;
+      const pedido = `Hola, quiero el plan ${p.nombre} de Fadido para ${negocio}.`;
       const link = this.linkVentas(pedido);
       const anual = Math.round(p.precio * 12 * (1 - d.descuentos.anual));
       return `
@@ -114,8 +114,8 @@ const Plan = {
         </ul>
         ${id === actual ? '<button class="btn btn-outline" disabled>Tu plan</button>'
           : link ? `<a class="btn btn-primary" href="${esc(link)}" target="_blank" rel="noopener">Quiero este plan</a>`
-            : '<p class="text-muted">Pedíselo a quien te instaló Morfi.</p>'}
-        ${id !== actual && link && p.contado ? `<a class="btn btn-outline btn-sm mt-10" href="${esc(this.linkVentas(`Hola, quiero el plan ${p.nombre} de Morfi de contado, con mantenimiento, para ${negocio}.`))}" target="_blank" rel="noopener">Lo quiero de contado</a>` : ''}
+            : '<p class="text-muted">Pedíselo a quien te instaló Fadido.</p>'}
+        ${id !== actual && link && p.contado ? `<a class="btn btn-outline btn-sm mt-10" href="${esc(this.linkVentas(`Hola, quiero el plan ${p.nombre} de Fadido de contado, con mantenimiento, para ${negocio}.`))}" target="_blank" rel="noopener">Lo quiero de contado</a>` : ''}
       </div>`;
     };
     view.innerHTML = `
@@ -141,7 +141,7 @@ const Plan = {
             <td><strong>${fmtMoneda(p.contado)}</strong></td><td>${fmtMoneda(p.mantenimiento)}</td>
             <td>${fmtMoneda(Math.round(p.mantenimiento * 12 * (1 - d.descuentos.anual)))}</td></tr>`).join('')}</tbody>
         </table></div>
-        <p class="text-muted">Si dejás de pagar el mantenimiento, Morfi sigue funcionando con todo lo de tu plan: solo dejás de recibir actualizaciones, cambios de ARCA y soporte. Los extras (como el Asistente IA) siguen siendo mensuales.</p>
+        <p class="text-muted">Si dejás de pagar el mantenimiento, Fadido sigue funcionando con todo lo de tu plan: solo dejás de recibir actualizaciones, cambios de ARCA y soporte. Los extras (como el Asistente IA) siguen siendo mensuales.</p>
       </div>
       <div class="card mt-20">
         <div class="card-header"><span class="card-title"><i class="fas fa-puzzle-piece"></i> Extras</span></div>
@@ -157,7 +157,7 @@ const Plan = {
       </div>` : ''}
       <div class="card mt-20">
         <div class="card-header"><span class="card-title"><i class="fas fa-key"></i> Licencia</span></div>
-        <p class="text-muted">Si el local está conectado a Morfi Nube, el plan se actualiza solo. Si no, pegá acá la licencia que te dio soporte.</p>
+        <p class="text-muted">Si el local está conectado a Fadido Nube, el plan se actualiza solo. Si no, pegá acá la licencia que te dio soporte.</p>
         <form onsubmit="Plan.guardarLicencia(event)">
           <div class="form-group"><label for="licenciaTexto">Licencia</label>
             <textarea id="licenciaTexto" rows="3" required placeholder="eyJ2Ijox..."></textarea></div>

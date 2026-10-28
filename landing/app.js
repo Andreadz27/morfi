@@ -1,4 +1,4 @@
-/* ── Morfi Landing — app.js ─────────────────────────── */
+/* ── Fadido Landing — app.js ─────────────────────────── */
 
 /* ── 1. NAVBAR: scroll shadow ──────────────────────────────── */
 (function () {

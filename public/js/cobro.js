@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Cobro en la mesa
+// FADIDO - Cobro en la mesa
 // Cobrar, dividir la cuenta, propina y factura AFIP/ARCA en un solo paso,
 // desde la caja o desde el celular del mozo
 // =============================================
@@ -11,7 +11,7 @@ const Cobro = {
   pagos: [],
   afipActiva: false,
 
-  METODOS: { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', transferencia: 'Transferencia', giftcard: 'Gift card', otro: 'Otro' },
+  METODOS: { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', modo: 'MODO', cuentadni: 'Cuenta DNI', transferencia: 'Transferencia', giftcard: 'Gift card', otro: 'Otro' },
   puntosCfg: null,    // programa de puntos (Configuración)
   clientes: null,     // para elegir el cliente del pedido (se cargan al buscar)
 
@@ -87,7 +87,8 @@ const Cobro = {
         ${x.metodo === 'efectivo' ? `<input type="number" min="0" step="0.01" value="${x.recibido}" placeholder="Recibido"
           aria-label="Efectivo recibido" oninput="Cobro.setPago(${i}, 'recibido', this.value)">`
           : x.metodo === 'giftcard' ? `<input type="text" value="${esc(x.referencia || '')}" placeholder="Código GM-XXXX-XXXX" maxlength="20"
-          aria-label="Código de la gift card" oninput="Cobro.setPago(${i}, 'referencia', this.value)" onchange="Cobro.saldoGiftCard(this.value)">` : '<span></span>'}
+          aria-label="Código de la gift card" oninput="Cobro.setPago(${i}, 'referencia', this.value)" onchange="Cobro.saldoGiftCard(this.value)">`
+          : x.metodo === 'transferencia' && App.config && App.config.alias_transferencia ? `<span class="text-muted" title="${esc(App.config.titular_transferencia || '')}"><i class="fas fa-university"></i> Alias: <strong>${esc(App.config.alias_transferencia)}</strong></span>` : '<span></span>'}
         ${this.pagos.length > 1 ? `<button type="button" class="btn btn-sm btn-outline" onclick="Cobro.quitarPago(${i})" aria-label="Quitar"><i class="fas fa-times"></i></button>` : '<span></span>'}
       </div>`).join('');
 

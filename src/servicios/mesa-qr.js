@@ -17,7 +17,7 @@ const MODOS_QR_MESA = ['confirmar', 'directo', 'solo_carta'];
 // pago: aviso al mozo de que la mesa pagó con Mercado Pago desde el celular (lo crea pago-mesa.js)
 const TIPOS_SOLICITUD = ['pedido', 'mozo', 'cuenta', 'pago'];
 // Con qué paga el que pide la cuenta (así el mozo lleva el posnet o el cambio)
-const FORMAS_PAGO_CUENTA = { efectivo: 'Paga en efectivo', tarjeta: 'Paga con tarjeta', mercadopago: 'Paga con QR de Mercado Pago' };
+const FORMAS_PAGO_CUENTA = { efectivo: 'Paga en efectivo', tarjeta: 'Paga con tarjeta', mercadopago: 'Paga con QR de Mercado Pago', transferencia: 'Paga por transferencia' };
 // Topes: sin login cualquiera con el QR puede pedir; un mismo QR no acumula pedidos sin confirmar
 const MAX_ITEMS_MESA = 30;
 const MAX_CANTIDAD_MESA = 20;
@@ -71,6 +71,12 @@ async function solicitarPedidoMesa(mesa, { items, notas, cliente }) {
   return resumenSolicitud(await get('SELECT * FROM solicitudes_mesa WHERE id = ?', [id]));
 }
 
+// Alias o CBU del local para transferir (Configuración), o null si no se cargó
+async function datosTransferencia() {
+  const c = await get('SELECT alias_transferencia, titular_transferencia FROM configuracion WHERE id = 1');
+  return c && c.alias_transferencia ? { alias: c.alias_transferencia, titular: c.titular_transferencia || '' } : null;
+}
+
 // Llamar al mozo o pedir la cuenta (con la forma de pago). Si ya hay uno igual esperando, no se duplica.
 async function llamarMozo(mesa, tipo, forma) {
   if (!['mozo', 'cuenta'].includes(tipo)) throw errorHttp(400, 'Tipo de llamado inválido');
@@ -104,7 +110,8 @@ async function estadoMesa(mesa) {
   return {
     mesa: { nombre: mesa.nombre }, modo: conPlan ? await modoQrMesa() : 'solo_carta', solicitudes: solicitudes.map(resumenSolicitud), cuenta,
     // Qué puede hacer el cliente al pagar desde el celular
-    pago: { mercadopago: conPlan && await pagoMesaDisponible(), whatsapp: whatsappListo(await configWhatsApp()) && await tiene('whatsapp') }
+    pago: { mercadopago: conPlan && await pagoMesaDisponible(), whatsapp: whatsappListo(await configWhatsApp()) && await tiene('whatsapp'),
+      transferencia: await datosTransferencia() }
   };
 }
 

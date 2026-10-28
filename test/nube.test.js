@@ -1,4 +1,4 @@
-// Morfi Nube: el local manda sus ventas y su estado; el dueño ve solo sus locales; soporte ve todos.
+// Fadido Nube: el local manda sus ventas y su estado; el dueño ve solo sus locales; soporte ve todos.
 // Se levanta la nube real (nube/servidor.js) en una carpeta temporal y un local real que sincroniza con ella.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -26,12 +26,12 @@ const ingresar = async (email, password) => (await aNube('POST', '/api/login', {
 const esperarQue = async (cond, ms = 15000) => { for (let t = 0; t < ms; t += 200) { if (await cond()) return true; await esperar(200); } return false; };
 
 before(async () => {
-  datosNube = fs.mkdtempSync(path.join(os.tmpdir(), 'morfi-nube-'));
+  datosNube = fs.mkdtempSync(path.join(os.tmpdir(), 'fadido-nube-'));
   tokenLocal = alta('local', '--cuenta', 'La Buena Mesa', '--nombre', 'Centro', '--cliente', 'buena-mesa-centro').match(/NUBE_TOKEN=(\S+)/)[1];
   tokenOtro = alta('local', '--cuenta', 'Otro Dueño', '--nombre', 'Bar Ajeno', '--cliente', 'bar-ajeno').match(/NUBE_TOKEN=(\S+)/)[1];
   alta('local', '--cuenta', 'Otro Dueño', '--nombre', 'Sucursal Nueva', '--cliente', 'sin-conectar');
   alta('usuario', '--cuenta', 'La Buena Mesa', '--nombre', 'Ana', '--email', 'Ana@BuenaMesa.com', '--password', 'clave-segura-1');
-  alta('soporte', '--nombre', 'Soporte', '--email', 'soporte@morfi.test', '--password', 'clave-segura-2');
+  alta('soporte', '--nombre', 'Soporte', '--email', 'soporte@fadido.test', '--password', 'clave-segura-2');
 
   const port = await puertoLibre();
   nubeBase = `http://127.0.0.1:${port}`;
@@ -102,7 +102,7 @@ test('reenviar una venta no la duplica (idempotente) y un token ajeno no escribe
   assert.equal((await aNube('POST', '/api/sync/ventas', { ventas: [v] }, 'mnl_falso'))[0], 401);
   assert.equal((await aNube('POST', '/api/sync/ventas', { ventas: [{ ...v, fecha: 'ayer' }] }, tokenOtro))[0], 400);
 
-  const sop = await ingresar('soporte@morfi.test', 'clave-segura-2');
+  const sop = await ingresar('soporte@fadido.test', 'clave-segura-2');
   const [, r] = await aNube('GET', `/api/panel/resumen?desde=${hoy}&hasta=${hoy}`, null, sop);
   const ajeno = r.locales.find(l => l.nombre === 'Bar Ajeno');
   assert.equal(ajeno.tickets, 1);
@@ -115,7 +115,7 @@ test('reenviar una venta no la duplica (idempotente) y un token ajeno no escribe
 test('soporte ve todos los locales con alertas; el dueño no entra a soporte', async () => {
   const ana = await ingresar('ana@buenamesa.com', 'clave-segura-1');
   assert.equal((await aNube('GET', '/api/soporte/locales', null, ana))[0], 403);
-  const sop = await ingresar('soporte@morfi.test', 'clave-segura-2');
+  const sop = await ingresar('soporte@fadido.test', 'clave-segura-2');
   const [st, lista] = await aNube('GET', '/api/soporte/locales', null, sop);
   assert.equal(st, 200);
   assert.equal(lista.length, 3);

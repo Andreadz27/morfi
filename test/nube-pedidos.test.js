@@ -1,4 +1,4 @@
-// Morfi Nube etapa 2: la carta online vive en la nube (/l/<cliente>) y el local trae los pedidos.
+// Fadido Nube etapa 2: la carta online vive en la nube (/l/<cliente>) y el local trae los pedidos.
 // Nube real + local real: el pedido entra por la nube, el local lo carga con sus precios y el cliente ve el número.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -28,7 +28,7 @@ const pedir = (cliente, items, extra = {}) => aNube('POST', `/l/${cliente}/api/p
 const estadoDe = async codigo => (await aNube('GET', `/l/centro/api/publico/pedido/${codigo}`))[1];
 
 before(async () => {
-  datosNube = fs.mkdtempSync(path.join(os.tmpdir(), 'morfi-nube-'));
+  datosNube = fs.mkdtempSync(path.join(os.tmpdir(), 'fadido-nube-'));
   const token = alta('local', '--cuenta', 'La Buena Mesa', '--nombre', 'Centro', '--cliente', 'centro').match(/NUBE_TOKEN=(\S+)/)[1];
   alta('local', '--cuenta', 'La Buena Mesa', '--nombre', 'Palermo', '--cliente', 'palermo');
   const port = await puertoLibre();
@@ -128,8 +128,8 @@ test('si el local no está conectado, la nube no toma pedidos y avisa con el tel
   assert.match(r.error, /11 2222-3333/);
 
   await qNube("INSERT INTO pedidos_online (local_id, codigo, datos, creado_en) VALUES (?, 'trabado-1', '{}', datetime('now', '-5 minutes'))", [palermo]);
-  alta('soporte', '--nombre', 'Soporte', '--email', 'sop@morfi.test', '--password', 'clave-segura-2');
-  const { token } = (await aNube('POST', '/api/login', { email: 'sop@morfi.test', password: 'clave-segura-2' }))[1];
+  alta('soporte', '--nombre', 'Soporte', '--email', 'sop@fadido.test', '--password', 'clave-segura-2');
+  const { token } = (await aNube('POST', '/api/login', { email: 'sop@fadido.test', password: 'clave-segura-2' }))[1];
   const lista = await (await fetch(nubeBase + '/api/soporte/locales', { headers: { Authorization: 'Bearer ' + token } })).json();
   const p = lista.find(l => l.cliente === 'palermo');
   assert.ok(p.alertas.includes('1 pedido(s) online sin recibir en el local'), JSON.stringify(p.alertas));
@@ -147,7 +147,7 @@ test('el pedido online directo al local sigue funcionando igual', async () => {
 
 test('los links de la carta del local (QR, WhatsApp, Instagram) pasan a ser los fijos de la nube', () => {
   const { linkCartaNube } = require('../src/servicios/sync-nube');
-  assert.equal(linkCartaNube('https://nube.morfi.com.ar/l/centro'), 'https://nube.morfi.com.ar/l/centro');
+  assert.equal(linkCartaNube('https://nube.fadido.com.ar/l/centro'), 'https://nube.fadido.com.ar/l/centro');
   assert.equal(linkCartaNube(null), null);
 });
 

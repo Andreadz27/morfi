@@ -28,7 +28,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Morfi de prueba en el puerto 3000
+      - name: Fadido de prueba en el puerto 3000
         run: |
           PORT=3000 nohup node qa/servidor.js > "$RUNNER_TEMP/servidor.log" 2>&1 &
           for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/api/salud > /dev/null && break; sleep 1; done

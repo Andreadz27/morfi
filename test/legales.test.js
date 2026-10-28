@@ -20,7 +20,7 @@ test('los documentos legales tienen los datos de docs/legales/datos.json', () =>
 });
 
 test('npm run legales cambia un dato en todos los documentos (texto, mailto y wa.me)', () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'morfi-legales-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fadido-legales-'));
   try {
     for (const f of ARCHIVOS) {
       fs.mkdirSync(path.dirname(path.join(tmp, f)), { recursive: true });
@@ -28,7 +28,7 @@ test('npm run legales cambia un dato en todos los documentos (texto, mailto y wa
     }
     const datos = JSON.parse(fs.readFileSync(path.join(tmp, 'docs/legales/datos.json'), 'utf8'));
     const viejo = datos.titular;
-    Object.assign(datos, { titular: 'Morfi <S.R.L.>', email: 'hola@morfi.com.ar', whatsapp_numero: '5491100000000' });
+    Object.assign(datos, { titular: 'Fadido <S.R.L.>', email: 'hola@fadido.com.ar', whatsapp_numero: '5491100000000' });
     fs.writeFileSync(path.join(tmp, 'docs/legales/datos.json'), JSON.stringify(datos));
 
     assert.equal(correr('--raiz', tmp, '--revisar').status, 1, 'detecta que no coinciden');
@@ -36,12 +36,12 @@ test('npm run legales cambia un dato en todos los documentos (texto, mailto y wa
     assert.equal(r.status, 0, r.stdout + r.stderr);
     for (const f of ['landing/privacidad.html', 'landing/terminos.html']) {
       const t = fs.readFileSync(path.join(tmp, f), 'utf8');
-      assert.match(t, /<span data-dato="titular">Morfi &lt;S\.R\.L\.&gt;<\/span>/, f);
+      assert.match(t, /<span data-dato="titular">Fadido &lt;S\.R\.L\.&gt;<\/span>/, f);
       assert.ok(!t.includes(viejo), `${f}: quedó el titular anterior`);
-      assert.match(t, /href="mailto:hola@morfi\.com\.ar"/, f);
+      assert.match(t, /href="mailto:hola@fadido\.com\.ar"/, f);
       assert.doesNotMatch(t, /wa\.me\/(?!5491100000000)/, f);
     }
-    assert.match(fs.readFileSync(path.join(tmp, 'docs/legales/ORDEN-DE-ALTA.md'), 'utf8'), /<!--dato:titular-->Morfi <S\.R\.L\.><!--\/dato-->/);
+    assert.match(fs.readFileSync(path.join(tmp, 'docs/legales/ORDEN-DE-ALTA.md'), 'utf8'), /<!--dato:titular-->Fadido <S\.R\.L\.><!--\/dato-->/);
     assert.equal(correr('--raiz', tmp, '--revisar').status, 0);
 
     // Un dato vacío no se publica en blanco

@@ -1,6 +1,6 @@
 # Pruebas en el celular con Maestro
 
-Morfi es una web: en el celular se usa desde Chrome (mozo, carta del QR, pago desde la mesa). Estos flujos manejan
+Fadido es una web: en el celular se usa desde Chrome (mozo, carta del QR, pago desde la mesa). Estos flujos manejan
 Chrome en un Android de verdad o en un emulador, tocando la pantalla como una persona.
 
 | Flujo | Caso |

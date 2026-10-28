@@ -1,4 +1,4 @@
-// MORFI - Cocina - tiempo real via Socket.IO
+// FADIDO - Cocina - tiempo real via Socket.IO
 
 const Cocina = {
   pedidos: [],

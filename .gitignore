@@ -9,7 +9,7 @@ data/*.bak*
 data/.secret_key
 data/backups/
 database.db
-morfi.db
+fadido.db
 gastromanager.db
 
 # Configuración local y secretos

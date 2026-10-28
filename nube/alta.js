@@ -1,8 +1,8 @@
 'use strict';
-// Altas en Morfi Nube (se corre en el servidor de la nube):
+// Altas en Fadido Nube (se corre en el servidor de la nube):
 //   node nube/alta.js local   --cuenta "La Buena Mesa" --nombre "Sucursal Centro" --cliente la-buena-mesa-centro [--plan pro]
 //   node nube/alta.js usuario --cuenta "La Buena Mesa" --nombre "Ana" --email ana@x.com --password ********
-//   node nube/alta.js soporte --nombre "Soporte Morfi" --email soporte@morfi.com.ar --password ********
+//   node nube/alta.js soporte --nombre "Soporte Fadido" --email soporte@fadido.com.ar --password ********
 //   node nube/alta.js plan    --cliente la-buena-mesa-centro --plan pro --vence 2026-12-31 [--extras asistente]
 //   node nube/alta.js plan    --cliente la-buena-mesa-centro --plan pro --modalidad contado --vence 2027-10-31
 //     (de contado: el plan queda para siempre y --vence es hasta cuándo está pago el mantenimiento)
@@ -31,7 +31,7 @@ async function main() {
     if (!o.cuenta || !o.nombre || !o.cliente) throw new Error('Faltan --cuenta, --nombre o --cliente');
     const r = await altaLocal(o);
     console.log(`Local "${o.nombre}" creado en la cuenta "${o.cuenta}" (plan ${describir(r)}).`);
-    console.log('Agregá en el .env del local (y reiniciá Morfi):');
+    console.log('Agregá en el .env del local (y reiniciá Fadido):');
     console.log(`  NUBE_URL=<la dirección de esta nube, con https>`);
     console.log(`  NUBE_TOKEN=${r.token}`);
   } else if (accion === 'usuario' || accion === 'soporte') {

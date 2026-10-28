@@ -1,5 +1,5 @@
 ﻿// =============================================
-// MORFI - Vista QR & Display Cocina
+// FADIDO - Vista QR & Display Cocina
 // =============================================
 
 const QRView = {
@@ -56,6 +56,17 @@ const QRView = {
           <button class="btn btn-outline" onclick="App.navigateTo('config')"><i class="fas fa-cog"></i> Cómo llegan los pedidos (Configuración)</button>
         </div>
       </div>
+      <div class="card mb-20">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-cocktail"></i> QR de la barra: pedir y pagar sin pasar por la caja</span>
+          <span class="card-subtitle">El cliente escanea en el mostrador, pide con su nombre (va directo a la cocina), paga desde el celular y le avisa cuando está listo. La pantalla de retiro muestra los números en una TV.</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 16px;">
+          <button class="btn btn-primary" onclick="QRView.imprimirQrBarra()"><i class="fas fa-print"></i> Imprimir QR de la barra</button>
+          <button class="btn btn-outline" onclick="QRView.abrirPantallaRetiro()"><i class="fas fa-tv"></i> Abrir pantalla de retiro</button>
+          <button class="btn btn-outline" onclick="QRView.nuevoQrBarra()"><i class="fas fa-sync-alt"></i> QR nuevo</button>
+        </div>
+      </div>
       <div class="card mb-20" id="conectarEquipos"></div>` : ''}
 
       <div class="qr-page-grid">
@@ -69,7 +80,7 @@ const QRView = {
           ${/^(localhost|127\.|\[::1\])/.test(new URL(urlMenu).hostname) ? `
           <div style="background:#fef3c7;color:#92400e;border-radius:8px;padding:10px 12px;margin:8px 12px;font-size:13px;">
             <i class="fas fa-exclamation-triangle"></i> Este QR apunta a <b>esta computadora</b> y no va a abrir en los celulares.
-            Entrá a Morfi con la dirección de la red del local (la que usan los mozos) o pedile a soporte que configure la dirección pública.
+            Entrá a Fadido con la dirección de la red del local (la que usan los mozos) o pedile a soporte que configure la dirección pública.
           </div>` : ''}
           <div class="qr-center-block">
             <div class="qr-wrapper" id="qrCanvas">
@@ -274,7 +285,7 @@ const QRView = {
         </div>
         ${dirs.length ? `<div class="conectar-equipos">${dirs.map(d => `
           <div class="conectar-direccion">
-            <img src="${urlQr(d.url)}" alt="QR para entrar a Morfi" width="140" height="140">
+            <img src="${urlQr(d.url)}" alt="QR para entrar a Fadido" width="140" height="140">
             <div><strong>${esc(d.url)}</strong><br><small class="text-muted">${esc(d.interfaz)}</small></div>
           </div>`).join('')}</div>
           <p class="text-muted conectar-ayuda">${dirs.length > 1 ? 'Esta PC tiene más de una conexión: usá la de la red a la que se conectan los celulares. ' : ''}
@@ -290,13 +301,13 @@ const QRView = {
     const win = window.open('', '_blank', 'width=700,height=900');
     if (!win) { App.showToast('Habilitá las ventanas emergentes para imprimir', 'warning'); return; }
     const negocio = (App.config && App.config.nombre_negocio) || '';
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Entrar a Morfi</title><style>
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Entrar a Fadido</title><style>
       body{font-family:Arial,sans-serif;margin:0;padding:18mm;color:#1e293b;text-align:center}
       .marca{display:flex;gap:10px;align-items:center;justify-content:center;font-size:26pt;font-weight:800}
       .marca img{width:44px;height:44px;border-radius:23%} .qr{width:70mm;height:70mm;margin:10mm auto 4mm}
       .dir{font-size:16pt;font-weight:bold} ol{text-align:left;max-width:140mm;margin:10mm auto;font-size:13pt;line-height:1.7}
     </style></head><body>
-      <div class="marca"><img src="${location.origin}/favicon.svg" alt="">morfi</div>
+      <div class="marca"><img src="${location.origin}/favicon.svg" alt="">fadido</div>
       <p>${esc(negocio)}</p>
       <img class="qr" src="${location.origin}${urlQr(d.url)}" alt="">
       <div class="dir">${esc(d.url)}</div>
@@ -309,6 +320,43 @@ const QRView = {
       <p>Funciona aunque no haya internet, mientras estés en el WiFi del local.</p>
       <script>window.onload=function(){window.print();};<\/script></body></html>`);
     win.document.close();
+  },
+
+  async _qrBarra(nuevo) {
+    const r = await API.getQrBarra(this._base || window.location.origin, nuevo);
+    if (/^https?:\/\/(localhost|127\.|\[::1\])/.test(r.url))
+      App.showToast('El QR apunta a "localhost": abrí Fadido con la dirección de la red del local para que funcione en los celulares', 'warning', 8000);
+    return r;
+  },
+
+  async imprimirQrBarra() {
+    const win = window.open('', '_blank', 'width=700,height=800');
+    if (!win) { App.showToast('Habilitá las ventanas emergentes para imprimir', 'warning'); return; }
+    try {
+      const q = await this._qrBarra();
+      const negocio = (App.config && App.config.nombre_negocio) || '';
+      // El SVG lo arma el servidor con la librería qrcode (solo figuras, sin texto del usuario)
+      win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>QR de la barra</title><style>
+        body{font-family:Arial,sans-serif;text-align:center;padding:15mm;}
+        svg{width:110mm;height:110mm;} h1{font-size:30pt;margin:4mm 0;} p{font-size:16pt;margin:3mm 0;}
+      </style></head><body><p>${esc(negocio)}</p><h1>Pedí y pagá desde tu celular</h1>${q.svg}
+        <p>1. Escaneá el código · 2. Elegí y poné tu nombre · 3. Pagá desde el celular o en la caja</p>
+        <p><strong>Te avisamos cuando esté listo para retirar</strong></p>
+        <script>window.onload=function(){window.print();};<\/script></body></html>`);
+      win.document.close();
+    } catch (err) {
+      win.close();
+      App.showToast(err.message, 'error');
+    }
+  },
+
+  async abrirPantallaRetiro() {
+    try { window.open((await this._qrBarra()).pantalla, '_blank', 'noopener'); } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  async nuevoQrBarra() {
+    if (!confirm('¿Generar un QR nuevo para la barra? El impreso y la pantalla de retiro abierta dejan de funcionar.')) return;
+    try { await this._qrBarra(true); App.showToast('QR nuevo: imprimilo y volvé a abrir la pantalla de retiro', 'success', 8000); } catch (err) { App.showToast(err.message, 'error'); }
   },
 
   async imprimirQrMesas() {

@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Contabilidad
+// FADIDO - Contabilidad
 // Estado de resultados, gastos, cuentas a pagar, IVA y libro diario
 // =============================================
 
@@ -407,14 +407,14 @@ const Contabilidad = {
           <div class="cont-adjuntos-cab">
             <label class="btn btn-outline btn-sm"><i class="fas fa-camera"></i> Sacar foto o subir la factura
               <input type="file" accept="image/*,application/pdf" multiple hidden onchange="Contabilidad.elegirArchivos(this)"></label>
-            <small class="text-muted">${o.lectura_facturas ? 'Morfi la lee y completa los datos: revisalos antes de guardar.' : 'Foto o PDF, queda guardada con el gasto.'}</small>
+            <small class="text-muted">${o.lectura_facturas ? 'Fadido la lee y completa los datos: revisalos antes de guardar.' : 'Foto o PDF, queda guardada con el gasto.'}</small>
           </div>
           <div class="cont-adj-lista" id="gasAdjLista"></div>
           <div class="cont-lectura" id="gasLectura"></div>
         </div>
         <div class="grid grid-2">
           <div class="form-group"><label>Fecha del comprobante</label><input type="date" id="gasFecha" value="${g ? g.fecha : o.hoy}" required></div>
-          <div class="form-group"><label>Categoría</label><select id="gasCategoria" required>${cats}</select></div>
+          <div class="form-group"><label>Categoría</label><select id="gasCategoria" onchange="Contabilidad.actualizarForm()" required>${cats}</select></div>
         </div>
         <div class="form-group"><label>Descripción</label><input type="text" id="gasDescripcion" maxlength="200" placeholder="Ej.: Compra de carne, factura de luz" value="${g ? esc(g.descripcion) : ''}" required></div>
         <div class="grid grid-2">
@@ -432,6 +432,7 @@ const Contabilidad = {
           <div class="form-group"><label>Percepciones / otros</label><input type="number" id="gasOtros" min="0" step="0.01" value="${g ? g.otros_impuestos || '' : ''}" oninput="Contabilidad.actualizarForm()"></div>
         </div>
         <p class="cont-total-form">Total del comprobante: <strong id="gasTotal">${fmtContable(g ? g.total : 0)}</strong></p>
+        ${this.seccionArticulos(g)}
         ${pagado ? '<p class="text-muted"><i class="fas fa-circle-check"></i> Este gasto ya está pagado.</p>' : `
         <div class="grid grid-2">
           <div class="form-group"><label>Vencimiento</label><input type="date" id="gasVence" value="${g && g.vencimiento ? g.vencimiento : ''}"></div>
@@ -447,9 +448,116 @@ const Contabilidad = {
         </div>
       </form>
     `, { title: g ? 'Editar gasto' : 'Cargar gasto o compra' });
+    this.articulosForm = [];
+    if (!g) this.cargarProductosCompra();
     this.actualizarForm();
     this.pintarAdjuntos();
   },
+
+  // ===== Artículos de la compra (suman al stock: servicios/inventario.js) =====
+  seccionArticulos(g) {
+    if (g) {
+      const lista = g.articulos || [];
+      if (!lista.length) return '';
+      return `<div class="form-group"><label><i class="fas fa-boxes"></i> Artículos que sumaron al stock</label>
+        <ul class="text-muted">${lista.map(a => `<li>${esc(a.nombre)}: ${a.cantidad} ${esc(a.unidad || '')}${a.importe ? ' · ' + fmtContable(a.importe) : ''}</li>`).join('')}</ul>
+        <small class="text-muted">Para cambiarlos, anulá la compra (se resta del stock) y cargala de nuevo.</small></div>`;
+    }
+    return `<div class="form-group mt-10" id="gasArticulosGrupo" style="display:none">
+      <label><i class="fas fa-boxes"></i> Artículos (suman al stock y actualizan el costo)</label>
+      <small class="text-muted" id="gasArticulosCab" style="display:none;gap:6px;margin:2px 0 4px"><span style="flex:3 1 0">Producto</span><span style="flex:1.2 1 0">Cantidad</span><span style="flex:0 0 74px">Unidad</span><span style="flex:1.6 1 0">Importe</span><span style="flex:0 0 34px"></span></small>
+      <div id="gasArticulos"></div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="Contabilidad.agregarArticulo()"><i class="fas fa-plus"></i> Agregar artículo</button>
+      <small class="text-muted" id="gasArticulosSuma"></small>
+    </div>`;
+  },
+
+  async cargarProductosCompra() {
+    this.productosCompra = null;
+    try {
+      const productos = await API.getProductos();
+      // Las elaboraciones propias (salsas) no se compran: se compran sus insumos. Primero los insumos.
+      this.productosCompra = productos.filter(p => p.clase !== 'elaboracion')
+        .sort((a, b) => (a.clase === 'insumo' ? 0 : 1) - (b.clase === 'insumo' ? 0 : 1) || a.nombre.localeCompare(b.nombre));
+    } catch (err) {
+      this.productosCompra = [];
+    }
+  },
+
+  // Si el producto va en gramos o mililitros, se puede cargar en kg o litros
+  unidadesDe(p) {
+    const u = (p && p.unidad) || 'unidad';
+    if (u === 'g') return [['g', 1], ['kg', 1000]];
+    if (u === 'ml') return [['ml', 1], ['l', 1000]];
+    return [[u, 1]];
+  },
+
+  agregarArticulo() {
+    if (!this.productosCompra) return App.showToast('Cargando los productos, probá de nuevo en un segundo', 'info');
+    if (!this.productosCompra.length) return App.showToast('No hay productos para cargar', 'warning');
+    const p = this.productosCompra[0];
+    this.articulosForm.push({ producto_id: p.id, cantidad: '', factor: this.unidadesDe(p).slice(-1)[0][1], importe: '' });
+    this.pintarArticulos();
+  },
+
+  quitarArticulo(i) {
+    this.articulosForm.splice(i, 1);
+    this.pintarArticulos();
+  },
+
+  cambiarArticulo(i, campo, valor) {
+    const a = this.articulosForm[i];
+    if (!a) return;
+    if (campo === 'producto_id') {
+      a.producto_id = Number(valor);
+      a.factor = this.unidadesDe(this.productosCompra.find(x => x.id === a.producto_id)).slice(-1)[0][1];
+      this.pintarArticulos();
+      return;
+    }
+    a[campo] = campo === 'factor' ? Number(valor) : valor;
+    this.sumaArticulos();
+  },
+
+  pintarArticulos() {
+    const cont = document.getElementById('gasArticulos');
+    if (!cont) return;
+    const lista = this.productosCompra || [];
+    cont.innerHTML = this.articulosForm.map((a, i) => {
+      const p = lista.find(x => x.id === a.producto_id);
+      const opciones = lista.map(x => `<option value="${x.id}" ${x.id === a.producto_id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('');
+      const unidades = this.unidadesDe(p).map(([u, f]) => `<option value="${f}" ${f === a.factor ? 'selected' : ''}>${esc(u)}</option>`).join('');
+      return `<div class="cont-articulo" style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+        <select style="flex:3 1 0;min-width:0;width:auto" onchange="Contabilidad.cambiarArticulo(${i}, 'producto_id', this.value)">${opciones}</select>
+        <input type="number" style="flex:1.2 1 0;min-width:0;width:auto" min="0" step="any" placeholder="Cantidad" value="${esc(String(a.cantidad))}"
+          oninput="Contabilidad.cambiarArticulo(${i}, 'cantidad', this.value)" required>
+        <select style="flex:0 0 74px;width:74px;padding-left:6px;padding-right:2px" onchange="Contabilidad.cambiarArticulo(${i}, 'factor', this.value)">${unidades}</select>
+        <input type="number" style="flex:1.6 1 0;min-width:0;width:auto" min="0" step="0.01" placeholder="Importe $" value="${esc(String(a.importe))}"
+          oninput="Contabilidad.cambiarArticulo(${i}, 'importe', this.value)">
+        <button type="button" class="btn btn-outline btn-sm" style="flex:0 0 auto" onclick="Contabilidad.quitarArticulo(${i})" title="Quitar"><i class="fas fa-times"></i></button>
+      </div>`;
+    }).join('');
+    const cab = document.getElementById('gasArticulosCab');
+    if (cab) cab.style.display = this.articulosForm.length ? 'flex' : 'none';
+    this.sumaArticulos();
+  },
+
+  sumaArticulos() {
+    const el = document.getElementById('gasArticulosSuma');
+    if (!el) return;
+    if (!(this.articulosForm || []).length) { el.textContent = ' Opcional: cargá lo que trajo el proveedor y se suma solo al stock.'; return; }
+    const suma = this.articulosForm.reduce((t, a) => t + (Number(a.importe) || 0), 0);
+    const neto = Number((document.getElementById('gasNeto') || {}).value) || 0;
+    el.textContent = ` Suma de los importes: ${fmtContable(suma)}${neto && suma && Math.abs(suma - neto) >= 1 ? ' (el neto del comprobante es ' + fmtContable(neto) + ')' : ''}. Con importe, el producto pasa a costar lo que pagaste.`;
+  },
+
+  articulosParaGuardar() {
+    return (this.articulosForm || []).filter(a => Number(a.cantidad) > 0).map(a => ({
+      producto_id: a.producto_id,
+      cantidad: Math.round(Number(a.cantidad) * a.factor * 10000) / 10000,
+      importe: Number(a.importe) || 0
+    }));
+  },
+
 
   // ===== Facturas adjuntas =====
   botonesAdjuntos(g) {
@@ -609,6 +717,9 @@ const Contabilidad = {
     if (!esA) ivaInput.value = '';
     else if (cambioNeto && this.opciones.tasa_iva) ivaInput.value = (Math.round(neto * this.opciones.tasa_iva) / 100).toFixed(2);
     const total = neto + (esA ? Number(ivaInput.value) || 0 : 0) + (Number(document.getElementById('gasOtros').value) || 0);
+    const grupoArt = document.getElementById('gasArticulosGrupo');
+    if (grupoArt) grupoArt.style.display = document.getElementById('gasCategoria').value === 'mercaderia' ? '' : 'none';
+    this.sumaArticulos();
     document.getElementById('gasTotal').textContent = fmtContable(total);
     const pagado = document.getElementById('gasPagado');
     if (pagado) {
@@ -629,6 +740,10 @@ const Contabilidad = {
       otros_impuestos: Number(val('gasOtros')) || 0,
       adjuntos: this.adjForm ? this.adjForm.nuevos.map(a => a.id) : []
     };
+    if (!id && data.categoria === 'mercaderia') {
+      const articulos = this.articulosParaGuardar();
+      if (articulos.length) data.articulos = articulos;
+    }
     if (val('gasVence') !== undefined) data.vencimiento = val('gasVence') || null;
     const pagado = document.getElementById('gasPagado');
     if (pagado && pagado.checked) {
@@ -639,7 +754,7 @@ const Contabilidad = {
     try {
       if (id) await API.updateGasto(id, data);
       else await API.createGasto(data);
-      App.showToast(id ? 'Gasto actualizado' : 'Gasto registrado', 'success');
+      App.showToast(id ? 'Gasto actualizado' : data.articulos ? 'Compra registrada: se sumó al stock' : 'Gasto registrado', 'success');
       App.closeModal();
       this.render();
     } catch (err) {
@@ -695,10 +810,12 @@ const Contabilidad = {
   },
 
   async anular(id) {
-    if (!confirm('¿Anular este gasto? Deja de contarse en los resultados y en el IVA.')) return;
+    const g = (Array.isArray(this.datos) ? this.datos : (this.datos.gastos || [])).find(x => x.id === id);
+    const conStock = g && g.articulos && g.articulos.length;
+    if (!confirm(`¿Anular este gasto? Deja de contarse en los resultados y en el IVA.${conStock ? ' También se resta del stock lo que había sumado.' : ''}`)) return;
     try {
-      await API.anularGasto(id);
-      App.showToast('Gasto anulado', 'success');
+      const r = await API.anularGasto(id);
+      App.showToast((r && r.message) || 'Gasto anulado', 'success');
       this.render();
     } catch (err) {
       App.showToast(err.message, 'error');

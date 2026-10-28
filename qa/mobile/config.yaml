@@ -1,4 +1,4 @@
-# Maestro: flujos de Morfi en un celular Android real o emulado, con Chrome (Morfi es una web, no una app nativa).
+# Maestro: flujos de Fadido en un celular Android real o emulado, con Chrome (Fadido es una web, no una app nativa).
 # Cómo correrlos: qa/mobile/README.md
 flows:
   - flujos/*.yaml

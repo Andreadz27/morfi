@@ -1,6 +1,6 @@
 'use strict';
-// Planes de Morfi: qué incluye cada uno y cuánto cuesta. Es el ÚNICO lugar con precios y módulos:
-// lo usan el local (src/licencia.js), Morfi Nube (nube/) y la pantalla "Tu plan". La landing repite los precios
+// Planes de Fadido: qué incluye cada uno y cuánto cuesta. Es el ÚNICO lugar con precios y módulos:
+// lo usan el local (src/licencia.js), Fadido Nube (nube/) y la pantalla "Tu plan". La landing repite los precios
 // a mano (landing/index.html, sección #precios): si cambian acá, cambiarlos también ahí.
 // Precios finales en pesos por mes (actualizarlos con la inflación; referencia en docs/PLANES.md).
 //
@@ -17,7 +17,7 @@ const MODULOS = {
   fidelizacion: 'Fidelización: puntos, cupones y gift cards',
   costos: 'Ganancias detalladas (por día, mes, plato y canal), recetas, sub-recetas y costo de cada plato',
   contabilidad: 'Contabilidad: gastos, facturas de compra leídas con IA, cuentas a pagar, IVA, resultados y libro diario',
-  panel_nube: 'Panel Morfi Nube: tus ventas desde el celular',
+  panel_nube: 'Panel Fadido Nube: tus ventas desde el celular',
   multisucursal: 'Varias sucursales y precios centrales',
   asistente: 'Asistente IA que atiende WhatsApp (pedidos y reservas)'
 };
@@ -60,7 +60,7 @@ const MANTENIMIENTO = [
   'Actualizaciones y mejoras nuevas',
   'Cambios de ARCA y de la factura electrónica al día',
   'Soporte por WhatsApp y a distancia',
-  'Copia de seguridad en la nube y panel Morfi Nube'
+  'Copia de seguridad en la nube y panel Fadido Nube'
 ];
 
 // Instalación (pago único, por local). A distancia no se cobra; presencial en AMBA tiene precio fijo y fuera de AMBA
@@ -83,9 +83,9 @@ const DESCUENTOS = { semestral: 0.10, anual: 2 / 12 };
 
 // A dónde escribe el cliente para contratar o cambiar de plan (botón "Quiero este plan")
 const VENTAS = {
-  // El de Morfi (11 2390-0155); MORFI_VENTAS_WHATSAPP lo cambia (por ejemplo, un revendedor). Con código de país, solo números
-  whatsapp: process.env.MORFI_VENTAS_WHATSAPP || '5491123900155',
-  email: process.env.MORFI_VENTAS_EMAIL || ''
+  // El de Fadido (11 2390-0155); FADIDO_VENTAS_WHATSAPP lo cambia (por ejemplo, un revendedor). Con código de país, solo números
+  whatsapp: process.env.FADIDO_VENTAS_WHATSAPP || process.env.MORFI_VENTAS_WHATSAPP || '5491123900155',
+  email: process.env.FADIDO_VENTAS_EMAIL || process.env.MORFI_VENTAS_EMAIL || ''
 };
 
 const PLAN_MINIMO = Object.fromEntries(Object.keys(MODULOS).map(m =>

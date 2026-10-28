@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Fidelización
+// FADIDO - Fidelización
 // Programa de puntos, cupones de descuento y gift cards.
 // Canjear puntos y cupones se hace al cobrar (Cobro); acá se configuran y se venden las gift cards.
 // =============================================
@@ -188,7 +188,7 @@ const Fidelizacion = {
               <div class="form-group"><label for="gcMonto">Monto ($)</label><input type="number" id="gcMonto" min="1" step="1" required></div>
               <div class="form-group"><label for="gcMedio">Cobrada en</label><select id="gcMedio">
                 <option value="efectivo">Efectivo (entra a la caja)</option><option value="tarjeta">Tarjeta</option>
-                <option value="transferencia">Transferencia</option><option value="mercadopago">Mercado Pago</option></select></div>
+                <option value="transferencia">Transferencia</option><option value="mercadopago">Mercado Pago</option><option value="modo">MODO</option><option value="cuentadni">Cuenta DNI</option></select></div>
               <div class="form-group"><label for="gcComprador">Compra</label><input type="text" id="gcComprador" maxlength="80"></div>
               <div class="form-group"><label for="gcPara">Para</label><input type="text" id="gcPara" maxlength="80"></div>
               <div class="form-group"><label for="gcVence">Vence</label><input type="date" id="gcVence" min="${hoy}"></div>

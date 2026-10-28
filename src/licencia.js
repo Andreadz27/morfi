@@ -1,6 +1,6 @@
 'use strict';
 // Plan del local y qué módulos tiene (ver src/planes.js).
-// - Con licencia (la manda Morfi Nube firmada, o se pega a mano en Configuración → Tu plan): el plan contratado
+// - Con licencia (la manda Fadido Nube firmada, o se pega a mano en Configuración → Tu plan): el plan contratado
 //   hasta su vencimiento, DIAS_GRACIA días más con todo, y después quedan solo los módulos de Esencial.
 // - Sin licencia: una instalación nueva tiene DIAS_PRUEBA días de prueba con todo y después Esencial.
 //   Una instalación que ya vendía antes de que existieran los planes sigue con todo hasta que se le asigne uno.
@@ -14,8 +14,8 @@ const { PLANES, EXTRAS, MODULOS, DIAS_PRUEBA, DIAS_GRACIA, DIAS_AVISO, modulosDe
 const { leerLicencia, huellaToken } = require('./licencia-firma');
 
 // En los tests se firma con otra clave (la privada de verdad no está en el repositorio)
-const CLAVE_PUBLICA = process.env.NODE_ENV === 'test' && process.env.MORFI_LICENCIA_PUBLICA
-  ? process.env.MORFI_LICENCIA_PUBLICA
+const CLAVE_PUBLICA = process.env.NODE_ENV === 'test' && process.env.FADIDO_LICENCIA_PUBLICA
+  ? process.env.FADIDO_LICENCIA_PUBLICA
   : fs.readFileSync(path.join(__dirname, 'licencia-publica.pem'), 'utf8');
 
 const sumarDias = (fecha, dias) => new Date(Date.parse(fecha + 'T12:00:00Z') + dias * 86400000).toISOString().slice(0, 10);
@@ -54,7 +54,7 @@ async function estadoLicencia(hoy = fechaLocal()) {
       if (dias >= 0) {
         const pronto = dias <= DIAS_AVISO;
         return resultado(lic.plan, extras, { ...base, estado: pronto ? 'mantenimiento_por_vencer' : 'activo', dias,
-          aviso: pronto ? `El mantenimiento de Morfi vence ${dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`} (${fechaAR(lic.vence)}). Tu plan sigue siendo tuyo; renovalo para seguir con actualizaciones, cambios de ARCA y soporte.` : '' });
+          aviso: pronto ? `El mantenimiento de Fadido vence ${dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`} (${fechaAR(lic.vence)}). Tu plan sigue siendo tuyo; renovalo para seguir con actualizaciones, cambios de ARCA y soporte.` : '' });
       }
       return resultado(lic.plan, hoy <= sumarDias(lic.vence, DIAS_GRACIA) ? extras : [], { ...base, estado: 'mantenimiento_vencido',
         aviso: `El mantenimiento venció el ${fechaAR(lic.vence)}. Tu plan ${(PLANES[lic.plan] || PLANES.esencial).nombre} sigue completo, pero sin actualizaciones, cambios de ARCA ni soporte hasta que lo renueves.` });

@@ -1,4 +1,4 @@
-// Morfi Nube etapa 3: precios centrales para cadenas. Nube real + dos sucursales reales de la misma cuenta.
+// Fadido Nube etapa 3: precios centrales para cadenas. Nube real + dos sucursales reales de la misma cuenta.
 // El dueño cambia un precio en el panel y cada sucursal lo aplica, con auditoría; soporte no toca precios.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -26,7 +26,7 @@ const precioEn = async (s, id) => (await s.q('SELECT precio_venta FROM productos
 const filaDe = async nombre => (await aNube('GET', '/api/panel/carta', null, duenio))[1].productos.find(p => p.producto === nombre);
 
 before(async () => {
-  datosNube = fs.mkdtempSync(path.join(os.tmpdir(), 'morfi-nube-'));
+  datosNube = fs.mkdtempSync(path.join(os.tmpdir(), 'fadido-nube-'));
   const tCentro = alta('local', '--cuenta', 'La Buena Mesa', '--nombre', 'Centro', '--cliente', 'centro').match(/NUBE_TOKEN=(\S+)/)[1];
   const tPalermo = alta('local', '--cuenta', 'La Buena Mesa', '--nombre', 'Palermo', '--cliente', 'palermo').match(/NUBE_TOKEN=(\S+)/)[1];
   alta('local', '--cuenta', 'Otro Dueño', '--nombre', 'Bar Ajeno', '--cliente', 'bar-ajeno');
@@ -68,7 +68,7 @@ test('un precio nuevo se aplica en todas las sucursales, queda en la auditoría 
   assert.ok(await esperarQue(async () => await precioEn(centro, prod.id) === 1250.5 && await precioEn(palermo, prod.id) === 1250.5),
     'las sucursales no aplicaron el precio');
   const [aud] = await centro.q("SELECT detalle FROM auditoria WHERE accion = 'precio_desde_nube' ORDER BY id DESC LIMIT 1");
-  assert.match(aud.detalle, /\$1\.000 → \$1\.250,5 \(Ana, desde Morfi Nube\)/);
+  assert.match(aud.detalle, /\$1\.000 → \$1\.250,5 \(Ana, desde Fadido Nube\)/);
   assert.ok(await esperarQue(async () => {
     const f = await filaDe(prod.nombre);
     return f.precios.every(x => x.precio === 1250.5 && x.precio_nuevo === null) && !f.distinto;

@@ -1,4 +1,4 @@
-﻿# Morfi - acceso remoto seguro con Cloudflare Tunnel (gratis, sin abrir puertos del router)
+﻿# Fadido - acceso remoto seguro con Cloudflare Tunnel (gratis, sin abrir puertos del router)
 # Antes: en el panel de Cloudflare (Zero Trust > Networks > Tunnels) crear un túnel para este local,
 # agregarle el "Public hostname" (ej. la-buena-mesa.tudominio.com.ar -> http://localhost:3000)
 # y copiar el token que muestra. Después, en PowerShell COMO ADMINISTRADOR:
@@ -6,7 +6,7 @@
 param(
   [Parameter(Mandatory = $true)][string]$Token,
   [Parameter(Mandatory = $true)][string]$Direccion,
-  # La instalación donde está este script (C:\Morfi, o C:\GastroManager si se instaló con el nombre anterior)
+  # La instalación donde está este script (C:\Fadido, o C:\Morfi / C:\GastroManager si se instaló con un nombre anterior)
   [string]$Carpeta = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 )
 $ErrorActionPreference = 'Stop'
@@ -24,8 +24,9 @@ $envFile = Join-Path $Carpeta '.env'
 $lineas = if (Test-Path $envFile) { Get-Content $envFile } else { @() }
 $lineas = @($lineas | Where-Object { $_ -notmatch '^BASE_URL=' }) + "BASE_URL=$Direccion"
 $lineas | Set-Content -Path $envFile -Encoding UTF8
-# El proceso se llama "morfi" (o "gastromanager" si todavía no se reinició desde el cambio de nombre)
-pm2 restart morfi --update-env
+# El proceso se llama "fadido" (o "morfi" si todavía no se actualizó desde el cambio de nombre)
+pm2 restart fadido --update-env
+if ($LASTEXITCODE) { pm2 restart morfi --update-env }
 if ($LASTEXITCODE -ne 0) { pm2 restart gastromanager --update-env }
 
 Write-Host "`nListo: $Direccion apunta a este local." -ForegroundColor Green

@@ -1,5 +1,5 @@
 'use strict';
-// Formato de la licencia: <datos en base64url>.<firma Ed25519 en base64url>. La firma Morfi Nube con la clave
+// Formato de la licencia: <datos en base64url>.<firma Ed25519 en base64url>. La firma Fadido Nube con la clave
 // privada (NUBE_CLAVE_LICENCIAS, nunca en el repositorio) y cada local la verifica con la pública
 // (src/licencia-publica.pem). Así el plan no se puede cambiar editando la base del local.
 // Sin dependencias de la base: lo usan el local y la nube.

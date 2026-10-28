@@ -21,8 +21,9 @@ const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
 const pct = (parte, total) => total > 0 ? Math.round(parte / total * 1000) / 10 : 0;
 
 // Valores típicos en Argentina (octubre 2026), con IVA de la comisión incluido. Cada local los ajusta.
-const COMISIONES_TIPICAS = { efectivo: 0, tarjeta: 3, mercadopago: 4, transferencia: 0, giftcard: 0, otro: 0 };
-const MEDIOS = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', transferencia: 'Transferencia',
+// MODO y Cuenta DNI: la comisión depende del banco y de la promoción vigente; cada local carga la suya.
+const COMISIONES_TIPICAS = { efectivo: 0, tarjeta: 3, mercadopago: 4, modo: 0, cuentadni: 0, transferencia: 0, giftcard: 0, otro: 0 };
+const MEDIOS = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', modo: 'MODO', cuentadni: 'Cuenta DNI', transferencia: 'Transferencia',
   giftcard: 'Gift card', otro: 'Otro' };
 const CANALES = { salon: 'Salón', takeaway: 'Para llevar', delivery: 'Delivery propio' };
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];

@@ -1,5 +1,5 @@
 'use strict';
-// Validación del pedido online (sin base de datos): la usan el local y Morfi Nube, así los dos aceptan lo mismo.
+// Validación del pedido online (sin base de datos): la usan el local y Fadido Nube, así los dos aceptan lo mismo.
 // Topes: nadie pide 30 platos distintos ni 50 de uno por la web.
 const MAX_ITEMS_ONLINE = 30;
 const MAX_CANTIDAD_ONLINE = 50;

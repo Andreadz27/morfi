@@ -1,5 +1,5 @@
 'use strict';
-// Morfi Nube: plan de cada local (lo asigna soporte con `node nube/alta.js plan ...`) y su licencia firmada.
+// Fadido Nube: plan de cada local (lo asigna soporte con `node nube/alta.js plan ...`) y su licencia firmada.
 // El local la busca cada 2 minutos y con ella habilita sus módulos (src/licencia.js); acá se usa el mismo plan
 // para el panel del dueño, la carta online y los precios centrales.
 // La clave privada va en NUBE_CLAVE_LICENCIAS (el PEM, o la ruta al archivo): sin ella no se firman licencias

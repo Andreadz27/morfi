@@ -59,7 +59,7 @@ after(async () => {
 test('sin Mercado Pago configurado no se ofrece pagar desde la mesa', async () => {
   await cuentaAbierta(mesa);
   const [, est] = await publico(mesa, 'GET', '');
-  assert.deepEqual(est.pago, { mercadopago: false, whatsapp: false });
+  assert.deepEqual(est.pago, { mercadopago: false, whatsapp: false, transferencia: null });
   const [st, r] = await publico(mesa, 'POST', '/pagar', { partes: 1 });
   assert.equal(st, 400);
   assert.match(r.error, /pedile la cuenta al mozo/);

@@ -1,6 +1,6 @@
 'use strict';
 // Pedido online (carta web, links de WhatsApp e Instagram), sin login. Entra directo al local
-// (POST /api/publico/pedido) o por Morfi Nube (el local lo trae con sync-nube.js): los dos usan esto.
+// (POST /api/publico/pedido) o por Fadido Nube (el local lo trae con sync-nube.js): los dos usan esto.
 const { run, get, transaccion } = require('../db');
 const { errorHttp } = require('../util');
 const { emitEvento } = require('../realtime');
@@ -9,7 +9,7 @@ const { comandaAutomatica } = require('./impresion');
 const { validarPedidoOnline } = require('../validar-pedido-online');
 const { controlarHorarios } = require('./venta-cruzada');
 
-// nubeId: id del pedido en Morfi Nube. Si ya se trajo (se cortó antes de avisarle a la nube), no se duplica.
+// nubeId: id del pedido en Fadido Nube. Si ya se trajo (se cortó antes de avisarle a la nube), no se duplica.
 async function crearPedidoOnline(datos, { nubeId = null } = {}) {
   const d = validarPedidoOnline(datos);
   if (nubeId) {
@@ -18,7 +18,7 @@ async function crearPedidoOnline(datos, { nubeId = null } = {}) {
   }
   const r = await transaccion(async () => {
     // Precio y nombre salen de la base (nunca del navegador ni de la nube); por la web no se venden insumos sin precio
-    // Las promos con horario (de 8 a 12) solo se piden en su horario. Lo que llega de Morfi Nube ya lo pidió el
+    // Las promos con horario (de 8 a 12) solo se piden en su horario. Lo que llega de Fadido Nube ya lo pidió el
     // cliente antes (el local lo trae cada 10 s): no se rechaza por haberlo traído pasada la hora.
     if (!nubeId) await controlarHorarios(d.items);
     const resueltos = await resolverItems(d.items);
