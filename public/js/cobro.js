@@ -87,7 +87,8 @@ const Cobro = {
         ${x.metodo === 'efectivo' ? `<input type="number" min="0" step="0.01" value="${x.recibido}" placeholder="Recibido"
           aria-label="Efectivo recibido" oninput="Cobro.setPago(${i}, 'recibido', this.value)">`
           : x.metodo === 'giftcard' ? `<input type="text" value="${esc(x.referencia || '')}" placeholder="Código GM-XXXX-XXXX" maxlength="20"
-          aria-label="Código de la gift card" oninput="Cobro.setPago(${i}, 'referencia', this.value)" onchange="Cobro.saldoGiftCard(this.value)">` : '<span></span>'}
+          aria-label="Código de la gift card" oninput="Cobro.setPago(${i}, 'referencia', this.value)" onchange="Cobro.saldoGiftCard(this.value)">`
+          : x.metodo === 'transferencia' && App.config && App.config.alias_transferencia ? `<span class="text-muted" title="${esc(App.config.titular_transferencia || '')}"><i class="fas fa-university"></i> Alias: <strong>${esc(App.config.alias_transferencia)}</strong></span>` : '<span></span>'}
         ${this.pagos.length > 1 ? `<button type="button" class="btn btn-sm btn-outline" onclick="Cobro.quitarPago(${i})" aria-label="Quitar"><i class="fas fa-times"></i></button>` : '<span></span>'}
       </div>`).join('');
 

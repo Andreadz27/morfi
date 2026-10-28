@@ -127,10 +127,13 @@ test('los ítems agregados seguidos salen en un solo "AGREGADO"', async () => {
 });
 
 test('ticket: precuenta a pedido y ticket al cobrar con cajón', async () => {
+  // La precuenta lleva el alias para transferir (Configuración); el ticket ya pagado, no
+  await s.q("UPDATE configuracion SET alias_transferencia = 'castillo.694', titular_transferencia = 'Castillo' WHERE id = 1");
   const [, pre] = await s.llamar('POST', `/api/pedidos/${pedidoId}/imprimir/ticket`, undefined, s.tokenVendedor);
   assert.equal(pre.ok, true);
   await esperarTrabajos(caja, 1);
   assert.ok(caja.texto(0).includes('PRECUENTA') && caja.texto(0).includes('TOTAL'));
+  assert.ok(caja.texto(0).includes('Transferencias: castillo.694') && caja.texto(0).includes('Titular: Castillo'));
 
   await s.q("UPDATE configuracion SET nombre_negocio = 'La Buena Mesa', eslogan = 'CAFÉ & COSAS RICAS', cuit = '20-12345678-9' WHERE id = 1");
   await s.llamar('PUT', '/api/impresion/config', { ticket_al_cobrar: true, abrir_cajon: true, pie: 'Volvé pronto' }, s.tokenAdmin);
@@ -147,6 +150,7 @@ test('ticket: precuenta a pedido y ticket al cobrar con cajón', async () => {
   assert.ok(t.includes('Pago Efectivo') && t.includes('Vuelto'));
   assert.ok(t.includes('Volv\x82 pronto') && t.includes('no v\xa0lido como factura'));
   assert.ok(!t.includes('PRECUENTA'));
+  assert.ok(!t.includes('castillo.694'), 'pagado: el alias ya no hace falta');
   assert.ok(t.includes(CAJON), 'abre el cajón al cobrar en efectivo');
 });
 
