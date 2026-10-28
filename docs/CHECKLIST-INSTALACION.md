@@ -1,4 +1,4 @@
-# Checklist: instalar Morfi en un cliente
+# Checklist: instalar Fadido en un cliente
 
 Para imprimir y llevar. El detalle de cada paso está en `docs/INSTALACION.md`.
 
@@ -6,8 +6,8 @@ Para imprimir y llevar. El detalle de cada paso está en `docs/INSTALACION.md`.
 
 - [ ] **Pedirle al cliente por WhatsApp:**
   - [ ] Lista de productos con precios y categorías (Excel, foto de la carta o lo que tenga).
-  - [ ] Nombre y email de cada persona que va a usar Morfi, y qué hace (encargado, caja, mozo, cocina).
-  - [ ] Si va a facturar con Morfi: CUIT, condición frente al IVA, y que tenga a mano la clave fiscal (nivel 3).
+  - [ ] Nombre y email de cada persona que va a usar Fadido, y qué hace (encargado, caja, mozo, cocina).
+  - [ ] Si va a facturar con Fadido: CUIT, condición frente al IVA, y que tenga a mano la clave fiscal (nivel 3).
   - [ ] Marca y modelo de las impresoras (comandas y tickets), y si van por cable de red o USB.
   - [ ] Que la PC esté prendida, con Windows 10 u 11, conectada por cable al router, y con la clave de administrador.
   - [ ] Si va a cobrar con Mercado Pago: usuario y contraseña de su cuenta, para que entre él.
@@ -28,11 +28,11 @@ Para imprimir y llevar. El detalle de cada paso está en `docs/INSTALACION.md`.
   `nombre-del-local` va en minúsculas, sin espacios ni acentos (ej. `pizzeria-don-jose`).
 - [ ] Al final, el instalador muestra **en rojo la clave de las copias**: guardarla ya en el gestor de contraseñas,
       con el nombre del cliente. Sin ella, si la PC se rompe, las copias de la nube no se pueden abrir.
-- [ ] Abrir `http://localhost:3000`. Entrar con `admin@morfi.local` / `admin123`: el sistema obliga a cambiar la
+- [ ] Abrir `http://localhost:3000`. Entrar con `admin@fadido.local` / `admin123`: el sistema obliga a cambiar la
       contraseña. Elegirla con el dueño y guardarla en el gestor.
 - [ ] **Copia fuera de la PC.** Mientras no haya un bucket de copias para el cliente, usar su Google Drive u OneDrive.
-      Instalar Drive para escritorio en la PC, y en `C:\Morfi\.env` agregar
-      `BACKUP_COPIA_DIR=G:\Mi unidad\Morfi-copias` (la carpeta sincronizada). Después: `pm2 restart morfi`.
+      Instalar Drive para escritorio en la PC, y en `C:\Fadido\.env` agregar
+      `BACKUP_COPIA_DIR=G:\Mi unidad\Fadido-copias` (la carpeta sincronizada). Después: `pm2 restart fadido`.
 
 ## En el local: puesta a punto, con el dueño
 
@@ -44,7 +44,7 @@ Para imprimir y llevar. El detalle de cada paso está en `docs/INSTALACION.md`.
 - [ ] **Mesas:** que coincidan con el salón (nombre y capacidad).
 - [ ] **Celulares del personal:** Menú QR → *Conectar celulares* → escanear con cada celular. Imprimir la *hoja para el
       personal* y pegarla en la caja.
-- [ ] **Factura electrónica** (si factura con Morfi; si no, se configura otro día):
+- [ ] **Factura electrónica** (si factura con Fadido; si no, se configura otro día):
   - [ ] En ARCA, con la clave fiscal del dueño: punto de venta "Web Services" dado de alta.
   - [ ] Integraciones → AFIP: CUIT, punto de venta, access token y certificado. **Primero en homologación** (prueba).
   - [ ] Opcional, recomendado: punto de venta CAEA para cuando ARCA no responde (`docs/INSTALACION.md`, "CAEA").
@@ -73,5 +73,5 @@ Para imprimir y llevar. El detalle de cada paso está en `docs/INSTALACION.md`.
 
 - [ ] Copia en la nube propia del cliente (bucket R2 o B2) y monitoreo (`docs/INSTALACION.md`, puntos 3 y 4).
 - [ ] Dirección fija con Cloudflare Tunnel (Mercado Pago con cierre automático, pedidos online, WhatsApp).
-- [ ] Conectarlo a Morfi Nube cuando tenga dirección pública.
+- [ ] Conectarlo a Fadido Nube cuando tenga dirección pública.
 - [ ] Llamarlo al tercer día: dudas, cosas que faltan cargar.

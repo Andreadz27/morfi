@@ -1,5 +1,5 @@
 /* =============================================
-   MORFI - Estilos CSS
+   FADIDO - Estilos CSS
    Sistema moderno y responsive
    ============================================= */
 
@@ -1337,7 +1337,7 @@ tr:hover td {
 }
 
 /* ============================================================
-   REDISEÑO PREMIUM v2 - MORFI
+   REDISEÑO PREMIUM v2 - FADIDO
    ============================================================ */
 
 /* Sidebar con gradiente moderno */
@@ -2225,7 +2225,7 @@ tr:hover td {
 .cobro-cliente-opcion:hover { background: rgba(249, 115, 22, .08); }
 .cobro-cliente-opcion small { color: var(--text-light); margin-left: 6px; }
 
-/* Marca Morfi: ícono (favicon.svg) y nombre en minúscula, como en el logo */
+/* Marca Fadido: ícono (favicon.svg) y nombre en minúscula, como en el logo */
 .marca-icono { display: block; flex-shrink: 0; border-radius: 23%; }
 .marca-texto { font-weight: 800; letter-spacing: -0.5px; }
 .login-logo { background: none; width: auto; height: auto; }

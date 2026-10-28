@@ -1,5 +1,5 @@
 'use strict';
-// Morfi Nube: manda a la nube las ventas cerradas y el estado del local, para el panel del dueño (todos sus
+// Fadido Nube: manda a la nube las ventas cerradas y el estado del local, para el panel del dueño (todos sus
 // locales desde el celular) y para soporte. Se activa con NUBE_URL y NUBE_TOKEN en el .env (el token lo da
 // `node nube/alta.js local ...`). Sin internet no pasa nada: lo que falta se manda en la próxima vuelta.
 // De las ventas no se mandan datos de los clientes (nombre, teléfono, CUIT): solo números de pedido, productos e importes.
@@ -155,7 +155,7 @@ async function aplicarCambiosDePrecio() {
     await transaccion(async () => {
       await run('UPDATE productos SET precio_venta = ? WHERE id = ?', [precio, prod.id]);
       await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (NULL, ?, ?)', ['precio_desde_nube',
-        `${prod.nombre}: ${plata(prod.precio_venta)} → ${plata(precio)} (${c.usuario || 'dueño'}, desde Morfi Nube)`]);
+        `${prod.nombre}: ${plata(prod.precio_venta)} → ${plata(precio)} (${c.usuario || 'dueño'}, desde Fadido Nube)`]);
     });
     await enviar(`/api/sync/cambios/${c.id}`, {});
     aplicados++;

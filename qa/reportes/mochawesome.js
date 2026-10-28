@@ -104,8 +104,8 @@ async function generarHtml(partes = PARTES.map(f => path.join(SALIDA, f)).filter
   const datos = informe(suites, { inicio, fin: inicio + duracion });
   const marge = require('mochawesome-report-generator');
   const [html] = await marge.create(datos, {
-    reportDir: path.join(SALIDA, 'mochawesome'), reportFilename: 'index', reportTitle: 'Morfi · Reporte de pruebas',
-    reportPageTitle: 'Morfi · Reporte de pruebas', inline: true, charts: true, code: false, showSkipped: true, overwrite: true, timestamp: false
+    reportDir: path.join(SALIDA, 'mochawesome'), reportFilename: 'index', reportTitle: 'Fadido · Reporte de pruebas',
+    reportPageTitle: 'Fadido · Reporte de pruebas', inline: true, charts: true, code: false, showSkipped: true, overwrite: true, timestamp: false
   });
   return { html, stats: datos.stats };
 }

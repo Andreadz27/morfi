@@ -15,10 +15,11 @@ const { subirCopia } = require('./copia-nube');
 const DIR_BACKUPS = path.join(DATA_DIR, 'backups');
 const BACKUPS_CONSERVAR = Math.max(1, parseInt(process.env.BACKUPS_CONSERVAR, 10) || 30);
 // El sufijo _N aparece si se pidieron dos copias en el mismo segundo (ej. la automática al iniciar y una manual).
-// Las de antes del cambio de nombre (gastromanager_...) se siguen listando y restaurando; por orden alfabético
-// quedan después de las morfi_..., que son todas más nuevas.
-const NOMBRE_BACKUP = /^(morfi|gastromanager)_\d{4}-\d{2}-\d{2}_\d{6}(_\d{1,3})?\.db$/;
-const sinExtension = n => n.replace(/\.db$/, '');
+// Las de los nombres anteriores (morfi_..., gastromanager_...) se siguen listando y restaurando.
+const NOMBRE_BACKUP = /^(fadido|morfi|gastromanager)_\d{4}-\d{2}-\d{2}_\d{6}(_\d{1,3})?\.db$/;
+// Se ordenan por la fecha del nombre, sin el prefijo: por orden alfabético, las fadido_ (las más nuevas) quedaban
+// detrás de las morfi_ y la rotación las borraba primero
+const fechaDelNombre = n => n.replace(/^[a-z]+_/, '').replace(/\.db$/, '');
 
 function listarBackups() {
   if (!fs.existsSync(DIR_BACKUPS)) return [];
@@ -28,7 +29,7 @@ function listarBackups() {
       const st = fs.statSync(path.join(DIR_BACKUPS, nombre));
       return { nombre, tamano: st.size, fecha: st.mtime.toISOString() };
     })
-    .sort((a, b) => sinExtension(b.nombre).localeCompare(sinExtension(a.nombre)));
+    .sort((a, b) => fechaDelNombre(b.nombre).localeCompare(fechaDelNombre(a.nombre)));
 }
 
 let backupEnCurso = null;
@@ -40,7 +41,7 @@ function crearBackup() {
     const hora = new Intl.DateTimeFormat('en-GB', {
       timeZone: ZONA_HORARIA, hourCycle: 'h23', hour: '2-digit', minute: '2-digit', second: '2-digit'
     }).format(new Date()).replace(/:/g, '');
-    const base = `morfi_${fechaLocal()}_${hora}`;
+    const base = `fadido_${fechaLocal()}_${hora}`;
     // VACUUM INTO falla si el archivo ya existe: nunca se pisa una copia anterior
     let nombre = `${base}.db`;
     for (let n = 2; fs.existsSync(path.join(DIR_BACKUPS, nombre)); n++) nombre = `${base}_${n}.db`;

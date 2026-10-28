@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Venta cruzada (la usan la carta del QR y el punto de venta)
+// FADIDO - Venta cruzada (la usan la carta del QR y el punto de venta)
 // - Acompañalo con: productos de las categorías que se sugieren con la del producto agregado
 //   (primero los recomendados, los más pedidos y los nuevos).
 // - ¿Lo querés grande?: la versión grande del producto.

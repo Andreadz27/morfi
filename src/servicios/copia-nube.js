@@ -5,7 +5,7 @@
 //
 // Variables de entorno (si falta alguna, la copia en la nube queda desactivada):
 //   BACKUP_S3_ENDPOINT   https://<account-id>.r2.cloudflarestorage.com (R2) o https://s3.us-west-004.backblazeb2.com (B2)
-//   BACKUP_S3_BUCKET     morfi-copias
+//   BACKUP_S3_BUCKET     fadido-copias
 //   BACKUP_S3_KEY_ID     keyID de la Application Key (B2) o Access Key ID
 //   BACKUP_S3_SECRET     applicationKey (B2) o Secret Access Key
 //   BACKUP_S3_REGION     opcional; si no está se toma del endpoint (us-west-004) o 'auto'
@@ -107,9 +107,10 @@ async function listarCopiasNube(cfg = configNube()) {
     nombre: path.basename((c.match(/<Key>([^<]*)<\/Key>/) || [])[1] || ''),
     tamano: Number((c.match(/<Size>(\d+)<\/Size>/) || [])[1]) || 0,
     fecha: (c.match(/<LastModified>([^<]*)<\/LastModified>/) || [])[1] || ''
-  })).filter(c => /^(morfi|gastromanager)_.*\.db(\.cifrado)?$/.test(c.nombre));
-  // Mismo orden que las copias locales: sin la extensión (si no, la _2 del mismo segundo queda mal ubicada)
-  const base = n => n.split('.')[0];
+  })).filter(c => /^(fadido|morfi|gastromanager)_.*\.db(\.cifrado)?$/.test(c.nombre));
+  // Mismo orden que las copias locales: por la fecha del nombre, sin prefijo ni extensión (si no, la _2 del mismo
+  // segundo queda mal ubicada y las fadido_ detrás de las morfi_)
+  const base = n => n.split('.')[0].replace(/^[a-z]+_/, '');
   return copias.sort((a, b) => base(b.nombre).localeCompare(base(a.nombre)));
 }
 

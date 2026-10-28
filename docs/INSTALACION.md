@@ -1,4 +1,4 @@
-# Instalar Morfi en un restaurante
+# Instalar Fadido en un restaurante
 
 Modelo recomendado (ver el estudio "Dónde alojar el sistema"): el servidor corre **en el local**, así vende e imprime
 aunque se corte internet; la nube guarda las copias y da acceso remoto.
@@ -11,7 +11,7 @@ aunque se corte internet; la nube guarda las copias y da acceso remoto.
 | Conexión | Por cable a la red del local | Las tablets y las impresoras la encuentran siempre |
 | IP fija en el router | Reservar la IP de la PC **y la de cada impresora de red** | Los celulares y tablets entran por la IP de la PC; la PC manda las comandas a la IP de cada impresora |
 | UPS (batería) | Para la PC y el router | Un corte de luz no corta la caja ni corrompe la base |
-| BIOS: *Restore on AC power loss* = **Power On** | En la configuración de la PC | Si la luz se corta más que la UPS, la PC se prende sola al volver y Morfi arranca solo (no hace falta iniciar sesión) |
+| BIOS: *Restore on AC power loss* = **Power On** | En la configuración de la PC | Si la luz se corta más que la UPS, la PC se prende sola al volver y Fadido arranca solo (no hace falta iniciar sesión) |
 | Internet de respaldo (recomendado) | Router con chip 4G y *failover* (pasa solo al 4G si se corta la fibra), o un módem 4G conectado al router principal | Sin internet el local sigue vendiendo, pero Mercado Pago, la factura al momento, WhatsApp y los pedidos online esperan. Con el 4G no se nota el corte |
 | Access point WiFi | Que llegue bien a todo el salón y la cocina | Si un celular pierde el WiFi del local, no puede tomar pedidos (el sistema está en la PC del local) |
 
@@ -21,7 +21,7 @@ Cada instalación descarga el sistema de GitHub (`Andreadz27/morfi`). Hoy el rep
 sin token. **Si pasa a privado**, cada instalación necesita un token de GitHub de solo lectura (`-Token`):
 
 - **Una vez (para todos los locales):** en GitHub, **Settings → Developer settings → Personal access tokens →
-  Fine-grained tokens → Generate new token**: acceso solo al repositorio `morfi`, permiso **Contents: Read-only**,
+  Fine-grained tokens → Generate new token**: acceso solo al repositorio `fadido`, permiso **Contents: Read-only**,
   vencimiento de 1 año. Guardarlo en un lugar seguro (no se vuelve a mostrar).
 - Antes de que venza, generar uno nuevo y volver a ejecutar el instalador en cada local con el token nuevo (no borra
   datos). Los locales que se instalaron sin token también lo necesitan para seguir recibiendo actualizaciones.
@@ -50,11 +50,11 @@ dirección de la PC en el WiFi del local (sin las redes virtuales de Windows) y 
 con los pasos y cómo agregarlo a la pantalla de inicio. Pegarla en la cocina o la caja. Los QR de la carta y de las
 mesas también usan esa dirección cuando se arman desde la misma PC.
 
-- **Arranca al encender la PC**, aunque nadie inicie sesión (tarea de Windows *Morfi*, cuenta SYSTEM).
-- **Se levanta solo si se cae**: la tarea *Morfi - vigilar* lo revisa cada 5 minutos y, si no responde, lo vuelve a arrancar (anota lo que hace en `logs\vigilante.log`; no actúa mientras se actualiza).
+- **Arranca al encender la PC**, aunque nadie inicie sesión (tarea de Windows *Fadido*, cuenta SYSTEM).
+- **Se levanta solo si se cae**: la tarea *Fadido - vigilar* lo revisa cada 5 minutos y, si no responde, lo vuelve a arrancar (anota lo que hace en `logs\vigilante.log`; no actúa mientras se actualiza).
 - **No se duerme con el cargador puesto**: sin suspensión ni hibernación y, en notebooks, cerrar la tapa no hace nada. Una notebook tiene que quedar siempre enchufada.
 - **Red del local como privada**: si Windows la marcó como pública, la pasa a privada (si no, el firewall no deja entrar a los celulares).
-  pm2 usa una carpeta compartida para toda la PC (`PM2_HOME=C:\ProgramData\Morfi\pm2`): `pm2 list` y
+  pm2 usa una carpeta compartida para toda la PC (`PM2_HOME=C:\ProgramData\Fadido\pm2`): `pm2 list` y
   `pm2 logs` desde una consola de administrador ven el mismo proceso.
 - **Clave de las copias:** la genera el instalador (`BACKUP_CLAVE` en el `.env`) y la muestra en rojo al final.
   **Guardala en tu gestor de contraseñas con el nombre del cliente.** Si la PC se rompe, sin esa clave las copias
@@ -77,7 +77,7 @@ no por carpeta.)
 2. En el bucket, **Settings → Object lifecycle rules → Add rule**: borrar objetos a los **30 días**.
 3. **R2 → Manage API tokens → Create API token**: permiso **Object Read & Write**, **solo para ese bucket**.
    Copiar **Access Key ID**, **Secret Access Key** y el endpoint `https://<account-id>.r2.cloudflarestorage.com`.
-4. Completar en `C:\Morfi\.env` (`BACKUP_CLAVE` ya la puso el instalador):
+4. Completar en `C:\Fadido\.env` (`BACKUP_CLAVE` ya la puso el instalador):
 
 ```
 BACKUP_S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
@@ -87,7 +87,7 @@ BACKUP_S3_SECRET=<Secret Access Key>
 BACKUP_S3_PREFIJO=la-buena-mesa
 ```
 
-5. `pm2 restart morfi --update-env`. Cada copia (al iniciar, cada 24 h y las manuales) se sube
+5. `pm2 restart fadido --update-env`. Cada copia (al iniciar, cada 24 h y las manuales) se sube
    **cifrada** a `gm-la-buena-mesa/la-buena-mesa/` (archivos `.db.cifrado`).
 6. Comprobar: `npm run restaurar -- --listar` muestra las copias locales y las de la nube.
 
@@ -100,11 +100,11 @@ Si un local decide no tener copia fuera de la PC (no recomendado), poner `BACKUP
 En la carpeta de la instalación (PowerShell como Administrador):
 
 ```powershell
-pm2 stop morfi
+pm2 stop fadido
 npm run restaurar -- --listar                                         # ver las copias
-npm run restaurar -- morfi_2026-10-23_050000.db               # una copia de esta PC
-npm run restaurar -- --nube morfi_2026-10-23_050000.db.cifrado  # una de la nube
-pm2 start morfi
+npm run restaurar -- fadido_2026-10-23_050000.db               # una copia de esta PC
+npm run restaurar -- --nube fadido_2026-10-23_050000.db.cifrado  # una de la nube
+pm2 start fadido
 ```
 
 Antes de reemplazar nada, verifica que la copia sea una base sana y guarda la base actual en
@@ -144,7 +144,7 @@ El sistema avisa cada 5 minutos que está vivo. Si deja de avisar (PC apagada, s
 (base sin responder, sin copia en 26 horas, falló la subida a la nube), te llega la alerta.
 Desde la red del local también se puede ver `http://<ip>:3000/api/salud`.
 
-### 4b. Morfi Nube (panel del dueño y de soporte)
+### 4b. Fadido Nube (panel del dueño y de soporte)
 
 Un servidor chico en internet (uno solo para todos los clientes) recibe las ventas cerradas y el estado de cada local.
 El dueño ve desde el celular las ventas de hoy, de la semana o del mes, por local y en total, lo más vendido y si
@@ -154,7 +154,7 @@ sin noticias hace más de 15 minutos, sin copia de seguridad, facturas que ARCA 
 - Se mandan números de pedido, productos e importes. **No** se mandan nombres, teléfonos ni CUIT de los clientes.
 - El local no depende de la nube: si se cae o no hay internet, se sigue cobrando y lo pendiente se manda al volver.
 
-**Montar la nube en la PC de un local (gratis; la opción elegida para empezar):** corre junto al Morfi del local, con
+**Montar la nube en la PC de un local (gratis; la opción elegida para empezar):** corre junto al Fadido del local, con
 una dirección fija por Cloudflare Tunnel. Su punto débil: si esa PC se apaga o pierde internet, a todos los clientes
 se les caen el panel y la carta online. Los locales siguen vendiendo igual. Cuando haya clientes que paguen, pasar a
 Render (más abajo).
@@ -164,7 +164,7 @@ Render (más abajo).
    ```
    $env:PORT='4000'; $env:NUBE_DATOS='C:\Users\<usuario>\Documents\Morfi-nube-datos'
    $env:NUBE_CLAVE_LICENCIAS='C:\Users\<usuario>\Documents\Morfi-claves\licencias-privada.pem'; $env:NODE_ENV='production'
-   pm2 start nube/servidor.js --name morfi-nube --update-env; pm2 save
+   pm2 start nube/servidor.js --name fadido-nube --update-env; pm2 save
    ```
    `npm run actualizar` la detiene antes de instalar dependencias y la reinicia con el código nuevo.
 3. Dirección fija: comprar un dominio (en NIC.ar, `.com.ar`) y agregarlo a una cuenta gratis de Cloudflare.
@@ -179,16 +179,16 @@ Render (más abajo).
    Como esa carpeta está en el mismo disco, conviene sacarla de la PC:
    - `NUBE_COPIA_DIR`: guarda un duplicado en otra carpeta, por ejemplo una de Google Drive u OneDrive sincronizada.
    - `BACKUP_S3_*`: las mismas variables que la copia del local. La sube cifrada al bucket, en la carpeta `nube/`.
-   Restaurar: `pm2 stop morfi-nube`, copiar la copia elegida sobre `Morfi-nube-datos\nube.db`, borrar
-   `nube.db-wal` y `nube.db-shm`, y `pm2 start morfi-nube`.
+   Restaurar: `pm2 stop fadido-nube`, copiar la copia elegida sobre `Morfi-nube-datos\nube.db`, borrar
+   `nube.db-wal` y `nube.db-shm`, y `pm2 start fadido-nube`.
 
 **Montar la nube en Render (cuando haya clientes que paguen):** no hay servidor que mantener, tiene https incluido y se
 actualiza sola cuando el CI pasa. Cuesta unos USD 7,25 por mes: plan Starter más 1 GB de disco.
 1. En Render: **New → Blueprint**, elegir el repositorio `Andreadz27/morfi` y, en **Blueprint path**, poner
-   `nube/render.yaml`. Crea el servicio `morfi-nube` con el disco y las variables.
+   `nube/render.yaml`. Crea el servicio `fadido-nube` con el disco y las variables.
 2. En el servicio: **Environment → Secret Files → Add**. Nombre: `licencias-privada.pem`. Contenido: el de
    `Documents\Morfi-claves\licencias-privada.pem`. Guardar y redesplegar.
-3. Abrir `https://morfi-nube.onrender.com/api/salud` (o la dirección que le haya dado Render). Tiene que responder
+3. Abrir `https://fadido-nube.onrender.com/api/salud` (o la dirección que le haya dado Render). Tiene que responder
    `"ok":true`, y en `"ip"` tu IP pública: comparala con la que muestra cualquier página de "cuál es mi IP". Si
    aparece otra, es la de un proxy de Render. En ese caso subir `TRUST_PROXY` a 2 en **Environment**, guardar y volver
    a mirar; si sigue sin coincidir, probar 3. Nunca poner `true`: permite falsear la IP y saltear el límite de
@@ -206,16 +206,16 @@ Hacer copia de la carpeta `NUBE_DATOS`: si se pierde, los locales vuelven a mand
 **Altas (en el servidor de la nube):**
 
 ```
-node nube/alta.js soporte --nombre "Soporte Morfi" --email vos@tu-dominio --password ********
+node nube/alta.js soporte --nombre "Soporte Fadido" --email vos@tu-dominio --password ********
 node nube/alta.js local   --cuenta "La Buena Mesa" --nombre "Centro" --cliente la-buena-mesa-centro
 node nube/alta.js usuario --cuenta "La Buena Mesa" --nombre "Ana" --email ana@labuenamesa.com --password ********
 ```
 
 El alta del local muestra **una sola vez** su `NUBE_TOKEN`. En el `.env` del local poner `NUBE_URL=https://<tu nube>` y
-`NUBE_TOKEN=...` y reiniciar Morfi. A los 2 minutos manda todo su historial de ventas (en tandas) y queda al día.
+`NUBE_TOKEN=...` y reiniciar Fadido. A los 2 minutos manda todo su historial de ventas (en tandas) y queda al día.
 Una cadena con varias sucursales es una cuenta con varios locales: el dueño las ve juntas.
 
-**Carta y pedidos online con link fijo:** con Morfi Nube configurada, la carta online de cada local queda en
+**Carta y pedidos online con link fijo:** con Fadido Nube configurada, la carta online de cada local queda en
 `https://<tu nube>/l/<cliente>` (el mismo nombre de cliente del alta). Ese link no cambia aunque cambie la PC, la
 conexión o se caiga el túnel: es el que va en Instagram, Google Maps, el QR de la vidriera y la landing. El sistema
 del local lo usa solo en Menú QR para los links de WhatsApp e Instagram.
@@ -232,7 +232,7 @@ del local lo usa solo en Menú QR para los links de WhatsApp e Instagram.
 **Precios centrales (cadenas):** en el panel, la pestaña *Precios* (solo el dueño, no soporte) muestra cada producto con el
 precio en cada sucursal y marca los que difieren. "Cambiar" pone un precio nuevo en todas o en las sucursales que se
 elijan. Cada local lo aplica en unos 10 segundos (sin internet, cuando vuelve) y lo deja en su auditoría
-("desde Morfi Nube", con el nombre de quien lo cambió). Los productos se reconocen por nombre: conviene que se llamen
+("desde Fadido Nube", con el nombre de quien lo cambió). Los productos se reconocen por nombre: conviene que se llamen
 igual en todas las sucursales. Si una sucursal no puede aplicarlo (dio de baja el producto), el panel lo avisa.
 
 ### 4c. Asistente IA por WhatsApp
@@ -263,7 +263,7 @@ Necesario para que el dueño vea el sistema desde afuera y para recibir avisos d
 4. En la PC del local, PowerShell como Administrador:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File C:\Morfi\scripts\windows\tunel.ps1 -Token "<token>" -Direccion "https://la-buena-mesa.tudominio.com.ar"
+powershell -ExecutionPolicy Bypass -File C:\Fadido\scripts\windows\tunel.ps1 -Token "<token>" -Direccion "https://la-buena-mesa.tudominio.com.ar"
 ```
 
 No se abren puertos del router: la conexión sale del local hacia Cloudflare, con HTTPS.
@@ -317,9 +317,9 @@ caída de ARCA), la primera alternativa es el **CAEA**: un código que ARCA otor
 1. En ARCA (clave fiscal del dueño): **Administración de puntos de venta y domicilios** → dar de alta un punto de
    venta **nuevo, solo para CAEA**, con el mismo domicilio y la misma condición de IVA que el de siempre. Confirmar con
    el contador el sistema que corresponde elegir.
-2. En Morfi: **Integraciones → AFIP → Punto de venta CAEA** → ese número → Guardar → **Actualizar con ARCA**. Tiene que
+2. En Fadido: **Integraciones → AFIP → Punto de venta CAEA** → ese número → Guardar → **Actualizar con ARCA**. Tiene que
    aparecer "CAEA … hasta el …".
-3. Listo. Morfi pide solo el CAEA de cada quincena (cada 6 horas revisa; el de la quincena siguiente, desde 5 días
+3. Listo. Fadido pide solo el CAEA de cada quincena (cada 6 horas revisa; el de la quincena siguiente, desde 5 días
    antes). Si ARCA no responde al cobrar, la factura sale igual con CAEA en ese punto de venta: el ticket dice "CAEA"
    y el QR lo marca así. Al volver internet la informa a ARCA sola (hay plazo hasta 8 días después de que termina la
    quincena). Una quincena sin uso se informa "sin movimiento".
@@ -335,8 +335,8 @@ quincena), la factura queda **en espera** y se emite con CAE cuando vuelve la co
 | Qué pasa | Qué sigue andando | Qué hacer |
 |---|---|---|
 | **Se corta internet** | Pedidos, mesas, cocina, impresoras y cobros en efectivo o con posnet (el posnet tiene su propio chip). Arriba aparece el aviso "Sin internet" | Nada. Las facturas quedan **en espera** y se emiten solas al volver (sin duplicarse). Mercado Pago, WhatsApp y los pedidos online vuelven con internet. Con router 4G de respaldo no se nota |
-| **Se corta la luz** | Con UPS: todo, el tiempo que dure la batería | Si la luz vuelve después de que se apagó la PC, se prende sola (BIOS) y Morfi arranca solo. No hace falta tocar nada |
-| **Un celular no carga Morfi** | El resto de los equipos | Que esté en el **WiFi del local** (no en datos móviles) y entre con la dirección de la hoja del personal. Si nadie entra, revisar que la PC esté prendida |
+| **Se corta la luz** | Con UPS: todo, el tiempo que dure la batería | Si la luz vuelve después de que se apagó la PC, se prende sola (BIOS) y Fadido arranca solo. No hace falta tocar nada |
+| **Un celular no carga Fadido** | El resto de los equipos | Que esté en el **WiFi del local** (no en datos móviles) y entre con la dirección de la hoja del personal. Si nadie entra, revisar que la PC esté prendida |
 | **Cambió la IP de la PC** (no se reservó en el router) | La PC misma | Menú QR → Conectar celulares muestra la dirección nueva. Reservarla en el router e imprimir la hoja de nuevo; en Configuración → Impresoras no hace falta tocar nada (la PC es la que les manda) |
 | **Se rompe la PC** | Nada hasta reemplazarla | Otra PC y `instalar.ps1 -RestaurarDeLaNube` (sección 3b): 15 a 30 minutos. Mientras tanto, comandas a mano |
 | **ARCA está caído** (con internet) | Todo menos la factura al momento | Las facturas quedan en espera y se reintentan solas; si ARCA rechaza alguna, aparece en Integraciones → AFIP |

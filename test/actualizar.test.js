@@ -55,7 +55,7 @@ test('actualiza a la versión nueva con copia previa; sin cambios no hace nada; 
     assert.doesNotMatch(fs.readFileSync(cargados, 'utf8'), /[\\/]sqlite3[\\/]/, 'sqlite3 se carga solo en el proceso de la copia');
     assert.equal(git(inst, 'rev-parse', 'HEAD'), nueva);
     assert.ok(fs.existsSync(path.join(inst, 'NOVEDAD.txt')));
-    assert.match(r.stdout, /Copia de seguridad previa: morfi_/);
+    assert.match(r.stdout, /Copia de seguridad previa: fadido_/);
     assert.ok(fs.readdirSync(path.join(datos, 'backups')).length >= 1);
     assert.match(fs.readFileSync(path.join(inst, 'logs', 'actualizaciones.log'), 'utf8'), /Actualizado a/);
 

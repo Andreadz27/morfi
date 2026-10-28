@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Configuración
+// FADIDO - Configuración
 // Datos del negocio y preferencias (solo admin)
 // =============================================
 

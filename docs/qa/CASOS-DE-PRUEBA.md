@@ -52,7 +52,7 @@ Corren en orden; si uno falla, los siguientes no corren.
 | CP-GAN-01 | "¿Cuánto gané hoy?" | Cobrar un pedido con tarjeta; ingresar como administrador | Las ventas suben; la comisión sube 3 % de lo cobrado; la tarjeta del inicio se ve | P2 | regresión |
 | CP-GAN-02 | Pestañas de Ganancias | Recorrer las 6 pestañas | Ninguna muestra error | P2 | regresión |
 
-## API (CP-API) · `qa/api/morfi.postman_collection.json`
+## API (CP-API) · `qa/api/fadido.postman_collection.json`
 
 Una carpeta por grupo; cada pedido tiene sus verificaciones (`pm.test`). Además, en todos: responde en menos de 2 s
 y el JSON se puede leer.

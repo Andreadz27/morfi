@@ -1,4 +1,4 @@
-// Morfi Nube detrás de un proxy (Render): TRUST_PROXY=1 toma la IP que agrega el proxy, no la que inventa el cliente.
+// Fadido Nube detrás de un proxy (Render): TRUST_PROXY=1 toma la IP que agrega el proxy, no la que inventa el cliente.
 // Con "true" cualquiera podía poner otra IP en X-Forwarded-For y saltear el límite de intentos de login.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -13,7 +13,7 @@ const RAIZ = path.join(__dirname, '..');
 const puertoLibre = () => new Promise(ok => { const x = net.createServer(); x.listen(0, () => { const { port } = x.address(); x.close(() => ok(port)); }); });
 
 async function conNube(env, fn) {
-  const datos = fs.mkdtempSync(path.join(os.tmpdir(), 'morfi-nube-proxy-'));
+  const datos = fs.mkdtempSync(path.join(os.tmpdir(), 'fadido-nube-proxy-'));
   const port = await puertoLibre();
   const base = `http://127.0.0.1:${port}`;
   const nube = spawn(process.execPath, [path.join(RAIZ, 'nube', 'servidor.js')],

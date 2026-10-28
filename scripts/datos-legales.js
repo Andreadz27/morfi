@@ -1,4 +1,4 @@
-// Datos del titular de Morfi en los documentos legales: se editan en docs/legales/datos.json y este script los
+// Datos del titular de Fadido en los documentos legales: se editan en docs/legales/datos.json y este script los
 // pasa a la política de privacidad, los términos y la orden de alta.
 // Uso:  npm run legales              (aplica los datos)
 //       node scripts/datos-legales.js --revisar   (falla si algún documento no coincide con datos.json; lo usa el test)

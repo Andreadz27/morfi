@@ -55,7 +55,7 @@ function pc(envExtra = {}) {
     dir, env,
     restaurar: (...a) => correr([path.join(RAIZ, 'scripts', 'restaurar.js'), ...a], { cwd: RAIZ, env }),
     q: async sql => (await correr(['-e', `
-      const db = new (require('sqlite3').Database)(${JSON.stringify(path.join(env.GM_DATA_DIR, 'morfi.db'))});
+      const db = new (require('sqlite3').Database)(${JSON.stringify(path.join(env.GM_DATA_DIR, 'fadido.db'))});
       db.all(${JSON.stringify(sql)}, (e, r) => { console.log(JSON.stringify(e ? e.message : r)); db.close(); });`], { cwd: RAIZ })).stdout,
     borrar: () => fs.rmSync(dir, { recursive: true, force: true })
   };
@@ -91,7 +91,7 @@ test('la copia se sube cifrada; una PC nueva la restaura desde la nube con la cl
     const r0 = await sinClave.restaurar('--nube', nombre);
     assert.equal(r0.status, 1);
     assert.match(r0.stderr, /falta BACKUP_CLAVE/);
-    assert.equal(fs.existsSync(path.join(sinClave.dir, 'morfi.db')), false, 'no tocó nada');
+    assert.equal(fs.existsSync(path.join(sinClave.dir, 'fadido.db')), false, 'no tocó nada');
     sinClave.borrar();
 
     const r = await nueva.restaurar('--nube', nombre);
@@ -125,7 +125,7 @@ test('restaurar una copia local: guarda la base actual antes y rechaza copias da
     const corriendo = await correr([path.join(RAIZ, 'scripts', 'restaurar.js'), copia],
       { cwd: RAIZ, env: { ...process.env, GM_DATA_DIR: dir, GM_ENV_FILE: path.join(dir, 'sin.env'), PORT: new URL(s.base).port } });
     assert.equal(corriendo.status, 1);
-    assert.match(corriendo.stderr, /pm2 stop morfi/);
+    assert.match(corriendo.stderr, /pm2 stop fadido/);
   } finally {
     await s.cerrar({ conservarDatos: true });
   }
@@ -143,7 +143,7 @@ test('restaurar una copia local: guarda la base actual antes y rechaza copias da
     const resguardo = fs.readdirSync(path.join(dir, 'backups')).find(f => f.startsWith('antes-de-restaurar_'));
     assert.ok(resguardo, 'guardó la base anterior');
     const resguardada = pc();
-    fs.copyFileSync(path.join(dir, 'backups', resguardo), path.join(resguardada.dir, 'morfi.db'));
+    fs.copyFileSync(path.join(dir, 'backups', resguardo), path.join(resguardada.dir, 'fadido.db'));
     assert.match(await resguardada.q('SELECT nombre_negocio FROM configuracion'), /Versión nueva/);
     resguardada.borrar();
   } finally {

@@ -1,11 +1,11 @@
-# Estrategia de pruebas de Morfi
+# Estrategia de pruebas de Fadido
 
 Qué se prueba, con qué herramienta, cuándo corre y cuándo una versión está lista para instalarse en un local.
 Complementa a `docs/MAPA-DE-RIESGOS.md` (qué partes se rompen más fácil y qué las protege).
 
 ## Qué se cuida primero
 
-Morfi corre en el mostrador de un restaurante en pleno servicio. El orden de prioridad sale de lo que más le
+Fadido corre en el mostrador de un restaurante en pleno servicio. El orden de prioridad sale de lo que más le
 cuesta al local si falla:
 
 1. **Cobrar y la caja** (plata): cobro doble, vuelto mal, caja que no cuadra, factura que no sale.
@@ -43,7 +43,7 @@ API desde afuera (Postman, como la usaría una integración) y el celular de ver
 
 ## Datos y ambiente
 
-- Cada corrida levanta Morfi sobre **una base nueva en una carpeta temporal** (`qa/servidor.js`) y la borra al
+- Cada corrida levanta Fadido sobre **una base nueva en una carpeta temporal** (`qa/servidor.js`) y la borra al
   terminar. Nunca se prueba contra la base de un local.
 - Usuarios y productos de prueba: `qa/datos.js`, una sola fuente para Playwright, Postman y Maestro.
 - Navegador: Edge en Windows, Chrome en Linux (el que ya está instalado; no se descarga otro).

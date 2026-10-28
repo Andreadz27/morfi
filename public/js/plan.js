@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Tu plan
+// FADIDO - Tu plan
 // Plan del local, lo que incluye cada plan y los candados del menú (los módulos que el plan no incluye).
 // El servidor igual controla cada operación (402 si el plan no la incluye); esto es para mostrarlo claro.
 // =============================================
@@ -72,7 +72,7 @@ const Plan = {
   linkVentas(texto) {
     const v = (this.datos && this.datos.ventas) || {};
     if (v.whatsapp) return `https://wa.me/${encodeURIComponent(v.whatsapp)}?text=${encodeURIComponent(texto)}`;
-    if (v.email) return `mailto:${v.email}?subject=${encodeURIComponent('Plan de Morfi')}&body=${encodeURIComponent(texto)}`;
+    if (v.email) return `mailto:${v.email}?subject=${encodeURIComponent('Plan de Fadido')}&body=${encodeURIComponent(texto)}`;
     return '';
   },
 
@@ -91,7 +91,7 @@ const Plan = {
     }[d.estado] || '';
     const actual = d.origen === 'licencia' ? d.contratado : d.plan;
     const tarjeta = ([id, p]) => {
-      const pedido = `Hola, quiero el plan ${p.nombre} de Morfi para ${negocio}.`;
+      const pedido = `Hola, quiero el plan ${p.nombre} de Fadido para ${negocio}.`;
       const link = this.linkVentas(pedido);
       const anual = Math.round(p.precio * 12 * (1 - d.descuentos.anual));
       return `
@@ -113,7 +113,7 @@ const Plan = {
         </ul>
         ${id === actual ? '<button class="btn btn-outline" disabled>Tu plan</button>'
           : link ? `<a class="btn btn-primary" href="${esc(link)}" target="_blank" rel="noopener">Quiero este plan</a>`
-            : '<p class="text-muted">Pedíselo a quien te instaló Morfi.</p>'}
+            : '<p class="text-muted">Pedíselo a quien te instaló Fadido.</p>'}
       </div>`;
     };
     view.innerHTML = `
@@ -137,7 +137,7 @@ const Plan = {
       </div>
       <div class="card mt-20">
         <div class="card-header"><span class="card-title"><i class="fas fa-key"></i> Licencia</span></div>
-        <p class="text-muted">Si el local está conectado a Morfi Nube, el plan se actualiza solo. Si no, pegá acá la licencia que te dio soporte.</p>
+        <p class="text-muted">Si el local está conectado a Fadido Nube, el plan se actualiza solo. Si no, pegá acá la licencia que te dio soporte.</p>
         <form onsubmit="Plan.guardarLicencia(event)">
           <div class="form-group"><label for="licenciaTexto">Licencia</label>
             <textarea id="licenciaTexto" rows="3" required placeholder="eyJ2Ijox..."></textarea></div>

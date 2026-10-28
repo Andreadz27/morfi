@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Contabilidad
+// FADIDO - Contabilidad
 // Estado de resultados, gastos, cuentas a pagar, IVA y libro diario
 // =============================================
 
@@ -407,7 +407,7 @@ const Contabilidad = {
           <div class="cont-adjuntos-cab">
             <label class="btn btn-outline btn-sm"><i class="fas fa-camera"></i> Sacar foto o subir la factura
               <input type="file" accept="image/*,application/pdf" multiple hidden onchange="Contabilidad.elegirArchivos(this)"></label>
-            <small class="text-muted">${o.lectura_facturas ? 'Morfi la lee y completa los datos: revisalos antes de guardar.' : 'Foto o PDF, queda guardada con el gasto.'}</small>
+            <small class="text-muted">${o.lectura_facturas ? 'Fadido la lee y completa los datos: revisalos antes de guardar.' : 'Foto o PDF, queda guardada con el gasto.'}</small>
           </div>
           <div class="cont-adj-lista" id="gasAdjLista"></div>
           <div class="cont-lectura" id="gasLectura"></div>

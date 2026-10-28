@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Opciones y adicionales al agregar un producto
+// FADIDO - Opciones y adicionales al agregar un producto
 // ("¿Qué leche?", "Adicionales"): ventana para elegir, la usan el punto de venta y "Agregar ítem".
 // El precio que se muestra es orientativo: el servidor lo vuelve a calcular con la base.
 // =============================================

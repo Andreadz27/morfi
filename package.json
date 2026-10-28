@@ -1,5 +1,5 @@
 {
-  "name": "morfi",
+  "name": "fadido",
   "version": "1.0.0",
   "description": "Sistema de gestión gastronómica - POS, inventario, comandas, reportes y más.",
   "main": "server.js",
@@ -39,7 +39,7 @@
     "gastronomia",
     "sistema"
   ],
-  "author": "Morfi",
+  "author": "Fadido",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "dependencies": {

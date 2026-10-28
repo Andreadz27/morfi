@@ -8,7 +8,7 @@ env:
   BASE_URL: http://10.0.2.2:3000
   # Los mismos usuarios de prueba que Playwright y Postman (qa/datos.js)
   MOZO_EMAIL: mozo@qa.test
-  MOZO_PASSWORD: Morfi-QA-mozo-7391
+  MOZO_PASSWORD: Fadido-QA-mozo-7391
 ---
 - runFlow: comunes/abrir-chrome.yaml
 - openLink: ${BASE_URL}/

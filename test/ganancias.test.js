@@ -22,7 +22,7 @@ async function venta(items, pagos, { propina = 0, plataforma = null } = {}) {
 }
 
 before(async () => {
-  s = await iniciarServidor({ MORFI_LICENCIA_PUBLICA: publicKey.export({ type: 'spki', format: 'pem' }) });
+  s = await iniciarServidor({ FADIDO_LICENCIA_PUBLICA: publicKey.export({ type: 'spki', format: 'pem' }) });
   await s.q('UPDATE configuracion SET tasa_iva = 0');
   [A, B] = await s.q('SELECT id FROM productos WHERE activo = 1 AND COALESCE(es_combo, 0) = 0 ORDER BY id LIMIT 2');
   // Sin control de stock ni receta: solo interesan precio y costo

@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Punto de Venta (POS)
+// FADIDO - Punto de Venta (POS)
 // Interfaz r\u00e1pida para tomar pedidos
 // =============================================
 

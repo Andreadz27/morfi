@@ -1,7 +1,7 @@
 // =============================================
-// MORFI - Pedidos sin WiFi
+// FADIDO - Pedidos sin WiFi
 // Si el celular del mozo pierde el WiFi del local al mandar un pedido o un agregado, queda guardado en el celular
-// y se manda solo cuando vuelve la conexión (al volver el WiFi, cada 15 segundos y al abrir Morfi).
+// y se manda solo cuando vuelve la conexión (al volver el WiFi, cada 15 segundos y al abrir Fadido).
 // Cada envío lleva una clave (X-Idempotencia): si el pedido había llegado y se perdió la respuesta, el servidor no
 // lo duplica (src/idempotencia.js). Un pedido de mesa que choca con un pedido ya abierto en esa mesa se suma a él.
 // =============================================
