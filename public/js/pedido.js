@@ -383,7 +383,8 @@ const PedidoOnline={
     this.mesa=estado;
     const directo=estado.modo==="directo";
     const ESTADOS={pendiente:pdT("est_pendiente"),confirmada:pdT("est_confirmada"),rechazada:pdT("est_rechazada"),atendida:pdT(directo?"atendida_directo":"est_atendida")};
-    const TITULOS={pedido:pdT("tit_pedido"),mozo:pdT("tit_mozo"),cuenta:pdT(directo?"tit_cuenta_directo":"tit_cuenta")};
+    // Sin mozo: los llamados al mozo de antes de cambiar de modo no se muestran
+    const TITULOS={pedido:pdT("tit_pedido"),...(directo?{}:{mozo:pdT("tit_mozo")}),cuenta:pdT(directo?"tit_cuenta_directo":"tit_cuenta")};
     // Sin mozo: no hay a quién llamar; "Pedir la cuenta" pasa a "Ver la cuenta y pagar"
     const bm=document.getElementById("btnLlamarMozo");if(bm)bm.style.display=directo?"none":"";
     const bc=document.querySelector("#btnPedirCuenta span");if(bc){bc.dataset.i18n=directo?"pagar_directo":"pedir_cuenta";bc.textContent=pdT(bc.dataset.i18n);}
