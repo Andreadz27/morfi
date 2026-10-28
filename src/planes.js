@@ -9,14 +9,14 @@
 
 // Módulos que dependen del plan
 const MODULOS = {
-  mesa_qr: 'Pedido y pago con Mercado Pago desde el QR de la mesa',
+  mesa_qr: 'Pedido y pago desde el celular: QR de cada mesa y de la barra, con pantalla de retiro',
   online: 'Pedidos online: carta con link fijo, WhatsApp e Instagram',
   apps_delivery: 'Integración con PedidosYa, Rappi y otras apps de delivery',
   whatsapp: 'WhatsApp Business: comprobantes, avisos y recordatorios de reservas',
   personal: 'Personal: fichadas, turnos y reparto de propinas',
   fidelizacion: 'Fidelización: puntos, cupones y gift cards',
   costos: 'Ganancias detalladas (por día, mes, plato y canal), recetas, sub-recetas y costo de cada plato',
-  contabilidad: 'Contabilidad: gastos, facturas de compra leídas con IA, cuentas a pagar, IVA, resultados y libro diario',
+  contabilidad: 'Contabilidad: gastos, compras que suman al stock, facturas leídas con IA, cuentas a pagar, IVA, resultados y libro diario',
   panel_nube: 'Panel Fadido Nube: tus ventas desde el celular',
   multisucursal: 'Varias sucursales y precios centrales',
   asistente: 'Asistente IA que atiende WhatsApp (pedidos y reservas)'
@@ -24,13 +24,14 @@ const MODULOS = {
 
 // Lo que viene en TODOS los planes (para la pantalla "Tu plan"; la landing lo repite a mano)
 const INCLUIDO = [
-  'Pedidos, mesas, cocina en pantalla, caja y cobros',
+  'Pedidos, mesas, cocina en pantalla, caja y cobros (cobrar y enviar en un toque)',
+  'Cobro en efectivo, tarjeta, Mercado Pago, MODO, Cuenta DNI y transferencia al alias del local',
   'Factura electrónica ARCA, también cuando ARCA no responde (CAEA)',
-  'Funciona sin internet y los mozos toman pedidos aunque se corte el WiFi',
+  'Funciona sin internet, los mozos toman pedidos aunque se corte el WiFi y si se cae vuelve solo',
   'Carta QR en español, inglés y portugués, y llamado al mozo desde la mesa',
   'Opciones y adicionales, venta cruzada y menú Take Away',
   'Cuenta dividida por plato y cierre del día automático',
-  'Stock, reportes y copia de seguridad en la nube',
+  'Stock con conteo de inventario, reportes y copia de seguridad en la nube',
   'Usuarios ilimitados'
 ];
 
