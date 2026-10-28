@@ -1,10 +1,10 @@
-// Video de lanzamiento de Morfi (~1 minuto, 1920x1080): textos animados, capturas reales del sistema en marco de
+// Video de lanzamiento de Fadido (~1 minuto, 1920x1080): textos animados, capturas reales del sistema en marco de
 // navegador y de celular, voz en off y música suave. No es una grabación de pantalla: cada cuadro se dibuja con
 // su tiempo exacto (render(t)) y se le pasa a ffmpeg, así las animaciones salen perfectas.
 // Requiere las capturas de la demo (npm run demo:video), ffmpeg y edge-tts (pip install edge-tts).
 //
 // Uso: npm run demo:promo
-// Salida: demo/salida/promo/morfi-promo.mp4 (voz y música), morfi-promo-solo-voz.mp4 y portada-promo.jpg
+// Salida: demo/salida/promo/fadido-promo.mp4 (voz y música), fadido-promo-solo-voz.mp4 y portada-promo.jpg
 'use strict';
 const { spawn, spawnSync, execFileSync } = require('child_process');
 const crypto = require('crypto');
@@ -29,7 +29,7 @@ const WHATSAPP = process.env.GM_PROMO_WHATSAPP || '11 2390-0155';
 const ESCENAS = [
   { tipo: 'texto', min: 4.2, lineas: ['¿Mesas esperando?', '¿Comandas que se pierden?', '¿Una caja que <em>no cierra</em>?'],
     voz: '¿Mesas esperando, comandas que se pierden... y una caja que nunca cierra?' },
-  { tipo: 'logo', min: 4.2, insignia: 'Lanzamiento', voz: 'Llegó Morfi: el sistema que pone tu negocio a punto.' },
+  { tipo: 'logo', min: 4.2, insignia: 'Lanzamiento', voz: 'Llegó Fadido: el sistema que pone tu negocio a punto.' },
   { tipo: 'pantalla', min: 4.2, kicker: 'Punto de venta', titulo: 'Tomás el pedido<br>en <em>segundos</em>', captura: '04-punto-de-venta',
     voz: 'Tomás el pedido en segundos, y la comanda vuela a la cocina.' },
   { tipo: 'pantalla', min: 3.6, kicker: 'Cocina', titulo: 'La cocina lo ve<br><em>al instante</em>', captura: '05-cocina', extra: '14-pantalla-cocina',
@@ -45,7 +45,7 @@ const ESCENAS = [
   { tipo: 'grilla', min: 4.6, titulo: 'Todo tu local, <em>en un solo sistema</em>',
     chips: ['Punto de venta', 'Mesas y reservas', 'Cocina en pantalla', 'Delivery y WhatsApp', 'Carta QR', 'Caja y arqueo', 'Recetas y stock', 'Facturación ARCA'],
     voz: 'Para restaurantes, bares, cafés y heladerías. Todo, en un solo sistema.' },
-  { tipo: 'cierre', min: 5.5, insignia: 'Ya disponible', voz: 'Morfi ya está disponible. Pedí tu demo gratis... y poné tu negocio a punto.' }
+  { tipo: 'cierre', min: 5.5, insignia: 'Ya disponible', voz: 'Fadido ya está disponible. Pedí tu demo gratis... y poné tu negocio a punto.' }
 ];
 const FUNDIDO = 0.38; // cada escena entra y sale fundiéndose con el fondo
 
@@ -103,13 +103,13 @@ function htmlEscena(e, i) {
       <h2 ${a(0.4, 'sube')}>${titulo}</h2>
       <div class="raya" ${a(0.7, 'ancho')}></div></div>`;
   const navegador = (captura, clase, t) => `<div class="navegador ${clase}" ${a(t, clase === 'principal' ? 'entra' : 'flota')}>
-      <div class="barra"><i></i><i></i><i></i><span>morfi</span></div><div class="vista"><img src="capturas/${captura}.png" data-kb></div></div>`;
+      <div class="barra"><i></i><i></i><i></i><span>fadido</span></div><div class="vista"><img src="capturas/${captura}.png" data-kb></div></div>`;
   let cuerpo = '';
   if (e.tipo === 'texto') {
     cuerpo = `<div class="pregunta">${e.lineas.map((l, k) => `<div ${a(0.2 + k * 0.85, 'sube')}>${l}</div>`).join('')}</div>`;
   } else if (e.tipo === 'logo') {
     cuerpo = `<div class="marca"><div class="insignia" ${a(1.4, 'pop')}>${e.insignia}</div><div class="logo" ${a(0.1, 'logo')}>${LOGO('logo' + i)}</div>
-      <div class="nombre" ${a(0.55, 'sube')}>morfi</div><div class="lema" ${a(0.95, 'sube')}>Tu negocio, <em>a punto.</em></div></div>`;
+      <div class="nombre" ${a(0.55, 'sube')}>fadido</div><div class="lema" ${a(0.95, 'sube')}>Tu negocio, <em>a punto.</em></div></div>`;
   } else if (e.tipo === 'pantalla') {
     cuerpo = `<div class="pantalla ${e.lado === 'izq' ? 'invertida' : ''}">${texto(e.kicker, e.titulo)}
       <div class="escenario">${navegador(e.captura, 'principal', 0.15)}${e.extra ? navegador(e.extra, 'secundaria', 1.6) : ''}</div></div>`;
@@ -121,7 +121,7 @@ function htmlEscena(e, i) {
       <div class="chips">${e.chips.map((c, k) => `<span ${a(0.6 + k * 0.16, 'pop')}>${c}</span>`).join('')}</div></div>`;
   } else if (e.tipo === 'cierre') {
     cuerpo = `<div class="marca cierre"><div class="insignia" ${a(0.3, 'pop')}>${e.insignia}</div><div class="logo" ${a(0.1, 'logo')}>${LOGO('logo' + i)}</div>
-      <div class="nombre" ${a(0.45, 'sube')}>morfi</div><div class="lema" ${a(0.8, 'sube')}>Tu negocio, <em>a punto.</em></div>
+      <div class="nombre" ${a(0.45, 'sube')}>fadido</div><div class="lema" ${a(0.8, 'sube')}>Tu negocio, <em>a punto.</em></div>
       <div class="cta" ${a(1.5, 'pop')}>Pedí tu demo gratis</div>
       <div class="contacto" ${a(2.1, 'sube')}><b>WhatsApp</b> ${WHATSAPP}</div></div>`;
   }
@@ -287,15 +287,15 @@ function render(t) {
   const NORMA = 'loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000';
   // Solo voz
   execFileSync(ffmpeg, ['-v', 'error', '-y', '-i', mudo, ...entradas, '-filter_complex', filtroVoz + `;[voz]${NORMA}[final]`,
-    '-map', '0:v', '-map', '[final]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', path.join(DESTINO, 'morfi-promo-solo-voz.mp4')]);
+    '-map', '0:v', '-map', '[final]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', path.join(DESTINO, 'fadido-promo-solo-voz.mp4')]);
   // Voz y música: la música baja sola mientras habla la locutora (sidechain)
   const m = voces.length + 1;
   execFileSync(ffmpeg, ['-v', 'error', '-y', '-i', mudo, ...entradas, '-i', musica, '-filter_complex',
     filtroVoz.replace('[voz]', '[vozpre]') + `;[vozpre]asplit=2[voz][llave];[${m}:a]volume=0.32[mus];` +
     '[mus][llave]sidechaincompress=threshold=0.03:ratio=6:attack=40:release=450[musduck];' +
     `[voz][musduck]amix=inputs=2:normalize=0,${NORMA}[mezcla]`,
-    '-map', '0:v', '-map', '[mezcla]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', path.join(DESTINO, 'morfi-promo.mp4')]);
+    '-map', '0:v', '-map', '[mezcla]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-shortest', path.join(DESTINO, 'fadido-promo.mp4')]);
   fs.rmSync(TRABAJO, { recursive: true, force: true });
   const mb = f => (fs.statSync(path.join(DESTINO, f)).size / 1048576).toFixed(1) + ' MB';
-  console.log(`Listo en demo/salida/promo: morfi-promo.mp4 (${mb('morfi-promo.mp4')}, ${total.toFixed(1)} s), morfi-promo-solo-voz.mp4 y portada-promo.jpg`);
+  console.log(`Listo en demo/salida/promo: fadido-promo.mp4 (${mb('fadido-promo.mp4')}, ${total.toFixed(1)} s), fadido-promo-solo-voz.mp4 y portada-promo.jpg`);
 })().catch(e => { console.error('Error armando el promo:', e.message); process.exit(1); });
