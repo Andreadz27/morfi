@@ -232,7 +232,7 @@ const normalizarCodigo = c => String(c || '').trim().toUpperCase();
 async function venderGiftCard({ monto, medio, comprador, destinatario, vence }, usuarioId) {
   monto = centavos(monto);
   if (!(monto > 0) || monto > 1000000) throw errorHttp(400, 'Monto inválido');
-  if (!['efectivo', 'tarjeta', 'transferencia', 'mercadopago'].includes(medio)) throw errorHttp(400, 'Medio de cobro inválido');
+  if (!['efectivo', 'tarjeta', 'transferencia', 'mercadopago', 'modo', 'cuentadni'].includes(medio)) throw errorHttp(400, 'Medio de cobro inválido');
   if (vence && (!FECHA.test(vence) || vence < fechaLocal())) throw errorHttp(400, 'Fecha de vencimiento inválida');
   return transaccion(async () => {
     let movimiento = null;

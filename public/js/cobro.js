@@ -11,7 +11,7 @@ const Cobro = {
   pagos: [],
   afipActiva: false,
 
-  METODOS: { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', transferencia: 'Transferencia', giftcard: 'Gift card', otro: 'Otro' },
+  METODOS: { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', modo: 'MODO', cuentadni: 'Cuenta DNI', transferencia: 'Transferencia', giftcard: 'Gift card', otro: 'Otro' },
   puntosCfg: null,    // programa de puntos (Configuración)
   clientes: null,     // para elegir el cliente del pedido (se cargan al buscar)
 

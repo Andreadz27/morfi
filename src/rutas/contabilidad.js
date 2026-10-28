@@ -54,7 +54,7 @@ const CUENTAS = {
   caja_menores: { codigo: '5.2.09', nombre: 'Gastos menores de caja' }
 };
 const CUENTA_DE_MEDIO = {
-  efectivo: 'caja', tarjeta: 'bancos', transferencia: 'bancos', cheque: 'bancos', mercadopago: 'mp', giftcard: 'giftcards'
+  efectivo: 'caja', tarjeta: 'bancos', transferencia: 'bancos', modo: 'bancos', cuentadni: 'bancos', cheque: 'bancos', mercadopago: 'mp', giftcard: 'giftcards'
 };
 const cuentaDeMedio = metodo => CUENTA_DE_MEDIO[metodo] || 'otros_medios';
 
