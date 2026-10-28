@@ -48,6 +48,9 @@ jobs:
           if ($s.base -ne 'ok') { throw 'la base no responde' }
           $login = Invoke-RestMethod -Method Post http://127.0.0.1:3000/api/auth/login -ContentType 'application/json' -Body '{"email":"admin@morfi.local","password":"admin123"}'
           if (-not $login.token) { throw 'no se pudo iniciar sesión con el administrador inicial' }
+          # La clave inicial obliga a cambiarla antes de usar el sistema (como hace el dueño al entrar la primera vez)
+          $cambio = Invoke-RestMethod -Method Put http://127.0.0.1:3000/api/auth/password -ContentType 'application/json' -Headers @{ Authorization = "Bearer $($login.token)" } -Body '{"actual":"admin123","nueva":"prueba-ci-1234"}'
+          $login = @{ token = $cambio.token }
           $productos = @(Invoke-RestMethod http://127.0.0.1:3000/api/productos -Headers @{ Authorization = "Bearer $($login.token)" })
           if ($productos.Count) { throw "con -BaseLimpia la base trae $($productos.Count) productos de ejemplo" }
           if (-not (Get-ScheduledTask -TaskName 'Morfi')) { throw 'falta la tarea de inicio' }
