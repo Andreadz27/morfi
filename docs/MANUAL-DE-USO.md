@@ -63,7 +63,7 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
 ### Vender en el mostrador, para llevar o delivery
 1. **Punto de Venta**: elegir el tipo de pedido (salón, mostrador, para llevar o delivery).
 2. Tocar los productos. Se puede elegir el cliente con **Elegir cliente**, para delivery, puntos o factura A.
-3. **Cobrar** y elegir el medio de pago: efectivo, tarjeta, transferencia, **QR Mercado Pago** u **Otro medio de
+3. **Cobrar** y elegir el medio de pago: efectivo, tarjeta, transferencia, **QR Mercado Pago**, **MODO**, **Cuenta DNI** u **Otro medio de
    pago**. En efectivo, Fadido calcula el vuelto.
 
 ### Cobrar una mesa

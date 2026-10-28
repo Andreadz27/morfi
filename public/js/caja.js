@@ -9,7 +9,7 @@ const Caja = {
   cierres: [],
   cierreConfig: null,
 
-  METODOS: { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', transferencia: 'Transferencia', otro: 'Otro' },
+  METODOS: { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', modo: 'MODO', cuentadni: 'Cuenta DNI', transferencia: 'Transferencia', otro: 'Otro' },
 
   async render() {
     const view = document.getElementById('view-caja');

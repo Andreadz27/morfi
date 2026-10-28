@@ -194,7 +194,7 @@ const fechaHora = s => formatoFecha(s, { day: '2-digit', month: '2-digit', year:
 const moneda = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(n) || 0);
 const cantidad = n => (Number.isInteger(Number(n)) ? String(Number(n)) : String(Number(n).toFixed(2)).replace('.', ','));
 const TIPOS = { salon: 'SALÓN', mostrador: 'MOSTRADOR', takeaway: 'PARA LLEVAR', delivery: 'DELIVERY' };
-const METODOS = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', transferencia: 'Transferencia', otro: 'Otro' };
+const METODOS = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', modo: 'MODO', cuentadni: 'Cuenta DNI', transferencia: 'Transferencia', otro: 'Otro' };
 
 // Comanda para cocina/barra. titulo: COMANDA | AGREGADO | ANULADO
 function plantillaComanda(pedido, items, impresora, titulo) {
