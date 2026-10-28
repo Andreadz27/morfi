@@ -1,9 +1,9 @@
-# Morfi Nube en Render (plan Starter + 1 GB de disco: unos USD 7,25 por mes).
+# Fadido Nube en Render (plan Starter + 1 GB de disco: unos USD 7,25 por mes).
 # Está separado del render.yaml de la raíz (la demo gratis) para que nada se cobre sin crearlo a mano:
 # en Render, New → Blueprint → este repositorio → "Blueprint path": nube/render.yaml. Pasos en docs/INSTALACION.md, 4b.
 services:
   - type: web
-    name: morfi-nube
+    name: fadido-nube
     runtime: node
     plan: starter
     # La región más cercana a Argentina que ofrece Render
@@ -17,13 +17,13 @@ services:
     # La base de la nube (cuentas, locales, ventas, cartas) tiene que sobrevivir a cada despliegue
     disk:
       name: datos
-      mountPath: /var/data/morfi-nube
+      mountPath: /var/data/fadido-nube
       sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: "22"
       - key: NUBE_DATOS
-        value: /var/data/morfi-nube
+        value: /var/data/fadido-nube
       # Firma las sesiones del panel; Render la genera al azar y no cambia entre despliegues
       - key: NUBE_SECRETO
         generateValue: true

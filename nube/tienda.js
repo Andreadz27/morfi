@@ -1,5 +1,5 @@
 'use strict';
-// Morfi Nube, etapa 2: la carta online de cada local en una dirección fija (/l/<cliente>) y sus pedidos.
+// Fadido Nube, etapa 2: la carta online de cada local en una dirección fija (/l/<cliente>) y sus pedidos.
 // El pedido queda acá y el local lo viene a buscar cada pocos segundos: no hace falta túnel ni abrir puertos,
 // y el link del local no cambia aunque cambie la PC o la conexión.
 // Si el local no viene a buscar (sin internet, PC apagada) no se toman pedidos: nadie los vería en la cocina.
@@ -93,7 +93,7 @@ module.exports = function registrarTienda(app, { ruta, errorHttp, autenticarLoca
   app.get('/l/:cliente/api/publico/info', conLocal(async (req, res, l, carta) => {
     const base = `${req.protocol}://${req.get('host')}/l/${encodeURIComponent(l.cliente)}`;
     res.json({
-      nombre: carta.info.nombre || 'Morfi', eslogan: carta.info.eslogan || '', descripcion: carta.info.direccion ? `Dirección: ${carta.info.direccion}` : '',
+      nombre: carta.info.nombre || 'Fadido', eslogan: carta.info.eslogan || '', descripcion: carta.info.direccion ? `Dirección: ${carta.info.direccion}` : '',
       telefono: carta.info.telefono, email: carta.info.email, cuit: carta.info.cuit || '',
       links: { carta: `${base}/pedido.html`, whatsapp: `${base}/pedido.html?origen=whatsapp`, instagram: `${base}/pedido.html?origen=instagram` },
       recibe_pedidos: recibe(l), aviso: recibe(l) ? '' : sinConexion(carta)

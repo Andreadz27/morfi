@@ -1,10 +1,10 @@
 // =============================================
-// MORFI - Service Worker
+// FADIDO - Service Worker
 // Primero la red y, sin conexión, la última copia guardada.
 // (Antes era cache-first: después de una actualización los celulares seguían con el JS viejo.)
 // =============================================
 
-const CACHE_NAME = 'morfi-v23';
+const CACHE_NAME = 'fadido-v23';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

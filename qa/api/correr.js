@@ -1,4 +1,4 @@
-// Corre la colección de Postman con Newman contra un servidor de prueba nuevo (o contra MORFI_QA_URL)
+// Corre la colección de Postman con Newman contra un servidor de prueba nuevo (o contra FADIDO_QA_URL)
 // y deja el resultado para el reporte Mochawesome (qa/reportes/salida/mochawesome-api.json).
 // npm run qa:api
 'use strict';
@@ -11,7 +11,7 @@ const correrNewman = opciones => new Promise((ok, mal) => newman.run(opciones, (
 
 // Una suite por carpeta de la colección y un caso por pedido, con cada pm.test en el contexto
 function aMochawesome(resumen, inicio) {
-  const raiz = suite('API Postman · Newman', 'qa/api/morfi.postman_collection.json');
+  const raiz = suite('API Postman · Newman', 'qa/api/fadido.postman_collection.json');
   const carpetas = new Map();
   for (const ej of resumen.run.executions) {
     const nombreCarpeta = ej.item.parent() && ej.item.parent().name || 'Colección';
@@ -41,13 +41,13 @@ function aMochawesome(resumen, inicio) {
 }
 
 (async () => {
-  const s = process.env.MORFI_QA_URL ? null : await levantar();
-  const base = process.env.MORFI_QA_URL || s.base;
+  const s = process.env.FADIDO_QA_URL ? null : await levantar();
+  const base = process.env.FADIDO_QA_URL || s.base;
   const inicio = Date.now();
   try {
     const resumen = await correrNewman({
-      collection: require('./morfi.postman_collection.json'),
-      environment: require('./morfi-local.postman_environment.json'),
+      collection: require('./fadido.postman_collection.json'),
+      environment: require('./fadido-local.postman_environment.json'),
       envVar: [{ key: 'base_url', value: base }],
       reporters: ['cli'],
       reporter: { cli: { noSummary: false } }

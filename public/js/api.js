@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - API Client
+// FADIDO - API Client
 // Manejador de peticiones HTTP al backend
 // =============================================
 
@@ -46,7 +46,7 @@ const API = {
       response = await fetch(`${this.baseURL}${url}`, options);
     } catch (e) {
       // Sin conexión con la PC del local (WiFi cortado): lo distingue de un error del servidor
-      throw Object.assign(new Error('Sin conexión con Morfi. Revisá el WiFi.'), { sinConexion: true });
+      throw Object.assign(new Error('Sin conexión con Fadido. Revisá el WiFi.'), { sinConexion: true });
     }
 
     if (response.status === 401) {
@@ -219,7 +219,7 @@ const API = {
     try {
       r = await fetch(`${this.baseURL}${url}`, { method, body, headers: { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
     } catch (e) {
-      throw Object.assign(new Error('Sin conexión con Morfi. Revisá el WiFi.'), { sinConexion: true });
+      throw Object.assign(new Error('Sin conexión con Fadido. Revisá el WiFi.'), { sinConexion: true });
     }
     if (r.status === 401) { this.clearToken(); window.location.reload(); throw new Error('Sesión expirada'); }
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Error en la petición');

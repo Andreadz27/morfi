@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Servidor Principal
+// FADIDO - Servidor Principal
 // Punto de entrada: migra la base, inicia Socket.IO y el servidor HTTP.
 // El código está en src/ (app.js, rutas/, servicios/).
 // =============================================
@@ -22,7 +22,7 @@ iniciarRealtime(server);
 // Copia previa si hay migraciones nuevas + migraciones en una sola transacción (ver src/migraciones.js)
 migrarConRespaldo({ respaldar: crearBackup }).then(() => server.listen(PORT, () => {
   console.log('==========================================');
-  console.log('  🍽️  MORFI v2.0');
+  console.log('  🍽️  FADIDO v2.0');
   console.log('  Sistema de Gestión Gastronómica');
   console.log('==========================================');
   console.log(`  Servidor corriendo en: http://localhost:${PORT}`);
@@ -39,7 +39,7 @@ migrarConRespaldo({ respaldar: crearBackup }).then(() => server.listen(PORT, () 
   iniciarRecordatoriosWhatsApp();
   // Aviso de "sin internet" y facturas en espera que se emiten solas al volver la conexión
   iniciarModoSinConexion();
-  // Ventas y estado del local al panel Morfi Nube (si NUBE_URL y NUBE_TOKEN están en el .env)
+  // Ventas y estado del local al panel Fadido Nube (si NUBE_URL y NUBE_TOKEN están en el .env)
   iniciarSyncNube();
   // Cierre del día a la hora configurada (si está activado en Caja → Cierre del día)
   iniciarCierreAutomatico();

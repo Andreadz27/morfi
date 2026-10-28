@@ -52,9 +52,9 @@ test('reinicia con pm2 aunque la carpeta de la instalación tenga espacios', asy
     const comandos = fs.readFileSync(llamadas, 'utf8').trim().split('\n').map(JSON.parse);
     const inicio = comandos.find(a => a[0] === 'start');
     assert.equal(inicio[1], path.join(inst, 'ecosystem.config.js'), 'la ruta llega entera');
-    // Morfi Nube en la misma PC se reinicia con el código nuevo (sin borrarla: conserva sus variables)
-    assert.ok(comandos.some(a => a[0] === 'restart' && a[1] === 'morfi-nube'), JSON.stringify(comandos));
-    assert.ok(!comandos.some(a => a[0] === 'delete' && a[1] === 'morfi-nube'), 'la nube no se borra');
+    // Fadido Nube en la misma PC se reinicia con el código nuevo (sin borrarla: conserva sus variables)
+    assert.ok(comandos.some(a => a[0] === 'restart' && a[1] === 'fadido-nube'), JSON.stringify(comandos));
+    assert.ok(!comandos.some(a => a[0] === 'delete' && a[1] === 'fadido-nube'), 'la nube no se borra');
   } finally {
     salud.close();
     fs.rmSync(tmp, { recursive: true, force: true });

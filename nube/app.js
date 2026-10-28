@@ -1,5 +1,5 @@
 'use strict';
-// Morfi Nube: recibe las ventas y el estado de cada local y los muestra en un panel.
+// Fadido Nube: recibe las ventas y el estado de cada local y los muestra en un panel.
 // - Los locales mandan con su token (Authorization: Bearer ...): solo pueden escribir lo suyo.
 // - El dueño ve los locales de su cuenta; soporte ve todos (para atender a los clientes).
 // El sistema de cada local sigue siendo el que manda: si la nube no está, el local trabaja igual y reenvía después.
@@ -159,7 +159,7 @@ async function localesVisibles(u, cuentaId) {
   }
   const todos = await all('SELECT * FROM locales WHERE cuenta_id = ? ORDER BY nombre', [u.cuenta_id]);
   const conPanel = todos.filter(l => licencias.tieneModulo(l, 'panel_nube'));
-  if (todos.length && !conPanel.length) throw errorHttp(402, 'El panel Morfi Nube está incluido en los planes Pro y Cadenas. Escribinos para pasarte de plan.');
+  if (todos.length && !conPanel.length) throw errorHttp(402, 'El panel Fadido Nube está incluido en los planes Pro y Cadenas. Escribinos para pasarte de plan.');
   return conPanel;
 }
 

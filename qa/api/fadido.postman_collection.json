@@ -1,7 +1,7 @@
 {
 	"info": {
-		"name": "Morfi · API",
-		"description": "Pruebas de la API de Morfi (casos CP-API de docs/qa/CASOS-DE-PRUEBA.md).\n\nCorrer todo con `npm run qa:api` (levanta un servidor sobre una base nueva y corre esta colección con Newman).\nDesde Postman: importar esta colección y `morfi-local.postman_environment.json`, levantar `npm start` y usar **Run collection** en orden: cada carpeta usa lo que dejó la anterior (tokens, pedido, caja).",
+		"name": "Fadido · API",
+		"description": "Pruebas de la API de Fadido (casos CP-API de docs/qa/CASOS-DE-PRUEBA.md).\n\nCorrer todo con `npm run qa:api` (levanta un servidor sobre una base nueva y corre esta colección con Newman).\nDesde Postman: importar esta colección y `fadido-local.postman_environment.json`, levantar `npm start` y usar **Run collection** en orden: cada carpeta usa lo que dejó la anterior (tokens, pedido, caja).",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"event": [

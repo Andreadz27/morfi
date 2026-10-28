@@ -65,10 +65,10 @@ app.get('/api/publico/info', async (req, res) => {
     // Sin BASE_URL no hay links: el navegador arma los suyos con la dirección por la que entró
     // (antes salían con localhost y el QR impreso en las mesas no abría en ningún celular)
     const base = urlPublica();
-    // Con Morfi Nube la carta tiene link fijo en la nube: anda aunque cambie la conexión o la PC del local
+    // Con Fadido Nube la carta tiene link fijo en la nube: anda aunque cambie la conexión o la PC del local
     const nube = urlCartaNube();
     res.json({
-      nombre: config?.nombre_negocio || 'Morfi',
+      nombre: config?.nombre_negocio || 'Fadido',
       eslogan: config?.eslogan || '',
       descripcion: config?.direccion ? `Dirección: ${config.direccion}` : '',
       telefono: config?.telefono || '',

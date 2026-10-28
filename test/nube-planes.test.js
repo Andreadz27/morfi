@@ -1,4 +1,4 @@
-// Planes desde Morfi Nube: soporte asigna el plan, el local recibe la licencia firmada y la nube aplica el mismo plan
+// Planes desde Fadido Nube: soporte asigna el plan, el local recibe la licencia firmada y la nube aplica el mismo plan
 // al panel del dueño y a la carta online.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -28,7 +28,7 @@ const esperarQue = async (cond, ms = 15000) => { for (let t = 0; t < ms; t += 20
 const planLocal = async () => (await s.llamar('GET', '/api/licencia', null, s.tokenAdmin))[1];
 
 before(async () => {
-  datosNube = fs.mkdtempSync(path.join(os.tmpdir(), 'morfi-nube-'));
+  datosNube = fs.mkdtempSync(path.join(os.tmpdir(), 'fadido-nube-'));
   const salida = alta('local', '--cuenta', 'Bar Chico', '--nombre', 'Centro', '--cliente', 'bar-chico', '--plan', 'esencial');
   assert.match(salida, /plan Esencial, sin vencimiento/);
   const token = salida.match(/NUBE_TOKEN=(\S+)/)[1];
@@ -39,7 +39,7 @@ before(async () => {
   nube = spawn(process.execPath, [path.join(RAIZ, 'nube', 'servidor.js')],
     { env: { ...process.env, NUBE_DATOS: datosNube, PORT: String(port), NUBE_CLAVE_LICENCIAS: PRIVADA }, stdio: 'ignore' });
   assert.ok(await esperarQue(async () => { try { return (await fetch(nubeBase + '/api/salud')).ok; } catch (e) { return false; } }), 'la nube no arrancó');
-  s = await iniciarServidor({ NUBE_URL: nubeBase, NUBE_TOKEN: token, NUBE_SEGUNDOS: '1', MORFI_LICENCIA_PUBLICA: PUBLICA });
+  s = await iniciarServidor({ NUBE_URL: nubeBase, NUBE_TOKEN: token, NUBE_SEGUNDOS: '1', FADIDO_LICENCIA_PUBLICA: PUBLICA });
 });
 after(async () => {
   if (s) await s.cerrar();

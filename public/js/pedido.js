@@ -1,10 +1,10 @@
-// MORFI - Pedido Online (WhatsApp / Instagram)
+// FADIDO - Pedido Online (WhatsApp / Instagram)
 function pdM(v){return new Intl.NumberFormat("es-AR",{style:"currency",currency:"ARS",minimumFractionDigits:0}).format(v||0);}
 // Argumento para un onclick="...": número tal cual, texto entre comillas simples (con comillas dobles cortaba el atributo)
 function pdA(v){return typeof v==="number"?String(v):"'"+String(v).replace(/[^\w-]/g,"")+"'";}
 function pdE(s){if(s==null)return"";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 
-// Desde Morfi Nube la página vive en /l/<local>/: la API también
+// Desde Fadido Nube la página vive en /l/<local>/: la API también
 const PD_API=(location.pathname.match(/^\/l\/[^/]+/)||[""])[0];
 
 // Carta en español, inglés y portugués. Los platos traen sus traducciones desde el local (si faltan, en español);
@@ -183,18 +183,18 @@ const PedidoOnline={
     const contactoOtro=[info.telefono,info.email].filter(Boolean).join(" / ");
     if(PD_IDIOMA==="en"){
       el.textContent=quien+" uses your details only to prepare and deliver your order; it does not sell or share them."+
-        (PD_API?" They go through Morfi Nube only until the store receives the order.":"")+
+        (PD_API?" They go through Fadido Nube only until the store receives the order.":"")+
         " You can ask to see, correct or delete them"+(contactoOtro?" by writing to "+contactoOtro:" at the store")+". Argentine Law 25.326.";
       return;
     }
     if(PD_IDIOMA==="pt"){
       el.textContent=quien+" usa seus dados só para preparar e entregar seu pedido; não os vende nem os repassa."+
-        (PD_API?" Passam pelo Morfi Nube só até o local receber o pedido.":"")+
+        (PD_API?" Passam pelo Fadido Nube só até o local receber o pedido.":"")+
         " Você pode pedir para vê-los, corrigi-los ou apagá-los"+(contactoOtro?" escrevendo para "+contactoOtro:" no local")+". Lei argentina 25.326.";
       return;
     }
     el.textContent="Tus datos los usa "+quien+" solo para preparar y entregar tu pedido; no los vende ni los cede."+
-      (PD_API?" Pasan por Morfi Nube solo hasta que el local recibe el pedido.":"")+
+      (PD_API?" Pasan por Fadido Nube solo hasta que el local recibe el pedido.":"")+
       " Podés pedir verlos, corregirlos o borrarlos"+(contacto?" escribiendo "+contacto:" en el local")+". Ley 25.326.";
   },
 
@@ -684,7 +684,7 @@ const PedidoOnline={
       this._btnEnviar();
     }
   },
-  // Por Morfi Nube el pedido llega al local en unos segundos: el cliente ve cuándo lo recibió y con qué número
+  // Por Fadido Nube el pedido llega al local en unos segundos: el cliente ve cuándo lo recibió y con qué número
   _seguirNube(codigo,nombre){
     const msg=document.getElementById("confirmacionMsg"),num=document.getElementById("confirmacionNumero");
     const tit=document.getElementById("confirmacionTitulo"),titulo=t=>{if(tit)tit.textContent=t;};

@@ -170,9 +170,9 @@ async function migrarEsquema() {
   await agregarColumna('pedidos', 'descuento_puntos', 'REAL DEFAULT 0');
   await agregarColumna('pedidos', 'cupon_id', 'INTEGER');
   await agregarColumna('pedidos', 'descuento_cupon', 'REAL DEFAULT 0');
-  // Morfi Nube: estado con el que el pedido se mandó a la nube (si cambia, por ej. se cancela, se vuelve a mandar)
+  // Fadido Nube: estado con el que el pedido se mandó a la nube (si cambia, por ej. se cancela, se vuelve a mandar)
   await agregarColumna('pedidos', 'sincronizado_nube', 'TEXT');
-  // Pedido online que entró por Morfi Nube: su id allá (traerlo dos veces no lo duplica)
+  // Pedido online que entró por Fadido Nube: su id allá (traerlo dos veces no lo duplica)
   await agregarColumna('pedidos', 'nube_pedido_id', 'INTEGER');
   await run('CREATE UNIQUE INDEX IF NOT EXISTS idx_pedidos_nube ON pedidos(nube_pedido_id) WHERE nube_pedido_id IS NOT NULL');
   // Asistente IA por WhatsApp: la conversación de cada cliente (tal cual la devuelve la API) y el uso por día

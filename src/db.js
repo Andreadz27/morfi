@@ -13,7 +13,7 @@ let emisor = () => {};
 const setEmisor = fn => { emisor = fn; };
 
 // Base de datos
-// morfi.db (si todavía se llama gastromanager.db, se renombra antes de abrirla)
+// fadido.db (si todavía se llama gastromanager.db, se renombra antes de abrirla)
 const dbPath = rutaBase(DATA_DIR);
 const db = new sqlite3.Database(dbPath);
 db.configure('busyTimeout', 10000);

@@ -1,6 +1,6 @@
-# Manual de uso de Morfi
+# Manual de uso de Fadido
 
-Guía para quienes usan Morfi en el local todos los días. La instalación y la configuración técnica están en
+Guía para quienes usan Fadido en el local todos los días. La instalación y la configuración técnica están en
 `docs/INSTALACION.md`.
 
 **Índice:** [Antes de empezar](#antes-de-empezar) · [Mozo](#mozo) · [Cajero](#cajero) · [Cocina](#cocina) ·
@@ -32,8 +32,8 @@ El botón **Fichar** de la barra lateral marca la entrada y, al tocarlo de nuevo
 el encargado lo corrige en **Personal → Fichadas** (queda registrado el motivo).
 
 ### Sin internet
-Morfi **sigue funcionando sin internet**: pedidos, mesas, cocina, caja y cobros en efectivo o con tarjeta en el
-posnet. Arriba aparece un aviso. Lo que necesita internet (facturas de ARCA, cobros con Mercado Pago, WhatsApp, Morfi
+Fadido **sigue funcionando sin internet**: pedidos, mesas, cocina, caja y cobros en efectivo o con tarjeta en el
+posnet. Arriba aparece un aviso. Lo que necesita internet (facturas de ARCA, cobros con Mercado Pago, WhatsApp, Fadido
 Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay que volver a cargar nada.
 
 ---
@@ -49,7 +49,7 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
 6. **Si se corta el WiFi del celular** al mandar un pedido o un agregado: aparece "quedó guardado en este celular" y
    un aviso amarillo abajo. No hay que volver a cargarlo, porque se envía solo cuando vuelve el WiFi (o con
    **Reintentar**). Si la mesa se abrió mientras tanto, lo pedido se suma a esa mesa. Si algo no se pudo enviar (por
-   ejemplo, un producto que se dio de baja), Morfi avisa para cargarlo de nuevo.
+   ejemplo, un producto que se dio de baja), Fadido avisa para cargarlo de nuevo.
 7. **Reservas**: en **Mesas → Reservas**, con **Nueva reserva** se carga nombre, teléfono, día, hora y cantidad de
    personas.
 
@@ -64,7 +64,7 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
 1. **Punto de Venta**: elegir el tipo de pedido (salón, mostrador, para llevar o delivery).
 2. Tocar los productos. Se puede elegir el cliente con **Elegir cliente**, para delivery, puntos o factura A.
 3. **Cobrar** y elegir el medio de pago: efectivo, tarjeta, transferencia, **QR Mercado Pago** u **Otro medio de
-   pago**. En efectivo, Morfi calcula el vuelto.
+   pago**. En efectivo, Fadido calcula el vuelto.
 
 ### Cobrar una mesa
 - Desde **Mesas** o **Pedidos**, **Cobrar**.
@@ -174,7 +174,7 @@ tarde y ausencias, y **Repartir propinas** por horas trabajadas o en partes igua
 - **Contabilidad** (plan Pro): gastos, cuentas a pagar, IVA, estado de resultados y libro diario.
   - **Factura de cada compra:** en **Cargar gasto**, tocar **Sacar foto o subir la factura** (foto con el celular o
     PDF). Queda guardada con el gasto y se ve con **Ver factura** en la lista y en el IVA compras. Si está cargada la
-    clave de Claude (Integraciones → Asistente IA), Morfi lee la factura y completa fecha, proveedor, comprobante,
+    clave de Claude (Integraciones → Asistente IA), Fadido lee la factura y completa fecha, proveedor, comprobante,
     neto, IVA y percepciones: hay que revisarlos antes de guardar. Si el proveedor no está cargado, ofrece agregarlo.
     Arriba de la lista se ve cuántos gastos todavía no tienen la factura adjunta.
 
@@ -188,7 +188,7 @@ tarde y ausencias, y **Repartir propinas** por horas trabajadas o en partes igua
 - **Tu plan**: qué incluye el plan, cuándo vence y cómo cambiarlo. Si soporte te pasa una licencia, se pega ahí.
 
 ### Copias de seguridad
-Morfi hace **una copia de la base todos los días**, sola. Conviene tener también la **copia fuera del local** (ver
+Fadido hace **una copia de la base todos los días**, sola. Conviene tener también la **copia fuera del local** (ver
 `docs/INSTALACION.md`): si se roba o se rompe la PC, con esa copia se recupera todo en otra PC.
 
 ---
@@ -197,12 +197,12 @@ Morfi hace **una copia de la base todos los días**, sola. Conviene tener tambi�
 
 | Pasa esto | Hacer esto |
 |---|---|
-| El celular no abre Morfi | Que esté en el mismo WiFi que la PC. Volver a escanear el QR de **Conectar celulares**. |
+| El celular no abre Fadido | Que esté en el mismo WiFi que la PC. Volver a escanear el QR de **Conectar celulares**. |
 | Se cortó internet | Seguir trabajando. Las facturas y los cobros con Mercado Pago se mandan solos al volver. |
 | Una factura dice "pendiente" | Se reintenta sola. Si dice "error", tocar **Reintentar factura** o avisar a soporte. |
-| Una factura dice "CAEA" en vez de "CAE" | Es normal: ARCA no respondía y salió con el código de contingencia. Es válida y Morfi la informa sola a ARCA cuando vuelve internet. |
+| Una factura dice "CAEA" en vez de "CAE" | Es normal: ARCA no respondía y salió con el código de contingencia. Es válida y Fadido la informa sola a ARCA cuando vuelve internet. |
 | La impresora no imprime | Que esté encendida y con papel. En **Configuración → Impresora**, probar la impresión. |
-| La PC no abre Morfi | Reiniciar la PC: Morfi arranca solo. Si sigue sin abrir, avisar a soporte. |
+| La PC no abre Fadido | Reiniciar la PC: Fadido arranca solo. Si sigue sin abrir, avisar a soporte. |
 | Algo raro con un cobro o la caja | No borrar nada. Sacar una foto de la pantalla y avisar a soporte. |
 
 **Soporte:** WhatsApp 11 2390-0155, de lunes a sábado de 10 a 20 h. Si el local no puede vender ni cobrar, se

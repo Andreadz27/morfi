@@ -4,9 +4,9 @@
 'use strict';
 
 const USUARIOS = {
-  admin: { nombre: 'Administrador', email: 'admin@morfi.local', password: 'admin123', rol: 'admin' },
+  admin: { nombre: 'Administrador', email: 'admin@fadido.local', password: 'admin123', rol: 'admin' },
   cajero: { nombre: 'Vendedor Test', email: 'vendedor@test.com', password: 'vendedor123', rol: 'cajero' },
-  mozo: { nombre: 'Mozo QA', email: 'mozo@qa.test', password: 'Morfi-QA-mozo-7391', rol: 'mozo' },
+  mozo: { nombre: 'Mozo QA', email: 'mozo@qa.test', password: 'Fadido-QA-mozo-7391', rol: 'mozo' },
   cocina: { nombre: 'Cocina QA', email: 'cocina@qa.test', password: 'cocina1234', rol: 'cocina' }
 };
 

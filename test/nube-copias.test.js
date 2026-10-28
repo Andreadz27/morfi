@@ -1,4 +1,4 @@
-// Morfi Nube: copia de su base al iniciar (y cada 24 h), rotación y duplicado en otra carpeta.
+// Fadido Nube: copia de su base al iniciar (y cada 24 h), rotación y duplicado en otra carpeta.
 // Su base tiene las cuentas, los usuarios del panel y los tokens de los locales: sin copia, un disco roto los perdía.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -14,7 +14,7 @@ const RAIZ = path.join(__dirname, '..');
 const puertoLibre = () => new Promise(ok => { const x = net.createServer(); x.listen(0, () => { const { port } = x.address(); x.close(() => ok(port)); }); });
 
 test('al iniciar copia la base, conserva solo las últimas y deja un duplicado en NUBE_COPIA_DIR', async () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'morfi-nube-copias-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fadido-nube-copias-'));
   const datos = path.join(tmp, 'datos'), otra = path.join(tmp, 'drive');
   // Dos copias viejas: con NUBE_COPIAS_CONSERVAR=2, al crear la nueva se borra la más vieja
   fs.mkdirSync(path.join(datos, 'copias'), { recursive: true });

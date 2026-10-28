@@ -233,9 +233,9 @@ const puertoLibre = () => new Promise((ok, mal) => {
 
   // ---------- Recorrido ----------
   await page.goto(base + '/');
-  await placa('Morfi', 'El sistema de gestión para restaurantes, bares y cafeterías',
+  await placa('Fadido', 'El sistema de gestión para restaurantes, bares y cafeterías',
     ['Punto de venta', 'Mesas y comandas', 'Delivery', 'Caja y arqueo', 'Recetas y costos', 'Facturación ARCA'], 4200,
-    'Hola. Te cuento cómo funciona Morfi, el sistema para restaurantes, bares y cafeterías. Vamos a recorrer un día de trabajo, de punta a punta.');
+    'Hola. Te cuento cómo funciona Fadido, el sistema para restaurantes, bares y cafeterías. Vamos a recorrer un día de trabajo, de punta a punta.');
   await page.evaluate(() => window.__gm.ocultarPlaca());
   await esperar(700);
   await captura('01-ingreso');
@@ -259,7 +259,7 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await captura('02-dashboard');
   await resaltar('#view-dashboard .stat-card', 1400);
   await rotulo('Alertas y consejos automáticos', 'Te avisa qué reponer, cuáles son tus horas pico y cómo viene el día frente a tu promedio.', 4000,
-    'Y más abajo, Morfi te va avisando cosas: qué conviene reponer, cuáles son tus horas pico... Es como tener a alguien mirando los números por vos.');
+    'Y más abajo, Fadido te va avisando cosas: qué conviene reponer, cuáles son tus horas pico... Es como tener a alguien mirando los números por vos.');
   await desplazar('#view-dashboard .card:nth-of-type(3)', 2600);
   await arriba();
 
@@ -448,9 +448,9 @@ const puertoLibre = () => new Promise((ok, mal) => {
 
   // Cierre
   await sinRotulo();
-  await placa('Morfi', 'Todo tu restaurante en un solo sistema. Sin instalaciones complicadas.',
+  await placa('Fadido', 'Todo tu restaurante en un solo sistema. Sin instalaciones complicadas.',
     ['Pedidos', 'Cocina', 'Delivery', 'Caja', 'Recetas', 'Contabilidad', 'Stock', 'ARCA'], 4500,
-    'Eso es Morfi: todo tu restaurante, en un solo sistema. ¡Gracias por mirar!');
+    'Eso es Fadido: todo tu restaurante, en un solo sistema. ¡Gracias por mirar!');
 
   fs.writeFileSync(path.join(SALIDA, 'capitulos.json'), JSON.stringify(capitulos, null, 2));
 

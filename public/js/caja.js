@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Caja
+// FADIDO - Caja
 // Apertura, cierre y arqueo de caja
 // =============================================
 
@@ -584,7 +584,7 @@ const Caja = {
     const estilos = [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => `<link rel="stylesheet" href="${l.href}">`).join('');
     win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(this._cierreVisto.titulo)}</title>${estilos}
       <style>body{background:#fff;padding:20px}.cierre-bloque{break-inside:avoid}</style></head>
-      <body><h2>${esc(App.config && App.config.nombre_negocio || 'Morfi')} — ${esc(this._cierreVisto.titulo)}</h2>${this.htmlCierre(this._cierreVisto.r)}</body></html>`);
+      <body><h2>${esc(App.config && App.config.nombre_negocio || 'Fadido')} — ${esc(this._cierreVisto.titulo)}</h2>${this.htmlCierre(this._cierreVisto.r)}</body></html>`);
     win.document.close();
     win.focus();
     setTimeout(() => win.print(), 500);

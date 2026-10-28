@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Inicialización de Base de Datos
+// FADIDO - Inicialización de Base de Datos
 // Crea todas las tablas y datos iniciales
 // =============================================
 
@@ -326,7 +326,7 @@ db.serialize(() => {
 
   // Usuario administrador por defecto
   db.run(`INSERT OR IGNORE INTO usuarios (nombre, email, password, rol) 
-          VALUES ('Administrador', 'admin@morfi.local', 'admin123', 'admin')`);
+          VALUES ('Administrador', 'admin@fadido.local', 'admin123', 'admin')`);
 
   // Configuración por defecto
   db.run(`INSERT OR IGNORE INTO configuracion (id, nombre_negocio) VALUES (1, 'Mi Restaurante')`);
@@ -437,10 +437,10 @@ db.serialize(() => {
   console.log(SIN_EJEMPLOS ? '✅ Base limpia: sin datos de ejemplo.' : '✅ Mesas, proveedores y promociones creados.');
   console.log('');
   console.log('🎉 BASE DE DATOS INICIALIZADA CON ÉXITO');
-  console.log('   Archivo: data/morfi.db');
+  console.log('   Archivo: data/fadido.db');
   console.log('');
   console.log('👤 Usuario por defecto:');
-  console.log('   Email: admin@morfi.local');
+  console.log('   Email: admin@fadido.local');
   console.log('   Password: admin123');
 });
 

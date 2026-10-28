@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Ganancias
+// FADIDO - Ganancias
 // Cuánto queda de lo que se vende: por día, semana, mes o año; por plato, canal, medio de pago, horario, momento del
 // día y mozo; qué se come la ganancia, cuánto hay que vender para cubrir los gastos fijos y el costo de cada producto.
 // Los cálculos y las definiciones están en src/servicios/ganancias.js.
@@ -329,7 +329,7 @@ const Ganancias = {
       </div>
       <div class="card">
         <div class="card-header"><span class="card-title"><i class="fas fa-tags"></i> Lo que te cuesta hacer cada producto</span></div>
-        <p class="text-muted">Poné cuánto te cuesta una unidad: mercadería, envase y lo que lleve. Con eso Morfi calcula la ganancia de cada plato y
+        <p class="text-muted">Poné cuánto te cuesta una unidad: mercadería, envase y lo que lleve. Con eso Fadido calcula la ganancia de cada plato y
           te dice cuáles conviene vender. "Vendidos" son las unidades de los últimos ${r.dias} días. Los que tienen receta toman el costo de sus ingredientes.</p>
         <div class="gan-costos-filtros">
           <input type="search" id="ganCostoBuscar" placeholder="Buscar producto o categoría" value="${esc(f.texto)}" oninput="Ganancias.filtrarCostos()" aria-label="Buscar">

@@ -1,7 +1,7 @@
 // Restaura una copia de seguridad (local o de la nube) sobre la base del sistema.
-// 1. Se niega si el servidor está corriendo (hay que detenerlo: pm2 stop morfi).
+// 1. Se niega si el servidor está corriendo (hay que detenerlo: pm2 stop fadido).
 // 2. Baja la copia de la nube y la descifra (BACKUP_CLAVE), si es de la nube.
-// 3. Comprueba que la copia es una base de Morfi sana (integrity_check) ANTES de tocar nada.
+// 3. Comprueba que la copia es una base de Fadido sana (integrity_check) ANTES de tocar nada.
 // 4. Guarda la base actual en data/backups/antes-de-restaurar_... y recién ahí la reemplaza.
 //
 // Uso (en la carpeta de la instalación):
@@ -9,7 +9,7 @@
 //   npm run restaurar -- <copia.db>               una copia local (nombre en data/backups o ruta)
 //   npm run restaurar -- --nube <nombre>          una copia de la nube (sirve para armar el local en otra PC)
 //   npm run restaurar -- --nube --ultima          la copia más nueva de la nube (PC de reemplazo: instalar.ps1 -RestaurarDeLaNube)
-// Después: pm2 start morfi
+// Después: pm2 start fadido
 'use strict';
 require('../src/env');
 const fs = require('fs');
@@ -45,7 +45,7 @@ async function verificarCopia(archivo) {
     const [{ integrity_check: estado }] = await consulta(db, 'PRAGMA integrity_check');
     if (estado !== 'ok') throw new Error(`la copia está dañada (${estado})`);
     const tablas = (await consulta(db, "SELECT name FROM sqlite_master WHERE type = 'table'")).map(t => t.name);
-    for (const t of ['usuarios', 'pedidos', 'productos']) if (!tablas.includes(t)) throw new Error(`no es una base de Morfi (falta la tabla ${t})`);
+    for (const t of ['usuarios', 'pedidos', 'productos']) if (!tablas.includes(t)) throw new Error(`no es una base de Fadido (falta la tabla ${t})`);
     const [{ n }] = await consulta(db, 'SELECT COUNT(*) AS n FROM pedidos');
     return { pedidos: n };
   } catch (e) {
@@ -83,7 +83,7 @@ async function restaurar() {
   const ultima = args.includes('--ultima');
   let nombre = ultima ? null : desdeNube ? args[args.indexOf('--nube') + 1] : args.find(a => !a.startsWith('--'));
   if (!nombre && !(ultima && desdeNube)) throw new Error('Indicá qué copia restaurar (npm run restaurar -- --listar para verlas).');
-  if (await servidorCorriendo()) throw new Error('El servidor está corriendo. Detenelo primero: pm2 stop morfi');
+  if (await servidorCorriendo()) throw new Error('El servidor está corriendo. Detenelo primero: pm2 stop fadido');
 
   // La copia a restaurar queda primero en un archivo temporal: la base no se toca hasta verificarla
   const temporal = path.join(os.tmpdir(), `gm-restaurar-${process.pid}.db`);
@@ -112,7 +112,7 @@ async function restaurar() {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     for (const extra of ['-wal', '-shm']) fs.rmSync(BASE + extra, { force: true });
     fs.copyFileSync(temporal, BASE);
-    console.log('Copia restaurada. Ahora: pm2 start morfi');
+    console.log('Copia restaurada. Ahora: pm2 start fadido');
   } finally {
     fs.rmSync(temporal, { force: true });
   }

@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Productos
+// FADIDO - Productos
 // CRUD de productos y categor\u00edas
 // =============================================
 
@@ -885,7 +885,7 @@ const Productos = {
   imprimirRecetario() {
     const win = window.open('', '_blank', 'width=800,height=900');
     if (!win) { App.showToast('Habilita las ventanas emergentes', 'warning'); return; }
-    const negocio = (App && App.nombreNegocio) ? App.nombreNegocio : 'Morfi';
+    const negocio = (App && App.nombreNegocio) ? App.nombreNegocio : 'Fadido';
     win.document.write(`
       <!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recetario</title>
       <style>

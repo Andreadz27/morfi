@@ -1,4 +1,4 @@
-# QA de Morfi
+# QA de Fadido
 
 Suite de pruebas que sigue los casos documentados en [`docs/qa/CASOS-DE-PRUEBA.md`](../docs/qa/CASOS-DE-PRUEBA.md).
 Estrategia completa: [`docs/qa/ESTRATEGIA-DE-PRUEBAS.md`](../docs/qa/ESTRATEGIA-DE-PRUEBAS.md).
@@ -22,15 +22,15 @@ Todo junto: **`npm run qa`** → abre `qa/reportes/salida/mochawesome/index.html
 ```
 qa/
 ├── datos.js                   usuarios y productos de prueba (una sola fuente para las tres herramientas)
-├── servidor.js                Morfi sobre una base nueva temporal; `node qa/servidor.js` deja uno corriendo
+├── servidor.js                Fadido sobre una base nueva temporal; `node qa/servidor.js` deja uno corriendo
 ├── playwright.config.js       proyectos "escritorio" y "celular" (Pixel 7), trazas, video y reportes
 ├── e2e/
 │   ├── fixtures.js            baseURL, API con sesión por rol y falla ante cualquier error de JavaScript
 │   ├── paginas/               page objects: login, POS, caja, cocina, carta
 │   └── specs/                 01-acceso · 02-venta · 03-carta-celular · 04-ganancias · 05-defectos
 ├── api/
-│   ├── morfi.postman_collection.json      importable en Postman
-│   ├── morfi-local.postman_environment.json
+│   ├── fadido.postman_collection.json      importable en Postman
+│   ├── fadido-local.postman_environment.json
 │   └── correr.js              Newman contra un servidor nuevo + parte del reporte
 ├── mobile/                    flujos de Maestro (Android + Chrome)
 └── reportes/                  adaptadores a Mochawesome (Playwright y Newman) y generador del HTML
@@ -39,7 +39,7 @@ qa/
 ## Postman a mano
 
 1. `node qa/servidor.js` (anota la dirección que muestra) o `npm start` con una base de prueba.
-2. Postman → Import → `qa/api/morfi.postman_collection.json` y `qa/api/morfi-local.postman_environment.json`.
+2. Postman → Import → `qa/api/fadido.postman_collection.json` y `qa/api/fadido-local.postman_environment.json`.
 3. En el ambiente, `base_url` = la dirección del paso 1.
 4. **Run collection**, en orden: cada carpeta usa lo que deja la anterior (tokens, pedido, caja).
 

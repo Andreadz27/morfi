@@ -1,5 +1,5 @@
 ﻿// =============================================
-// MORFI - Vista QR & Display Cocina
+// FADIDO - Vista QR & Display Cocina
 // =============================================
 
 const QRView = {
@@ -69,7 +69,7 @@ const QRView = {
           ${/^(localhost|127\.|\[::1\])/.test(new URL(urlMenu).hostname) ? `
           <div style="background:#fef3c7;color:#92400e;border-radius:8px;padding:10px 12px;margin:8px 12px;font-size:13px;">
             <i class="fas fa-exclamation-triangle"></i> Este QR apunta a <b>esta computadora</b> y no va a abrir en los celulares.
-            Entrá a Morfi con la dirección de la red del local (la que usan los mozos) o pedile a soporte que configure la dirección pública.
+            Entrá a Fadido con la dirección de la red del local (la que usan los mozos) o pedile a soporte que configure la dirección pública.
           </div>` : ''}
           <div class="qr-center-block">
             <div class="qr-wrapper" id="qrCanvas">
@@ -274,7 +274,7 @@ const QRView = {
         </div>
         ${dirs.length ? `<div class="conectar-equipos">${dirs.map(d => `
           <div class="conectar-direccion">
-            <img src="${urlQr(d.url)}" alt="QR para entrar a Morfi" width="140" height="140">
+            <img src="${urlQr(d.url)}" alt="QR para entrar a Fadido" width="140" height="140">
             <div><strong>${esc(d.url)}</strong><br><small class="text-muted">${esc(d.interfaz)}</small></div>
           </div>`).join('')}</div>
           <p class="text-muted conectar-ayuda">${dirs.length > 1 ? 'Esta PC tiene más de una conexión: usá la de la red a la que se conectan los celulares. ' : ''}
@@ -290,13 +290,13 @@ const QRView = {
     const win = window.open('', '_blank', 'width=700,height=900');
     if (!win) { App.showToast('Habilitá las ventanas emergentes para imprimir', 'warning'); return; }
     const negocio = (App.config && App.config.nombre_negocio) || '';
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Entrar a Morfi</title><style>
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Entrar a Fadido</title><style>
       body{font-family:Arial,sans-serif;margin:0;padding:18mm;color:#1e293b;text-align:center}
       .marca{display:flex;gap:10px;align-items:center;justify-content:center;font-size:26pt;font-weight:800}
       .marca img{width:44px;height:44px;border-radius:23%} .qr{width:70mm;height:70mm;margin:10mm auto 4mm}
       .dir{font-size:16pt;font-weight:bold} ol{text-align:left;max-width:140mm;margin:10mm auto;font-size:13pt;line-height:1.7}
     </style></head><body>
-      <div class="marca"><img src="${location.origin}/favicon.svg" alt="">morfi</div>
+      <div class="marca"><img src="${location.origin}/favicon.svg" alt="">fadido</div>
       <p>${esc(negocio)}</p>
       <img class="qr" src="${location.origin}${urlQr(d.url)}" alt="">
       <div class="dir">${esc(d.url)}</div>

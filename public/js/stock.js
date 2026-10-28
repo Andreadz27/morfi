@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Stock / Inventario
+// FADIDO - Stock / Inventario
 // Movimientos de stock y niveles
 // =============================================
 

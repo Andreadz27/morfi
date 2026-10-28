@@ -1,5 +1,5 @@
 // Utilidades para los tests: levantan un servidor real sobre una base nueva
-// en una carpeta temporal (nunca se toca data/morfi.db).
+// en una carpeta temporal (nunca se toca data/fadido.db).
 const { spawn, execFileSync } = require('child_process');
 const fs = require('fs');
 const net = require('net');
@@ -39,7 +39,7 @@ async function iniciarServidor(envExtra = {}, opciones = {}) {
     await esperar(100);
   }
 
-  const db = new sqlite3.Database(path.join(dataDir, 'morfi.db'));
+  const db = new sqlite3.Database(path.join(dataDir, 'fadido.db'));
   db.configure('busyTimeout', 10000);
   const q = (sql, p = []) => new Promise((ok, mal) => db.all(sql, p, (e, r) => e ? mal(e) : ok(r)));
 
