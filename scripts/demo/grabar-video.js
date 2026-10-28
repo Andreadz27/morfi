@@ -39,9 +39,9 @@ const OVERLAY = () => {
       background:radial-gradient(circle at 30% 20%,#fb923c 0,#ea580c 30%,#9a3412 70%,#431407 100%);color:#fff;text-align:center;
       font-family:system-ui,-apple-system,'Segoe UI',sans-serif;opacity:0;transition:opacity .6s;pointer-events:none}
     #gm-placa.visible{opacity:1}
-    #gm-placa .logo{font-size:84px;line-height:1;margin-bottom:18px}
-    #gm-placa h1{font-size:64px;margin:0;font-weight:800;letter-spacing:-1.5px}
-    #gm-placa p{font-size:26px;margin:14px 0 0;opacity:.92;max-width:900px}
+    #gm-placa .logo{width:120px;height:120px;margin-bottom:22px;border-radius:28px;box-shadow:0 16px 40px rgba(0,0,0,.3)}
+    #gm-placa h1{font-size:64px;margin:0;font-weight:800;letter-spacing:-1.5px;color:#fff !important}
+    #gm-placa p{font-size:26px;margin:14px 0 0;opacity:.92;max-width:900px;color:#fff !important}
     #gm-placa .chips{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap;justify-content:center}
     #gm-placa .chips span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);padding:8px 18px;border-radius:999px;font-size:18px}
     .gm-resaltado{outline:4px solid #f97316 !important;outline-offset:4px !important;border-radius:10px;transition:outline-color .3s}`;
@@ -65,7 +65,7 @@ const OVERLAY = () => {
     ocultarRotulo() { document.getElementById('gm-rotulo').classList.remove('visible'); },
     placa(titulo, texto, chips = []) {
       const p = document.getElementById('gm-placa');
-      p.innerHTML = `<div class="logo">🍽️</div><h1></h1><p></p><div class="chips"></div>`;
+      p.innerHTML = `<img class="logo" src="/favicon.svg" alt=""><h1></h1><p></p><div class="chips"></div>`;
       p.querySelector('h1').textContent = titulo; p.querySelector('p').textContent = texto;
       for (const c of chips) { const s = document.createElement('span'); s.textContent = c; p.querySelector('.chips').appendChild(s); }
       p.classList.add('visible');
@@ -235,7 +235,7 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await page.goto(base + '/');
   await placa('Fadido', 'El sistema de gestión para restaurantes, bares y cafeterías',
     ['Punto de venta', 'Mesas y comandas', 'Delivery', 'Caja y arqueo', 'Recetas y costos', 'Facturación ARCA'], 4200,
-    'Hola. Te cuento cómo funciona Fadido, el sistema para restaurantes, bares y cafeterías. Vamos a recorrer un día de trabajo, de punta a punta.');
+    'Hola. Te presento Fadido, el sistema para restaurantes, bares y cafeterías. Vamos a recorrer un día de trabajo, de punta a punta.');
   await page.evaluate(() => window.__gm.ocultarPlaca());
   await esperar(700);
   await captura('01-ingreso');
@@ -312,8 +312,8 @@ const puertoLibre = () => new Promise((ok, mal) => {
   await page.evaluate(() => document.querySelectorAll('.gm-resaltado').forEach(e => e.classList.remove('gm-resaltado')));
   await ir('mesas');
   await clic(`button[onclick="Pedidos.abrirPedidoDeMesa('3')"]`, 1400);
-  await rotulo('Cobrar es igual de simple', 'Efectivo, tarjeta, Mercado Pago o transferencia, con el vuelto calculado.', 1800,
-    'A la hora de cobrar, es igual de simple. Efectivo, tarjeta, Mercado Pago o transferencia... y el vuelto ya te lo calcula.');
+  await rotulo('Cobrar es igual de simple', 'Efectivo, tarjeta, Mercado Pago, MODO, Cuenta DNI o transferencia, con el vuelto calculado.', 2600,
+    'A la hora de cobrar, es igual de simple. Efectivo, tarjeta, Mercado Pago, MODO, Cuenta DNI o transferencia... y el vuelto ya te lo calcula.');
   await captura('06-detalle-pedido');
   await clic('button[onclick^="Cobro.abrir("]', 1200);
   await rotulo('Propina y cuenta dividida', 'Sumás la propina con un toque y dividís la cuenta en partes iguales o por plato.', 1200,
@@ -448,9 +448,9 @@ const puertoLibre = () => new Promise((ok, mal) => {
 
   // Cierre
   await sinRotulo();
-  await placa('Fadido', 'Todo tu restaurante en un solo sistema. Sin instalaciones complicadas.',
-    ['Pedidos', 'Cocina', 'Delivery', 'Caja', 'Recetas', 'Contabilidad', 'Stock', 'ARCA'], 4500,
-    'Eso es Fadido: todo tu restaurante, en un solo sistema. ¡Gracias por mirar!');
+  await placa('Fadido', 'Tu negocio, a punto. Todo tu restaurante en un solo sistema.',
+    ['Anda sin internet', 'Si se cae, vuelve solo', 'MODO y Cuenta DNI', 'Facturación ARCA', 'Copias automáticas', 'Carta QR sin comisiones'], 6500,
+    'Eso es Fadido: todo tu restaurante, en un solo sistema. Sigue andando aunque se corte internet, y si algo se cae, vuelve solo. Tu negocio, a punto. ¡Gracias por mirar!');
 
   fs.writeFileSync(path.join(SALIDA, 'capitulos.json'), JSON.stringify(capitulos, null, 2));
 
