@@ -51,6 +51,9 @@ con los pasos y cómo agregarlo a la pantalla de inicio. Pegarla en la cocina o 
 mesas también usan esa dirección cuando se arman desde la misma PC.
 
 - **Arranca al encender la PC**, aunque nadie inicie sesión (tarea de Windows *Morfi*, cuenta SYSTEM).
+- **Se levanta solo si se cae**: la tarea *Morfi - vigilar* lo revisa cada 5 minutos y, si no responde, lo vuelve a arrancar (anota lo que hace en `logs\vigilante.log`; no actúa mientras se actualiza).
+- **No se duerme con el cargador puesto**: sin suspensión ni hibernación y, en notebooks, cerrar la tapa no hace nada. Una notebook tiene que quedar siempre enchufada.
+- **Red del local como privada**: si Windows la marcó como pública, la pasa a privada (si no, el firewall no deja entrar a los celulares).
   pm2 usa una carpeta compartida para toda la PC (`PM2_HOME=C:\ProgramData\Morfi\pm2`): `pm2 list` y
   `pm2 logs` desde una consola de administrador ven el mismo proceso.
 - **Clave de las copias:** la genera el instalador (`BACKUP_CLAVE` en el `.env`) y la muestra en rojo al final.

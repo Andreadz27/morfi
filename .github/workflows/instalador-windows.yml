@@ -71,6 +71,21 @@ jobs:
           if (-not $ok) { Get-Content C:\Morfi\logs\pm2-error.log -Tail 40 -ErrorAction SilentlyContinue; throw 'después del reinicio Morfi no volvió solo' }
           'volvió solo después del reinicio'
 
+      - name: Se cae en pleno día (sin reiniciar la PC) y el vigilante lo levanta
+        shell: pwsh
+        run: |
+          $env:PM2_HOME = [Environment]::GetEnvironmentVariable('PM2_HOME', 'Machine')
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+          if (-not (Get-ScheduledTask -TaskName 'Morfi - vigilar')) { throw 'falta la tarea del vigilante' }
+          pm2 kill
+          Start-Sleep 3
+          Start-ScheduledTask -TaskName 'Morfi - vigilar'
+          $ok = $false
+          for ($i = 0; $i -lt 50 -and -not $ok; $i++) { Start-Sleep 3; try { $ok = (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/api/salud -SkipHttpErrorCheck).StatusCode -gt 0 } catch {} }
+          Get-Content C:\Morfi\logs\vigilante.log -ErrorAction SilentlyContinue
+          if (-not $ok) { Get-ScheduledTaskInfo -TaskName 'Morfi - vigilar' | Format-List; throw 'el vigilante no levantó Morfi' }
+          'el vigilante lo levantó'
+
       - name: Volver a correr el instalador (no rompe ni pisa nada)
         shell: powershell
         run: |
