@@ -10,7 +10,7 @@ const PD_API=(location.pathname.match(/^\/l\/[^/]+/)||[""])[0];
 // Carta en español, inglés y portugués. Los platos traen sus traducciones desde el local (si faltan, en español);
 // los textos de la página están acá. Lo que ve cocina y caja sigue en español.
 const PD_TEXTOS={
-  es:{acompana:"Acompañalo con",grande_q:"¿Lo querés grande? +{m}",conviene:"Te conviene: {c}. Ahorrás {m}",cambiar:"Cambiar",se_pide:"Se pide {h}",dias:["dom","lun","mar","mié","jue","vie","sáb"],dias_todos:"todos los días",de_a:"de {d} a {h}",de_h:"de {a} a {b}",op_una:"Elegí una",op_opcional:"Opcional",op_hasta:"Hasta {n}",op_varias:"Elegí las que quieras",op_falta:"Elegí: {g}",op_agregar:"Agregar {m}",cancelar:"Cancelar",letra:"Letra más grande",toda_carta:"Toda la carta",buscar_ph:"Buscar en la carta",sin_resultados:"No encontramos nada con esa búsqueda.",b_mas:"Lo más pedido",b_nuevo:"Nuevo",b_reco:"Recomendado",online_sub:"Arma tu pedido y lo recibimos enseguida",ver_sub:"Nuestra carta",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",mesa_sub_directo:"Pedí y pagá desde tu celular: tu pedido va directo a la cocina",enviar_cocina:"Enviar a la cocina",barra_sub:"Pedí y pagá desde tu celular: te avisamos cuando esté listo para retirar",barra:"Barra",falta_nombre:"Poné tu nombre: con él te llamamos cuando esté listo",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
+  es:{acompana:"Acompañalo con",grande_q:"¿Lo querés grande? +{m}",conviene:"Te conviene: {c}. Ahorrás {m}",cambiar:"Cambiar",se_pide:"Se pide {h}",dias:["dom","lun","mar","mié","jue","vie","sáb"],dias_todos:"todos los días",de_a:"de {d} a {h}",de_h:"de {a} a {b}",op_una:"Elegí una",op_opcional:"Opcional",op_hasta:"Hasta {n}",op_varias:"Elegí las que quieras",op_falta:"Elegí: {g}",op_agregar:"Agregar {m}",cancelar:"Cancelar",letra:"Letra más grande",toda_carta:"Toda la carta",buscar_ph:"Buscar en la carta",sin_resultados:"No encontramos nada con esa búsqueda.",b_mas:"Lo más pedido",b_nuevo:"Nuevo",b_reco:"Recomendado",online_sub:"Arma tu pedido y lo recibimos enseguida",ver_sub:"Nuestra carta",mesa_sub:"Elegí, enviá tu pedido y el mozo lo confirma",pagar_directo:"Ver la cuenta y pagar",como_pagas_directo:"¿Cómo pagás?",otra_forma_directo:"¿Pagás de otra forma?",cuenta_directo:"Listo: avisamos en la caja. Acercate a pagar cuando quieras.",atendida_directo:"Visto en la caja",tit_cuenta_directo:"Avisaste cómo pagás",pago_no_directo:"El pago no se completó. Podés intentar de nuevo o pagar en la caja.",mesa_sub_directo:"Pedí y pagá desde tu celular: tu pedido va directo a la cocina",enviar_cocina:"Enviar a la cocina",barra_sub:"Pedí y pagá desde tu celular: te avisamos cuando esté listo para retirar",barra:"Barra",falta_nombre:"Poné tu nombre: con él te llamamos cuando esté listo",carta_sub:"Mirá la carta y llamá al mozo cuando quieras pedir",
     llamar_mozo:"Llamar al mozo",pedir_cuenta:"Pedir la cuenta",tu_pedido:"Tu pedido",vacio:"Todavía no agregaste nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Tus datos",nombre:"Nombre",nombre_opc:"Tu nombre (opcional)",nombre_ph:"Tu nombre",telefono:"Teléfono",como:"¿Cómo lo querés?",retiro:"Retiro en el local",delivery:"Delivery",
     direccion:"Dirección de entrega",direccion_ph:"Calle, número, piso/dpto",notas:"Notas / aclaraciones",notas_ph:"Sin cebolla, sin sal, etc.",volver:"Volver",enviar:"Enviar pedido",enviar_mozo:"Enviar al mozo",
@@ -21,13 +21,13 @@ const PD_TEXTOS={
     tus_pedidos:"Tus pedidos",tu_cuenta:"Tu cuenta",total:"Total",descuento:"Descuento",pagado:"Pagado",
     est_pendiente:"Esperando al mozo",est_confirmada:"Confirmado, en preparación",est_rechazada:"No se pudo tomar",est_atendida:"El mozo ya viene",avisado:"Avisado",
     tit_pedido:"Pedido",tit_mozo:"Llamaste al mozo",tit_cuenta:"Pediste la cuenta",sin_productos:"No hay productos.",sin_productos_cat:"Sin productos en esta categoría.",
-    qr_invalido:"Este QR no corresponde a ninguna mesa. Pedile ayuda al mozo.",sin_menu:"No se pudo cargar la carta.",recibido:"¡Pedido recibido!",enviado:"Pedido enviado",
+    qr_invalido:"Este QR no corresponde a ninguna mesa. Pedí ayuda al personal del local.",sin_menu:"No se pudo cargar la carta.",recibido:"¡Pedido recibido!",enviado:"Pedido enviado",
     otro_pedido:"Hacer otro pedido",consultar_wa:"Consultar por WhatsApp",gracias:"¡Gracias {n}! Recibimos tu pedido y en breve te contactamos.",numero:"Número de pedido:",
     completa_datos:"Completá nombre y teléfono.",completa_dir:"Completá la dirección de entrega.",agrega_algo:"Agregá al menos un producto.",
     listo_cocina:"¡Listo{n}! Tu pedido ya está en preparación.",espera_mozo:"¡Gracias{n}! El mozo lo confirma en un momento: abajo ves cuándo pasa a cocina.",
     pago_ok:"¡Pago aprobado! Gracias.",cuenta_paga:" La cuenta quedó paga.",falta_resto:" Falta pagar el resto de la mesa.",
     pago_proceso:"Tu pago está en proceso: cuando Mercado Pago lo apruebe, se acredita solo.",pago_no:"El pago no se completó. Podés intentar de nuevo o pedirle la cuenta al mozo."},
-  en:{acompana:"Goes great with",grande_q:"Make it large? +{m}",conviene:"Better deal: {c}. You save {m}",cambiar:"Switch",se_pide:"Available {h}",dias:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],dias_todos:"every day",de_a:"{d} to {h}",de_h:"from {a} to {b}",op_una:"Choose one",op_opcional:"Optional",op_hasta:"Up to {n}",op_varias:"Choose any",op_falta:"Please choose: {g}",op_agregar:"Add {m}",cancelar:"Cancel",letra:"Bigger text",toda_carta:"Full menu",buscar_ph:"Search the menu",sin_resultados:"Nothing matches your search.",b_mas:"Most ordered",b_nuevo:"New",b_reco:"Our pick",online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",mesa_sub_directo:"Order and pay from your phone: your order goes straight to the kitchen",enviar_cocina:"Send to the kitchen",barra_sub:"Order and pay from your phone: we'll let you know when it's ready to pick up",barra:"Bar",falta_nombre:"Enter your name: we'll call you with it when it's ready",carta_sub:"Browse the menu and call the waiter when you're ready to order",
+  en:{acompana:"Goes great with",grande_q:"Make it large? +{m}",conviene:"Better deal: {c}. You save {m}",cambiar:"Switch",se_pide:"Available {h}",dias:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],dias_todos:"every day",de_a:"{d} to {h}",de_h:"from {a} to {b}",op_una:"Choose one",op_opcional:"Optional",op_hasta:"Up to {n}",op_varias:"Choose any",op_falta:"Please choose: {g}",op_agregar:"Add {m}",cancelar:"Cancel",letra:"Bigger text",toda_carta:"Full menu",buscar_ph:"Search the menu",sin_resultados:"Nothing matches your search.",b_mas:"Most ordered",b_nuevo:"New",b_reco:"Our pick",online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",pagar_directo:"See the bill and pay",como_pagas_directo:"How will you pay?",otra_forma_directo:"Paying another way?",cuenta_directo:"Done: we let the register know. Come pay whenever you like.",atendida_directo:"Seen at the register",tit_cuenta_directo:"You told us how you'll pay",pago_no_directo:"The payment wasn't completed. You can try again or pay at the register.",mesa_sub_directo:"Order and pay from your phone: your order goes straight to the kitchen",enviar_cocina:"Send to the kitchen",barra_sub:"Order and pay from your phone: we'll let you know when it's ready to pick up",barra:"Bar",falta_nombre:"Enter your name: we'll call you with it when it's ready",carta_sub:"Browse the menu and call the waiter when you're ready to order",
     llamar_mozo:"Call the waiter",pedir_cuenta:"Ask for the bill",tu_pedido:"Your order",vacio:"You haven't added anything yet",total_estimado:"Estimated total",confirmar:"Confirm order",
     tus_datos:"Your details",nombre:"Name",nombre_opc:"Your name (optional)",nombre_ph:"Your name",telefono:"Phone",como:"How would you like it?",retiro:"Pick up at the store",delivery:"Delivery",
     direccion:"Delivery address",direccion_ph:"Street, number, floor/apt",notas:"Notes",notas_ph:"No onion, no salt, etc.",volver:"Back",enviar:"Send order",enviar_mozo:"Send to the waiter",
@@ -44,7 +44,7 @@ const PD_TEXTOS={
     listo_cocina:"Done{n}! Your order is being prepared.",espera_mozo:"Thank you{n}! The waiter will confirm it shortly: below you'll see when it goes to the kitchen.",
     pago_ok:"Payment approved! Thank you.",cuenta_paga:" The bill is fully paid.",falta_resto:" The rest of the table still has to pay.",
     pago_proceso:"Your payment is being processed: once Mercado Pago approves it, it will be credited automatically.",pago_no:"The payment wasn't completed. You can try again or ask the waiter for the bill."},
-  pt:{acompana:"Combina com",grande_q:"Quer grande? +{m}",conviene:"Vale mais a pena: {c}. Você economiza {m}",cambiar:"Trocar",se_pide:"Disponível {h}",dias:["dom","seg","ter","qua","qui","sex","sáb"],dias_todos:"todos os dias",de_a:"de {d} a {h}",de_h:"das {a} às {b}",op_una:"Escolha uma",op_opcional:"Opcional",op_hasta:"Até {n}",op_varias:"Escolha as que quiser",op_falta:"Escolha: {g}",op_agregar:"Adicionar {m}",cancelar:"Cancelar",letra:"Letra maior",toda_carta:"Cardápio completo",buscar_ph:"Buscar no cardápio",sin_resultados:"Não encontramos nada com essa busca.",b_mas:"Mais pedido",b_nuevo:"Novo",b_reco:"Recomendado",online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",mesa_sub_directo:"Peça e pague pelo celular: seu pedido vai direto para a cozinha",enviar_cocina:"Enviar para a cozinha",barra_sub:"Peça e pague pelo celular: avisamos quando estiver pronto para retirar",barra:"Balcão",falta_nombre:"Coloque seu nome: chamamos você por ele quando estiver pronto",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
+  pt:{acompana:"Combina com",grande_q:"Quer grande? +{m}",conviene:"Vale mais a pena: {c}. Você economiza {m}",cambiar:"Trocar",se_pide:"Disponível {h}",dias:["dom","seg","ter","qua","qui","sex","sáb"],dias_todos:"todos os dias",de_a:"de {d} a {h}",de_h:"das {a} às {b}",op_una:"Escolha uma",op_opcional:"Opcional",op_hasta:"Até {n}",op_varias:"Escolha as que quiser",op_falta:"Escolha: {g}",op_agregar:"Adicionar {m}",cancelar:"Cancelar",letra:"Letra maior",toda_carta:"Cardápio completo",buscar_ph:"Buscar no cardápio",sin_resultados:"Não encontramos nada com essa busca.",b_mas:"Mais pedido",b_nuevo:"Novo",b_reco:"Recomendado",online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",pagar_directo:"Ver a conta e pagar",como_pagas_directo:"Como vai pagar?",otra_forma_directo:"Vai pagar de outro jeito?",cuenta_directo:"Pronto: avisamos o caixa. Venha pagar quando quiser.",atendida_directo:"Visto no caixa",tit_cuenta_directo:"Você avisou como vai pagar",pago_no_directo:"O pagamento não foi concluído. Você pode tentar de novo ou pagar no caixa.",mesa_sub_directo:"Peça e pague pelo celular: seu pedido vai direto para a cozinha",enviar_cocina:"Enviar para a cozinha",barra_sub:"Peça e pague pelo celular: avisamos quando estiver pronto para retirar",barra:"Balcão",falta_nombre:"Coloque seu nome: chamamos você por ele quando estiver pronto",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
     llamar_mozo:"Chamar o garçom",pedir_cuenta:"Pedir a conta",tu_pedido:"Seu pedido",vacio:"Você ainda não adicionou nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
     tus_datos:"Seus dados",nombre:"Nome",nombre_opc:"Seu nome (opcional)",nombre_ph:"Seu nome",telefono:"Telefone",como:"Como você prefere?",retiro:"Retirar no local",delivery:"Delivery",
     direccion:"Endereço de entrega",direccion_ph:"Rua, número, andar/apto",notas:"Observações",notas_ph:"Sem cebola, sem sal, etc.",volver:"Voltar",enviar:"Enviar pedido",enviar_mozo:"Enviar ao garçom",
@@ -212,6 +212,8 @@ const PedidoOnline={
     document.getElementById("clienteTelefono").required=false;
     this._textos();
   },
+  // En modo directo (sin mozo) los textos que nombran al mozo tienen su versión propia
+  _tm(clave,v){return pdT(this.mesa&&this.mesa.modo==="directo"&&PD_TEXTOS.es[clave+"_directo"]?clave+"_directo":clave,v);},
   _iniciarMesa(estado){
     const b=document.getElementById("origenBadge");
     if(b){b.innerHTML='<i class="fas fa-chair"></i> '+pdE(estado.mesa.nombre);b.className="origen-badge-hero badge-web";b.style.display="";}
@@ -270,7 +272,7 @@ const PedidoOnline={
       </div>
       ${mp}
       <div class="pago-seccion">
-        <h4>${pdE(pdT(mp?"otra_forma":"como_pagas"))}</h4>
+        <h4>${pdE(this._tm(mp?"otra_forma":"como_pagas"))}</h4>
         <div class="mesa-acciones">
           <button class="btn btn-outline" onclick="PedidoOnline.cuentaAlMozo('efectivo')"><i class="fas fa-money-bill-wave"></i> ${pdE(pdT("efectivo"))}</button>
           <button class="btn btn-outline" onclick="PedidoOnline.cuentaAlMozo('tarjeta')"><i class="fas fa-credit-card"></i> ${pdE(pdT("tarjeta"))}</button>
@@ -328,7 +330,7 @@ const PedidoOnline={
   async cuentaAlMozo(forma){
     this.cerrarCuenta();
     await this.llamar("cuenta",forma);
-    this._aviso(pdT("cuenta_en_camino"));
+    this._aviso(this.mesa&&this.mesa.modo==="directo"?pdT("cuenta_directo"):pdT("cuenta_en_camino"));
   },
   _aviso(texto){
     const a=document.getElementById("mesaAviso");
@@ -345,7 +347,7 @@ const PedidoOnline={
         this._aviso(pdT("pago_ok")+pdT(d.cuenta_cerrada?"cuenta_paga":"falta_resto"));
         this._pintarComprobante(id,d);
       }else{
-        this._aviso(pdT(status==="pending"||status==="in_process"?"pago_proceso":"pago_no"));
+        this._aviso(status==="pending"||status==="in_process"?pdT("pago_proceso"):this._tm("pago_no"));
       }
       this._refrescarMesa();
     }catch(err){this._aviso(err.message);}
@@ -379,8 +381,12 @@ const PedidoOnline={
   },
   _pintarMesa(estado){
     this.mesa=estado;
-    const ESTADOS={pendiente:pdT("est_pendiente"),confirmada:pdT("est_confirmada"),rechazada:pdT("est_rechazada"),atendida:pdT("est_atendida")};
-    const TITULOS={pedido:pdT("tit_pedido"),mozo:pdT("tit_mozo"),cuenta:pdT("tit_cuenta")};
+    const directo=estado.modo==="directo";
+    const ESTADOS={pendiente:pdT("est_pendiente"),confirmada:pdT("est_confirmada"),rechazada:pdT("est_rechazada"),atendida:pdT(directo?"atendida_directo":"est_atendida")};
+    const TITULOS={pedido:pdT("tit_pedido"),mozo:pdT("tit_mozo"),cuenta:pdT(directo?"tit_cuenta_directo":"tit_cuenta")};
+    // Sin mozo: no hay a quién llamar; "Pedir la cuenta" pasa a "Ver la cuenta y pagar"
+    const bm=document.getElementById("btnLlamarMozo");if(bm)bm.style.display=directo?"none":"";
+    const bc=document.querySelector("#btnPedirCuenta span");if(bc){bc.dataset.i18n=directo?"pagar_directo":"pedir_cuenta";bc.textContent=pdT(bc.dataset.i18n);}
     // Los avisos de pago son para el mozo; el cliente ve lo pagado en la cuenta
     const sols=(estado.solicitudes||[]).filter(s=>TITULOS[s.tipo]).slice(0,6).map(s=>{
       const det=s.tipo==="pedido"?" — "+s.items.map(i=>i.cantidad+" x "+this._nombreItem(i)).join(", "):"";
