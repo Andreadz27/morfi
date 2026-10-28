@@ -4,7 +4,8 @@
 # -Token: token de GitHub de SOLO LECTURA para este repositorio (el repo es privado; ver docs/INSTALACION.md).
 # -BaseLimpia: la base arranca vacía (sin la carta, mesas, categorías, proveedores ni promociones de ejemplo).
 # Hace todo: Node.js y Git (con winget), descarga el sistema, crea la base, lo deja corriendo con pm2,
-# lo arranca solo AL ENCENDER la PC (aunque nadie inicie sesión: si se corta la luz, vuelve solo),
+# lo arranca solo AL ENCENDER la PC (aunque nadie inicie sesión: si se corta la luz, vuelve solo), lo vigila cada
+# 5 minutos (si se cae, lo levanta), no deja que la PC se duerma con el cargador puesto,
 # abre el puerto para las tablets de la red local y (opcional) programa la actualización automática de madrugada.
 # Se puede volver a ejecutar: no borra datos ni pisa la configuración existente.
 #
@@ -19,6 +20,7 @@ param(
   # Dirección de antes del cambio de nombre: GitHub la redirige si el repositorio se renombra, así sirve en los dos casos
   [string]$Repo = 'https://github.com/Andreadz27/gastromanager.git',
   [string]$Token,                                          # token de solo lectura (repositorio privado)
+  [string]$Rama = 'main',                                  # solo para probar una versión sin publicar (CI): en los locales, main
   [int]$Puerto = 3000,
   [switch]$ActualizacionAutomatica,                        # actualiza todos los días a las 05:00 (con copia y vuelta atrás)
   [switch]$BaseLimpia,                                     # local nuevo: base sin la carta, mesas ni proveedores de ejemplo
@@ -65,7 +67,7 @@ if (Test-Path (Join-Path $Carpeta '.git')) {
   if ($Token) { git -C $Carpeta remote set-url origin $origen; Revisar 'guardar el token' }
   git -C $Carpeta pull --ff-only; Revisar 'bajar la última versión (git pull)'
 } else {
-  git clone $origen $Carpeta
+  git clone -b $Rama $origen $Carpeta
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo descargar el sistema. Si el repositorio es privado, pasa -Token con un token de solo lectura.' }
 }
 # Las tareas corren como SYSTEM y la carpeta es del administrador: git las rechaza por "dubious ownership" si no se autoriza
@@ -207,6 +209,24 @@ if ($habiaNube) {
   Tolerante { pm2 save }
 }
 
+Paso 'Vigilante: si Morfi se cae, vuelve solo (cada 5 minutos)'
+# La tarea de inicio solo corre al prender la PC: si el servidor se caía en pleno día, quedaba apagado hasta reiniciar
+$vigilar = Join-Path $Carpeta 'scripts\windows\vigilar.ps1'
+$accionVig = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$vigilar`" -Pm2 `"$pm2Cmd`" -Puerto $Puerto" -WorkingDirectory $Carpeta
+$cada5 = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5)
+# También desde el arranque, con la misma repetición: así no depende de la fecha en que se instaló
+$alPrender = New-ScheduledTaskTrigger -AtStartup; $alPrender.Repetition = $cada5.Repetition; $alPrender.Delay = 'PT3M'
+$ajustesVig = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
+Register-ScheduledTask -TaskName 'Morfi - vigilar' -Action $accionVig -Trigger $cada5, $alPrender -Principal $sistema -Settings $ajustesVig -Force | Out-Null
+
+Paso 'Energía: que la PC no se duerma con el cargador puesto'
+# Dormida o con la tapa cerrada (notebook), Morfi deja de atender a mozos y cocina aunque esté "prendida"
+Tolerante { powercfg /change standby-timeout-ac 0 }
+Tolerante { powercfg /change hibernate-timeout-ac 0 }
+Tolerante { powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0 }   # cerrar la tapa: no hacer nada
+Tolerante { powercfg /setactive SCHEME_CURRENT }
+if (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) { Write-Host '  Es una notebook: dejala SIEMPRE enchufada (con batería se puede dormir igual).' -ForegroundColor Yellow }
+
 if ($ActualizacionAutomatica) {
   Paso 'Actualización automática diaria (05:00)'
   # Sin "si se perdió la hora, ejecutar al prender": en un local que apaga la PC de noche, eso actualizaba
@@ -220,6 +240,11 @@ if ($ActualizacionAutomatica) {
 Paso "Firewall: puerto $Puerto para tablets y celulares de la red del local"
 if (-not (Get-NetFirewallRule -DisplayName 'Morfi' -ErrorAction SilentlyContinue)) {
   New-NetFirewallRule -DisplayName 'Morfi' -Direction Inbound -Protocol TCP -LocalPort $Puerto -Action Allow -Profile Private,Domain | Out-Null
+}
+# La regla vale para redes privadas: si Windows marcó el WiFi del local como pública, los celulares no entraban
+Get-NetConnectionProfile -ErrorAction SilentlyContinue | Where-Object NetworkCategory -eq 'Public' | ForEach-Object {
+  try { Set-NetConnectionProfile -InterfaceIndex $_.InterfaceIndex -NetworkCategory Private -ErrorAction Stop } catch { return }
+  Write-Host "  La red '$($_.Name)' estaba como pública: ahora es privada."
 }
 
 $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch '^(127\.|169\.254\.)' -and $_.PrefixOrigin -ne 'WellKnown' } | Select-Object -First 1).IPAddress
