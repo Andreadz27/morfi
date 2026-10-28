@@ -36,7 +36,7 @@ jobs:
         shell: powershell
         run: |
           $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-          powershell -ExecutionPolicy Bypass -File "$env:RUNNER_TEMP\instalar.ps1" -Cliente prueba-ci -BaseLimpia -Repo "https://github.com/${{ github.repository }}.git"
+          powershell -ExecutionPolicy Bypass -File "$env:RUNNER_TEMP\instalar.ps1" -Cliente prueba-ci -BaseLimpia -Repo "https://github.com/${{ github.repository }}.git" -Rama "${{ github.head_ref || github.ref_name }}"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
       - name: Quedó todo andando

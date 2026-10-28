@@ -20,6 +20,7 @@ param(
   # Dirección de antes del cambio de nombre: GitHub la redirige si el repositorio se renombra, así sirve en los dos casos
   [string]$Repo = 'https://github.com/Andreadz27/gastromanager.git',
   [string]$Token,                                          # token de solo lectura (repositorio privado)
+  [string]$Rama = 'main',                                  # solo para probar una versión sin publicar (CI): en los locales, main
   [int]$Puerto = 3000,
   [switch]$ActualizacionAutomatica,                        # actualiza todos los días a las 05:00 (con copia y vuelta atrás)
   [switch]$BaseLimpia,                                     # local nuevo: base sin la carta, mesas ni proveedores de ejemplo
@@ -66,7 +67,7 @@ if (Test-Path (Join-Path $Carpeta '.git')) {
   if ($Token) { git -C $Carpeta remote set-url origin $origen; Revisar 'guardar el token' }
   git -C $Carpeta pull --ff-only; Revisar 'bajar la última versión (git pull)'
 } else {
-  git clone $origen $Carpeta
+  git clone -b $Rama $origen $Carpeta
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo descargar el sistema. Si el repositorio es privado, pasa -Token con un token de solo lectura.' }
 }
 # Las tareas corren como SYSTEM y la carpeta es del administrador: git las rechaza por "dubious ownership" si no se autoriza
