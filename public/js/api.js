@@ -253,6 +253,9 @@ const API = {
   getStock() { return this.request('GET', '/stock'); },
   getMovimientosStock() { return this.request('GET', '/stock/movimientos'); },
   registrarMovimientoStock(data) { return this.request('POST', '/stock/movimiento', data); },
+  getConteos() { return this.request('GET', '/stock/conteos'); },
+  getConteo(id) { return this.request('GET', `/stock/conteos/${id}`); },
+  registrarConteo(data) { return this.request('POST', '/stock/conteos', data); },
 
   // ===== Clientes =====
   getClientes() { return this.request('GET', '/clientes'); },

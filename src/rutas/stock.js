@@ -2,6 +2,7 @@
 const {
   run, get, all, transaccion, errorHttp, errorInterno, autenticar, emitEvento, requiere
 } = require('../contexto');
+const { registrarConteoTx, listarConteos, detalleConteo } = require('../servicios/inventario');
 
 module.exports = function registrarRutas(app) {
 
@@ -36,6 +37,33 @@ app.get('/api/stock/movimientos', autenticar, requiere('stock.ver'), async (req,
       LIMIT 100
     `);
     res.json(movimientos);
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// Conteo de inventario (servicios/inventario.js): lo contado reemplaza a lo que decía el sistema
+app.get('/api/stock/conteos', autenticar, requiere('stock.ver'), async (req, res) => {
+  try {
+    res.json(await listarConteos());
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+app.get('/api/stock/conteos/:id', autenticar, requiere('stock.ver'), async (req, res) => {
+  try {
+    res.json(await detalleConteo(req.params.id));
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+app.post('/api/stock/conteos', autenticar, requiere('stock.mover'), async (req, res) => {
+  try {
+    const r = await transaccion(() => registrarConteoTx(req.body || {}, req.usuario.id));
+    emitEvento('stock:actualizar', { accion: 'conteo' });
+    res.status(201).json(r);
   } catch (err) {
     errorInterno(res, err);
   }

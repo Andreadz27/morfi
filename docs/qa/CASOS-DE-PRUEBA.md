@@ -52,6 +52,13 @@ Corren en orden; si uno falla, los siguientes no corren.
 | CP-GAN-01 | "¿Cuánto gané hoy?" | Cobrar un pedido con tarjeta; ingresar como administrador | Las ventas suben; la comisión sube 3 % de lo cobrado; la tarjeta del inicio se ve | P2 | regresión |
 | CP-GAN-02 | Pestañas de Ganancias | Recorrer las 6 pestañas | Ninguna muestra error | P2 | regresión |
 
+## Inventario (CP-INV) · `qa/e2e/specs/08-inventario.spec.js`
+
+| ID | Caso | Pasos | Resultado esperado | Prio. | Etiquetas |
+|---|---|---|---|---|---|
+| CP-INV-01 | Compra que suma al stock | Cargar una compra de mercadería con un artículo de 3 kg por $12.000 | El insumo queda con control de stock, 3000 g y costo $4 por g | P1 | regresión |
+| CP-INV-02 | Conteo de inventario | Contar 200 menos de lo que dice el sistema | La diferencia se ve al escribir (−200); el stock queda en lo contado; el conteo aparece en la lista | P1 | regresión |
+
 ## API (CP-API) · `qa/api/fadido.postman_collection.json`
 
 Una carpeta por grupo; cada pedido tiene sus verificaciones (`pm.test`). Además, en todos: responde en menos de 2 s
