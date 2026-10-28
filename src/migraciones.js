@@ -383,6 +383,14 @@ async function migrarEsquema() {
   // Cobro por transferencia: alias o CBU/CVU del local (en la pantalla de cobro, la precuenta y el QR de la mesa)
   await agregarColumna('configuracion', 'alias_transferencia', "TEXT DEFAULT ''");
   await agregarColumna('configuracion', 'titular_transferencia', "TEXT DEFAULT ''");
+  // Pedido desde la barra (servicios/barra.js): token del QR del mostrador; cada pedido tiene su código para que el
+  // cliente lo siga y lo pague desde el celular; retirado_en = la caja lo entregó (sale de la pantalla de retiro);
+  // aviso_pago = el cliente avisó que transfirió (la caja lo confirma)
+  await agregarColumna('configuracion', 'qr_barra_token', "TEXT DEFAULT ''");
+  await agregarColumna('pedidos', 'codigo_cliente', 'TEXT');
+  await agregarColumna('pedidos', 'retirado_en', 'TEXT');
+  await agregarColumna('pedidos', 'aviso_pago', "TEXT DEFAULT ''");
+  await run('CREATE UNIQUE INDEX IF NOT EXISTS idx_pedidos_codigo_cliente ON pedidos(codigo_cliente)');
   await agregarColumna('caja', 'pendiente_arqueo', 'INTEGER NOT NULL DEFAULT 0');
   await agregarColumna('caja', 'arqueo_por', 'INTEGER');
   await agregarColumna('caja', 'arqueo_en', 'TEXT');

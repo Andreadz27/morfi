@@ -2,7 +2,8 @@
 const {
   rateLimit, urlPublica, urlCartaNube, get, all, errorInterno, crearPedidoOnline, mesaPorToken, estadoMesa, solicitarPedidoMesa, llamarMozo,
   iniciarPagoMesa, verificarPagoMesa, pedirComprobanteMesa, leerTraducciones, ORDEN_CARTA, cartaPorMomentos, listarGrupos, gruposPorProducto,
-  leerJSON, disponibleAhora, textoHorario
+  leerJSON, disponibleAhora, textoHorario, barraValida, crearPedidoBarra, estadoParaCliente, iniciarPagoCliente,
+  verificarPagoCliente, avisarTransferencia, tableroPublico, tiene
 } = require('../contexto');
 const QRCode = require('qrcode');
 
@@ -96,6 +97,32 @@ app.post('/api/publico/pedido', pedidoOnlineLimiter, async (req, res) => {
     res.status(201).json({ id: pid, numero_pedido: numero, subtotal: total, total, origen: label });
   } catch (err) { errorInterno(res, err); }
 });
+
+// ============ PEDIDO DESDE LA BARRA (QR del mostrador, sin login: servicios/barra.js) ============
+const barraLimiter = rateLimit({ windowMs: 60000, max: 60 });
+const conBarra = fn => async (req, res) => {
+  try {
+    if (!(await barraValida(req.params.token)) || !(await tiene('mesa_qr')))
+      return res.status(404).json({ error: 'Este QR no corresponde a la barra. Pedí en la caja.' });
+    await fn(req, res);
+  } catch (err) { errorInterno(res, err); }
+};
+const enPedido = fn => async (req, res) => {
+  try { res.json(await fn(req)); } catch (err) { errorInterno(res, err); }
+};
+
+app.get('/api/publico/barra/:token', barraLimiter, conBarra(async (req, res) => res.json({ ok: true })));
+// Pocos por minuto desde el mismo celular/IP: en el local todos salen por el mismo WiFi, por eso no es más estricto
+app.post('/api/publico/barra/:token/pedido', rateLimit({ windowMs: 60000, max: 20 }), conBarra(async (req, res) => {
+  res.status(201).json(await crearPedidoBarra(req.body || {}));
+}));
+app.get('/api/publico/retiro/:token', barraLimiter, conBarra(async (req, res) => res.json(await tableroPublico())));
+// El pedido de cada cliente, por su código (lo que se ve en seguimiento.html)
+app.get('/api/publico/pedido-barra/:codigo', barraLimiter, enPedido(req => estadoParaCliente(req.params.codigo)));
+app.post('/api/publico/pedido-barra/:codigo/pagar', barraLimiter, enPedido(req => iniciarPagoCliente(req.params.codigo)));
+app.post('/api/publico/pedido-barra/:codigo/verificar', barraLimiter,
+  enPedido(req => verificarPagoCliente(req.params.codigo, req.body && req.body.payment_id)));
+app.post('/api/publico/pedido-barra/:codigo/transferi', barraLimiter, enPedido(req => avisarTransferencia(req.params.codigo)));
 
 // ============ PEDIDO DESDE LA MESA (QR de cada mesa, sin login) ============
 // En el local todos los celulares salen por la misma IP (el WiFi): el límite por IP es amplio

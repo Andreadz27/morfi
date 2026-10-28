@@ -44,8 +44,11 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
 2. Para agregar más cosas, se vuelve a tocar la mesa y se suman productos al mismo pedido.
 3. Lo que se pide **llega solo a la pantalla de cocina**.
 4. **Pedidos desde el QR de la mesa:** si el cliente pide con el QR de su mesa, al mozo le aparece el aviso para
-   **Confirmar** o **Rechazar** el pedido (si el local lo configuró así).
+   **Confirmar** o **Rechazar** el pedido (si el local lo configuró así). En **Configuración → "Sin mozo"** el pedido
+   del cliente va directo a la cocina sin que nadie lo confirme, y el cliente también paga desde el celular.
 5. **"Llamar al mozo" y "pagó":** cuando el cliente toca *Llamar al mozo* o paga desde su celular, aparece el aviso.
+   Si avisa que paga **por transferencia**, quien cobra ve *Transferencia recibida: cobrar y cerrar*: con la plata en la
+   cuenta, un toque cobra lo que falta y libera la mesa. Con Mercado Pago la mesa se cierra sola al pagar todo.
 6. **Si se corta el WiFi del celular** al mandar un pedido o un agregado: aparece "quedó guardado en este celular" y
    un aviso amarillo abajo. No hay que volver a cargarlo, porque se envía solo cuando vuelve el WiFi (o con
    **Reintentar**). Si la mesa se abrió mientras tanto, lo pedido se suma a esa mesa. Si algo no se pudo enviar (por
@@ -65,6 +68,21 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
 2. Tocar los productos. Se puede elegir el cliente con **Elegir cliente**, para delivery, puntos o factura A.
 3. **Cobrar** y elegir el medio de pago: efectivo, tarjeta, transferencia, **QR Mercado Pago**, **MODO**, **Cuenta DNI** u **Otro medio de
    pago**. En efectivo, Fadido calcula el vuelto.
+
+**Barra o mostrador en un toque**: con los productos en el carrito, **Cobrar y enviar (mostrador)** pide el nombre
+(opcional, para llamarlo) y cómo paga: el pedido se cobra y va a la cocina en el mismo paso.
+
+### Pedidos desde la barra y para retirar
+- **QR de la barra** (Menú QR → *Imprimir QR de la barra*): el cliente escanea en el mostrador, elige, pone su
+  nombre y el pedido va **directo a la cocina** (sale la comanda). En su celular ve el número (#12), si está en
+  preparación o listo, y puede pagar con Mercado Pago (si está conectado), por transferencia al alias del local o
+  en la caja al retirar.
+- **Pantalla de retiro** (Menú QR → *Abrir pantalla de retiro*): para una TV en la barra. Muestra "En preparación" y
+  "¡Listos!" con número y nombre; suena cuando uno pasa a listo (tocar la pantalla una vez para activar el sonido).
+- **Para retirar** (botón en Punto de Venta): los pedidos de mostrador y barra con su estado y su pago. Si el
+  cliente avisó que transfirió, aparece **Avisó transferencia**: cuando la ves en la cuenta, *Transferencia
+  recibida* cobra y cierra. Al entregarlo, **Entregado** lo saca de la pantalla.
+- Cuando la cocina toca **Listo**, el celular del cliente vibra y suena: "¡Listo! Retiralo en la barra".
 
 ### Cobrar una mesa
 - Desde **Mesas** o **Pedidos**, **Cobrar**.

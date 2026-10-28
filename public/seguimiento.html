@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f97316">
+  <title>Tu pedido</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <style>
+    :root { --naranja: #f97316; --oscuro: #1e293b; --gris: #64748b; --borde: #e2e8f0; --verde: #16a34a; --fondo: #fff7ed; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--fondo); color: var(--oscuro); }
+    main { max-width: 480px; margin: 0 auto; padding: 16px; }
+    .negocio { text-align: center; color: var(--gris); font-size: 14px; margin: 8px 0 12px; }
+    .tarjeta { background: #fff; border-radius: 16px; padding: 18px; margin-bottom: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+    .numero { text-align: center; }
+    .numero small { color: var(--gris); font-size: 14px; }
+    .numero strong { display: block; font-size: 44px; letter-spacing: 1px; margin: 4px 0; }
+    .etapa { text-align: center; padding: 22px 18px; }
+    .etapa i { font-size: 46px; color: var(--naranja); }
+    .etapa h2 { margin: 10px 0 4px; font-size: 22px; }
+    .etapa p { margin: 0; color: var(--gris); }
+    .etapa.listo { background: var(--verde); color: #fff; animation: latido 1.2s ease-in-out 3; }
+    .etapa.listo i, .etapa.listo p { color: #fff; }
+    @keyframes latido { 50% { transform: scale(1.03); } }
+    .pasos { display: flex; justify-content: space-between; margin-top: 16px; font-size: 12px; color: var(--gris); }
+    .pasos span { flex: 1; text-align: center; border-top: 4px solid var(--borde); padding-top: 6px; }
+    .pasos span.hecho { border-color: var(--naranja); color: var(--oscuro); font-weight: 600; }
+    .etapa.listo .pasos span, .etapa.listo .pasos span.hecho { border-color: #fff; color: #fff; }
+    h3 { margin: 0 0 10px; font-size: 16px; }
+    .fila { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--borde); font-size: 15px; }
+    .fila:last-child { border-bottom: 0; }
+    .total { font-weight: 700; font-size: 18px; }
+    .pagado { text-align: center; color: var(--verde); font-weight: 700; font-size: 18px; }
+    .boton { display: block; width: 100%; border: 0; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+    .boton.mp { background: #009ee3; color: #fff; }
+    .boton.principal { background: var(--naranja); color: #fff; }
+    .boton.secundario { background: #fff; color: var(--oscuro); border: 2px solid var(--borde); }
+    .boton:disabled { opacity: .6; }
+    .alias { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--fondo); border-radius: 10px; padding: 12px; margin-top: 10px; }
+    .alias strong { font-size: 20px; }
+    .nota { color: var(--gris); font-size: 13px; text-align: center; margin-top: 10px; }
+    .error { text-align: center; padding: 40px 16px; color: var(--gris); }
+  </style>
+</head>
+<body>
+  <main id="app"><div class="error"><i class="fas fa-spinner fa-spin fa-2x"></i></div></main>
+  <script src="js/seguimiento.js"></script>
+</body>
+</html>

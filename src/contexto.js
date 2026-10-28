@@ -29,6 +29,7 @@ module.exports = {
   ...require('./servicios/cobro-mesa'),
   ...require('./servicios/mesa-qr'),
   ...require('./servicios/pago-mesa'),
+  ...require('./servicios/barra'),
   ...require('./servicios/sin-conexion'),
   ...require('./servicios/personal'),
   ...require('./servicios/caja'),
