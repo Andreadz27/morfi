@@ -170,9 +170,9 @@ async function migrarEsquema() {
   await agregarColumna('pedidos', 'descuento_puntos', 'REAL DEFAULT 0');
   await agregarColumna('pedidos', 'cupon_id', 'INTEGER');
   await agregarColumna('pedidos', 'descuento_cupon', 'REAL DEFAULT 0');
-  // Morfi Nube: estado con el que el pedido se mandó a la nube (si cambia, por ej. se cancela, se vuelve a mandar)
+  // Fadido Nube: estado con el que el pedido se mandó a la nube (si cambia, por ej. se cancela, se vuelve a mandar)
   await agregarColumna('pedidos', 'sincronizado_nube', 'TEXT');
-  // Pedido online que entró por Morfi Nube: su id allá (traerlo dos veces no lo duplica)
+  // Pedido online que entró por Fadido Nube: su id allá (traerlo dos veces no lo duplica)
   await agregarColumna('pedidos', 'nube_pedido_id', 'INTEGER');
   await run('CREATE UNIQUE INDEX IF NOT EXISTS idx_pedidos_nube ON pedidos(nube_pedido_id) WHERE nube_pedido_id IS NOT NULL');
   // Asistente IA por WhatsApp: la conversación de cada cliente (tal cual la devuelve la API) y el uso por día
@@ -380,6 +380,17 @@ async function migrarEsquema() {
   await agregarColumna('configuracion', 'cierre_propinas_usuarios', "TEXT DEFAULT ''");
   // Eslogan del local (ej. "Café & cosas ricas"): va debajo del nombre en la carta y en el ticket
   await agregarColumna('configuracion', 'eslogan', "TEXT DEFAULT ''");
+  // Cobro por transferencia: alias o CBU/CVU del local (en la pantalla de cobro, la precuenta y el QR de la mesa)
+  await agregarColumna('configuracion', 'alias_transferencia', "TEXT DEFAULT ''");
+  await agregarColumna('configuracion', 'titular_transferencia', "TEXT DEFAULT ''");
+  // Pedido desde la barra (servicios/barra.js): token del QR del mostrador; cada pedido tiene su código para que el
+  // cliente lo siga y lo pague desde el celular; retirado_en = la caja lo entregó (sale de la pantalla de retiro);
+  // aviso_pago = el cliente avisó que transfirió (la caja lo confirma)
+  await agregarColumna('configuracion', 'qr_barra_token', "TEXT DEFAULT ''");
+  await agregarColumna('pedidos', 'codigo_cliente', 'TEXT');
+  await agregarColumna('pedidos', 'retirado_en', 'TEXT');
+  await agregarColumna('pedidos', 'aviso_pago', "TEXT DEFAULT ''");
+  await run('CREATE UNIQUE INDEX IF NOT EXISTS idx_pedidos_codigo_cliente ON pedidos(codigo_cliente)');
   await agregarColumna('caja', 'pendiente_arqueo', 'INTEGER NOT NULL DEFAULT 0');
   await agregarColumna('caja', 'arqueo_por', 'INTEGER');
   await agregarColumna('caja', 'arqueo_en', 'TEXT');
@@ -477,6 +488,42 @@ async function migrarEsquema() {
   await agregarColumna('productos', 'para_llevar', 'INTEGER NOT NULL DEFAULT 0');
   await agregarColumna('categorias', 'nombre_para_llevar', "TEXT NOT NULL DEFAULT ''");
   await agregarColumna('momentos_carta', 'solo_para_llevar', 'INTEGER NOT NULL DEFAULT 0');
+
+  // Inventario (servicios/inventario.js). Artículos de una compra de mercadería: al guardarla suman al stock y
+  // actualizan el costo del producto. monto = lo que costó esa línea (sin IVA en factura A).
+  await run(`CREATE TABLE IF NOT EXISTS gasto_articulos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gasto_id INTEGER NOT NULL,
+    producto_id INTEGER NOT NULL,
+    cantidad REAL NOT NULL,
+    monto REAL NOT NULL DEFAULT 0,
+    costo_anterior REAL,
+    FOREIGN KEY (gasto_id) REFERENCES gastos(id),
+    FOREIGN KEY (producto_id) REFERENCES productos(id)
+  )`);
+  await run('CREATE INDEX IF NOT EXISTS idx_gasto_articulos_gasto ON gasto_articulos(gasto_id)');
+  // Conteo de inventario: lo que había según el sistema, lo contado y la diferencia valorizada al costo de ese día
+  await run(`CREATE TABLE IF NOT EXISTS conteos_stock (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT DEFAULT CURRENT_TIMESTAMP,
+    notas TEXT NOT NULL DEFAULT '',
+    productos INTEGER NOT NULL DEFAULT 0,
+    con_diferencia INTEGER NOT NULL DEFAULT 0,
+    valor_diferencia REAL NOT NULL DEFAULT 0,
+    usuario_id INTEGER,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS conteo_stock_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conteo_id INTEGER NOT NULL,
+    producto_id INTEGER NOT NULL,
+    sistema REAL NOT NULL,
+    contado REAL NOT NULL,
+    diferencia REAL NOT NULL,
+    costo REAL NOT NULL DEFAULT 0,
+    FOREIGN KEY (conteo_id) REFERENCES conteos_stock(id),
+    FOREIGN KEY (producto_id) REFERENCES productos(id)
+  )`);
 }
 
 // ============ Migración segura (lo que usa server.js) ============

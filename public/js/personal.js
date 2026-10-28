@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Personal
+// FADIDO - Personal
 // Fichar entrada y salida, turnos, fichadas del equipo y reparto de propinas.
 // Cualquiera ficha y ve lo suyo; lo del equipo es del encargado (permiso "personal").
 // =============================================

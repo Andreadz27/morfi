@@ -1,5 +1,5 @@
 'use strict';
-// Panel de Morfi Nube: ventas de todos los locales y su estado. Se actualiza solo cada minuto.
+// Panel de Fadido Nube: ventas de todos los locales y su estado. Se actualiza solo cada minuto.
 (function () {
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);

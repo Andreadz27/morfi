@@ -1,5 +1,5 @@
 /* =============================================
-   MORFI - Estilos responsive / móvil
+   FADIDO - Estilos responsive / móvil
    Topbar, sidebar colapsable, bottom nav,
    adaptaciones POS y cocina para touch
    ============================================= */
@@ -217,7 +217,7 @@
   .pos-product-btn .product-name { font-size: 12px; }
   .pos-qty-btn { width: 36px; height: 36px; font-size: 16px; }
   .pos-qty     { font-size: 14px; min-width: 28px; }
-  .pos-checkout-btn { padding: 16px; font-size: 16px; }
+  .pos-checkout-btn, .pos-rapido-btn { padding: 16px; font-size: 16px; }
   .cocina-grid { grid-template-columns: 1fr; }
   .mesas-grid  { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .mesa-card   { padding: 14px 10px; }
@@ -271,7 +271,7 @@
 
 /* ===== TOUCH IMPROVEMENTS ===== */
 @media (hover: none) and (pointer: coarse) {
-  .btn, .pos-cat-btn, .pos-checkout-btn,
+  .btn, .pos-cat-btn, .pos-checkout-btn, .pos-rapido-btn,
   .nav-item, .bottom-nav-item, .pos-qty-btn { min-height: 44px; }
   .pos-product-btn:hover { transform: none; box-shadow: none; }
   .btn:hover             { transform: none; opacity: 1; }

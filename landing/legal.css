@@ -26,7 +26,7 @@
 .legal th { background: var(--light); font-weight: 700; color: var(--dark); }
 .legal .tabla { overflow-x: auto; }
 .legal .aviso-ley { font-size: .88rem; color: var(--gray); border-top: 1px solid var(--border); margin-top: 2.5rem; padding-top: 1rem; }
-/* Datos que el titular de Morfi tiene que completar antes de publicar (ver docs/legales/README.md) */
+/* Datos que el titular de Fadido tiene que completar antes de publicar (ver docs/legales/README.md) */
 .completar { background: #fef08a; color: #713f12; padding: 0 .25rem; border-radius: 3px; font-weight: 600; }
 
 .legal-footer { border-top: 1px solid var(--border); padding: 1.5rem 0; font-size: .88rem; color: var(--gray); text-align: center; }

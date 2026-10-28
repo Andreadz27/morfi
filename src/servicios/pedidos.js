@@ -118,7 +118,7 @@ async function cerrarPedidoTx(pedido, metodo, usuarioId) {
 }
 
 // giftcard: la referencia es el código de la tarjeta (se descuenta su saldo al cobrar)
-const METODOS_PAGO = ['efectivo', 'tarjeta', 'mercadopago', 'transferencia', 'giftcard', 'otro'];
+const METODOS_PAGO = ['efectivo', 'tarjeta', 'mercadopago', 'modo', 'cuentadni', 'transferencia', 'giftcard', 'otro'];
 
 // Total, lo ya cobrado (pagos parciales al dividir la cuenta) y lo que falta
 async function saldoPedido(pedidoId) {

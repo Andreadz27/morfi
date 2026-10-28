@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Configuración
+// FADIDO - Configuración
 // Datos del negocio y preferencias (solo admin)
 // =============================================
 
@@ -90,6 +90,16 @@ const ConfigView = {
               <input type="text" id="cfgCuit" value="${esc(c.cuit || '')}">
             </div>
           </div>
+          <div class="grid grid-2">
+            <div class="form-group">
+              <label>Alias para transferencias <small class="text-muted">(o CBU/CVU: sale al cobrar, en la precuenta y en el QR de la mesa)</small></label>
+              <input type="text" id="cfgAlias" maxlength="30" placeholder="Ej.: mi.local.mp" value="${esc(c.alias_transferencia || '')}">
+            </div>
+            <div class="form-group">
+              <label>Titular de la cuenta <small class="text-muted">(opcional)</small></label>
+              <input type="text" id="cfgTitular" maxlength="60" value="${esc(c.titular_transferencia || '')}">
+            </div>
+          </div>
           <div class="grid grid-3">
             <div class="form-group">
               <label>IVA (%)</label>
@@ -122,7 +132,7 @@ const ConfigView = {
               <label>Pedidos desde el QR de la mesa</label>
               <select id="cfgQrMesa" title="El cliente escanea el QR de su mesa y pide desde el celular. Los QR se imprimen en Menú QR.">
                 <option value="confirmar" ${!c.qr_mesa_modo || c.qr_mesa_modo === 'confirmar' ? 'selected' : ''}>El mozo confirma cada pedido</option>
-                <option value="directo" ${c.qr_mesa_modo === 'directo' ? 'selected' : ''}>Van directo a cocina</option>
+                <option value="directo" ${c.qr_mesa_modo === 'directo' ? 'selected' : ''}>Sin mozo: el cliente pide (va directo a cocina) y paga desde el celular</option>
                 <option value="solo_carta" ${c.qr_mesa_modo === 'solo_carta' ? 'selected' : ''}>Solo ver la carta y llamar al mozo</option>
               </select>
             </div>
@@ -621,6 +631,8 @@ const ConfigView = {
       telefono: document.getElementById('cfgTelefono').value,
       email: document.getElementById('cfgEmail').value,
       cuit: document.getElementById('cfgCuit').value,
+      alias_transferencia: document.getElementById('cfgAlias').value,
+      titular_transferencia: document.getElementById('cfgTitular').value,
       tasa_iva: parseInt(document.getElementById('cfgIva').value || 21),
       moneda: document.getElementById('cfgMoneda').value,
       activar_impresion: parseInt(document.getElementById('cfgImpresion').value),

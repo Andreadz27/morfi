@@ -53,7 +53,7 @@ app.get('/api/licencia', autenticar, async (req, res) => {
   } catch (err) { errorInterno(res, err); }
 });
 
-// Licencia pegada a mano (local sin conexión a Morfi Nube): la da soporte
+// Licencia pegada a mano (local sin conexión a Fadido Nube): la da soporte
 app.put('/api/licencia', autenticar, esAdmin, async (req, res) => {
   try { res.json(await guardarLicencia(req.body && req.body.licencia)); } catch (err) { errorInterno(res, err); }
 });

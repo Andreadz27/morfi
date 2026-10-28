@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retirá tu pedido</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <style>
+    /* Pantalla de retiro para la TV de la barra (retiro.html?t=<token de la barra>): número y nombre, nada más */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #fff; display: flex; flex-direction: column; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 2vh 3vw; background: #1e293b; }
+    header h1 { margin: 0; font-size: 4vh; }
+    header img { height: 6vh; }
+    .columnas { flex: 1; display: grid; grid-template-columns: 1fr 1.4fr; gap: 2vw; padding: 2vh 3vw; min-height: 0; }
+    section { background: #1e293b; border-radius: 2vh; padding: 2vh 2vw; overflow: hidden; }
+    section h2 { margin: 0 0 2vh; font-size: 3.6vh; color: #94a3b8; text-transform: uppercase; letter-spacing: .1em; }
+    section.listos { background: #14532d; }
+    section.listos h2 { color: #bbf7d0; }
+    .lista { display: flex; flex-wrap: wrap; gap: 1.5vh; align-content: flex-start; }
+    .pedido { background: rgba(255,255,255,.08); border-radius: 1.5vh; padding: 1.5vh 2vh; min-width: 22vh; }
+    .pedido strong { display: block; font-size: 6vh; line-height: 1; }
+    .pedido span { font-size: 3vh; opacity: .85; }
+    .listos .pedido { background: #16a34a; }
+    .listos .pedido.nuevo { animation: llama 1s ease-in-out 6; }
+    @keyframes llama { 50% { background: #f97316; transform: scale(1.05); } }
+    .vacio { color: #64748b; font-size: 3vh; }
+    #sonido { position: fixed; inset: 0; background: rgba(15,23,42,.92); display: flex; align-items: center; justify-content: center; font-size: 4vh; cursor: pointer; text-align: center; padding: 4vw; }
+  </style>
+</head>
+<body>
+  <header><h1 id="negocio">Retirá tu pedido</h1><img src="img/fadido-logo-claro.svg" alt="Fadido"></header>
+  <div class="columnas">
+    <section><h2><i class="fas fa-fire-burner"></i> En preparación</h2><div class="lista" id="preparando"></div></section>
+    <section class="listos"><h2><i class="fas fa-bell"></i> ¡Listos! Retirá tu pedido</h2><div class="lista" id="listos"></div></section>
+  </div>
+  <div id="sonido" onclick="Retiro.activarSonido()"><div><i class="fas fa-volume-high"></i><br>Tocá la pantalla para activar el sonido<br><small>(cuando un pedido está listo, suena)</small></div></div>
+  <script>
+    'use strict';
+    const Retiro = {
+      token: new URLSearchParams(location.search).get('t') || '',
+      vistos: null, ctx: null,
+      esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
+      activarSonido() {
+        try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+        document.getElementById('sonido').style.display = 'none';
+      },
+      sonar() {
+        if (!this.ctx) return;
+        [0, 0.3, 0.6].forEach((t, i) => {
+          const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+          o.frequency.value = [660, 880, 1100][i]; o.connect(g); g.connect(this.ctx.destination);
+          g.gain.setValueAtTime(0.3, this.ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + t + 0.28);
+          o.start(this.ctx.currentTime + t); o.stop(this.ctx.currentTime + t + 0.28);
+        });
+      },
+      pintar(id, lista, nuevos) {
+        document.getElementById(id).innerHTML = lista.length
+          ? lista.map(p => `<div class="pedido ${nuevos.has(p.numero_pedido) ? 'nuevo' : ''}"><strong>#${this.esc(p.numero_corto || p.numero_pedido)}</strong><span>${this.esc(p.nombre || '')}</span></div>`).join('')
+          : '<div class="vacio">—</div>';
+      },
+      async cargar() {
+        try {
+          const r = await fetch('/api/publico/retiro/' + encodeURIComponent(this.token));
+          if (!r.ok) { document.getElementById('preparando').innerHTML = '<div class="vacio">Este link no corresponde a la barra: abrilo de nuevo desde Fadido (Menú QR).</div>'; return; }
+          const d = await r.json();
+          const ahora = new Set(d.listos.map(p => p.numero_pedido));
+          const nuevos = new Set(this.vistos ? [...ahora].filter(n => !this.vistos.has(n)) : []);
+          if (nuevos.size) this.sonar();
+          this.vistos = ahora;
+          this.pintar('preparando', d.preparando, new Set());
+          this.pintar('listos', d.listos, nuevos);
+        } catch (e) { /* sin conexión un momento: se reintenta */ }
+      }
+    };
+    fetch('/api/publico/info').then(r => r.json()).then(i => { if (i && i.nombre) document.getElementById('negocio').textContent = i.nombre + ' · Retirá tu pedido'; }).catch(() => {});
+    Retiro.cargar();
+    setInterval(() => Retiro.cargar(), 4000);
+  </script>
+</body>
+</html>

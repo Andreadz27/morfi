@@ -1,7 +1,7 @@
-# Orden de alta — Morfi
+# Orden de alta — Fadido
 
 Esta orden se firma junto con los **Términos y condiciones del servicio**, vigentes en la fecha de firma
-(página "Términos y condiciones" de la web de Morfi; el local recibe una copia impresa). Se imprime en dos copias: una para el local y otra para Morfi.
+(página "Términos y condiciones" de la web de Fadido; el local recibe una copia impresa). Se imprime en dos copias: una para el local y otra para Fadido.
 
 ## Prestador
 
@@ -50,7 +50,7 @@ Esta orden se firma junto con los **Términos y condiciones del servicio**, vige
 
 Lugar y fecha: ______________________________
 
-| Por el local | Por Morfi |
+| Por el local | Por Fadido |
 |---|---|
 | Firma: | Firma: |
 | Aclaración: | Aclaración: |

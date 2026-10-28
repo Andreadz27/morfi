@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - API Client
+// FADIDO - API Client
 // Manejador de peticiones HTTP al backend
 // =============================================
 
@@ -46,7 +46,7 @@ const API = {
       response = await fetch(`${this.baseURL}${url}`, options);
     } catch (e) {
       // Sin conexión con la PC del local (WiFi cortado): lo distingue de un error del servidor
-      throw Object.assign(new Error('Sin conexión con Morfi. Revisá el WiFi.'), { sinConexion: true });
+      throw Object.assign(new Error('Sin conexión con Fadido. Revisá el WiFi.'), { sinConexion: true });
     }
 
     if (response.status === 401) {
@@ -131,6 +131,11 @@ const API = {
   atenderSolicitudMesa(id) { return this.request('POST', `/mesas/solicitudes/${id}/atender`); },
   getQrMesas(base) { return this.request('GET', `/mesas/qr?base=${encodeURIComponent(base)}`); },
   nuevoQrMesa(id) { return this.request('POST', `/mesas/${id}/qr`); },
+  getQrBarra(base, nuevo) { return this.request('GET', `/barra/qr?base=${encodeURIComponent(base)}${nuevo ? '&nuevo=1' : ''}`); },
+  getRetiro() { return this.request('GET', '/retiro'); },
+  marcarRetirado(id) { return this.request('POST', `/pedidos/${id}/retirado`); },
+  cobrarTransferencia(id) { return this.request('POST', `/pedidos/${id}/cobrar-transferencia`); },
+  cobrarTransferenciaMesa(solicitudId) { return this.request('POST', `/mesas/solicitudes/${solicitudId}/cobrar-transferencia`); },
   getRedLocal() { return this.request('GET', '/red-local'); },
 
   // ===== Reservas =====
@@ -219,7 +224,7 @@ const API = {
     try {
       r = await fetch(`${this.baseURL}${url}`, { method, body, headers: { ...headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
     } catch (e) {
-      throw Object.assign(new Error('Sin conexión con Morfi. Revisá el WiFi.'), { sinConexion: true });
+      throw Object.assign(new Error('Sin conexión con Fadido. Revisá el WiFi.'), { sinConexion: true });
     }
     if (r.status === 401) { this.clearToken(); window.location.reload(); throw new Error('Sesión expirada'); }
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Error en la petición');
@@ -248,6 +253,9 @@ const API = {
   getStock() { return this.request('GET', '/stock'); },
   getMovimientosStock() { return this.request('GET', '/stock/movimientos'); },
   registrarMovimientoStock(data) { return this.request('POST', '/stock/movimiento', data); },
+  getConteos() { return this.request('GET', '/stock/conteos'); },
+  getConteo(id) { return this.request('GET', `/stock/conteos/${id}`); },
+  registrarConteo(data) { return this.request('POST', '/stock/conteos', data); },
 
   // ===== Clientes =====
   getClientes() { return this.request('GET', '/clientes'); },

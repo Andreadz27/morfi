@@ -99,7 +99,7 @@ test('cada rol ve solo sus secciones y arranca en la suya', async () => {
     ['mozo@test.com', 'clave1234', 'mesas', ['pos', 'mesas', 'pedidos', 'clientes'], ['caja', 'reportes', 'usuarios', 'config', 'dashboard']],
     ['cocina@test.com', 'clave1234', 'cocina', ['cocina', 'stock'], ['pos', 'caja', 'pedidos', 'dashboard']],
     ['vendedor@test.com', 'vendedor123', 'dashboard', ['pos', 'caja', 'reportes', 'delivery'], ['usuarios', 'config', 'integraciones', 'productos']],
-    ['admin@morfi.local', 'admin123', 'dashboard', ['usuarios', 'config', 'integraciones', 'productos', 'caja'], []]
+    ['admin@fadido.local', 'admin123', 'dashboard', ['usuarios', 'config', 'integraciones', 'productos', 'caja'], []]
   ];
   for (const [email, clave, inicial, ve, noVe] of casos) {
     const page = await nuevaPagina();
@@ -256,7 +256,7 @@ test('el administrador configura una impresora de red y la prueba', async (t) =>
 
   const page = await nuevaPagina();
   t.after(() => page.context().close());
-  await ingresarOk(page, 'admin@morfi.local', 'admin123');
+  await ingresarOk(page, 'admin@fadido.local', 'admin123');
   // Primer ingreso del admin: asistente para elegir el tipo de negocio
   await page.click('.wizard-card[data-perfil="restaurante_mediano"]');
   await toast(page, 'success', 'Perfil configurado');
@@ -333,7 +333,7 @@ test('la lista de pedidos de hoy usa la fecha del negocio aunque el dispositivo 
 
 test('el administrador configura WhatsApp Business desde Integraciones', async () => {
   const page = await nuevaPagina();
-  await ingresarOk(page, 'admin@morfi.local', 'admin123');
+  await ingresarOk(page, 'admin@fadido.local', 'admin123');
   await ir(page, 'integraciones');
   await page.waitForSelector('#waPhoneId');
   await page.fill('#waPhoneId', '1234567890');
@@ -360,7 +360,7 @@ test('receta desde la pantalla: ingredientes, costo calculado y descuento de sto
   const pan = await crear({ nombre: 'Pan e2e', precio_venta: 0, costo: 200, tracking_stock: 1, stock_actual: 50 });
   const plato = await crear({ nombre: 'Sandwich e2e', precio_venta: 2000, costo: 0 });
   const page = await nuevaPagina();
-  await ingresarOk(page, 'admin@morfi.local', 'admin123');
+  await ingresarOk(page, 'admin@fadido.local', 'admin123');
   await page.evaluate(() => App.closeModal());
   await ir(page, 'productos');
   await page.click(`button[onclick="Productos.receta(${plato})"]`);
@@ -599,7 +599,7 @@ test('personal: el mozo ficha desde la barra; el encargado ve la fichada, arma u
 
   await s.q('UPDATE configuracion SET setup_completado = 1'); // sin el asistente de primer ingreso
   const enc = await nuevaPagina();
-  await ingresarOk(enc, 'admin@morfi.local', 'admin123');
+  await ingresarOk(enc, 'admin@fadido.local', 'admin123');
   await ir(enc, 'personal');
   await enc.click('.personal-tabs button:has-text("Fichadas")');
   await enc.waitForSelector('#personalContenido td:has-text("Usuario mozo")');
@@ -676,7 +676,7 @@ test('plan Esencial: Contabilidad con candado explica qué plan la tiene; "Tu pl
   await s.q('UPDATE configuracion SET setup_completado = 1'); // sin el asistente de primer ingreso
   try {
     const page = await nuevaPagina();
-    await ingresarOk(page, 'admin@morfi.local', 'admin123');
+    await ingresarOk(page, 'admin@fadido.local', 'admin123');
     await page.waitForSelector('a.nav-item[data-view="contabilidad"].nav-bloqueado .nav-candado');
     await page.waitForSelector('#avisoPlan:has-text("Terminó la prueba gratis")');
     assert.equal(await page.isVisible('#btnFichar'), false, 'sin el módulo Personal no hay botón de fichar');
@@ -697,7 +697,7 @@ test('plan Esencial: Contabilidad con candado explica qué plan la tiene; "Tu pl
 test('ganancias: tarjeta de hoy en el inicio, pestañas sin errores y comisiones editables', async () => {
   await s.q('UPDATE configuracion SET setup_completado = 1');
   const page = await nuevaPagina();
-  await ingresarOk(page, 'admin@morfi.local', 'admin123');
+  await ingresarOk(page, 'admin@fadido.local', 'admin123');
   await page.waitForSelector('.gan-hoy:has-text("¿Cuánto gané hoy?")');
   await ir(page, 'ganancias');
   await page.waitForSelector('.gan-cascada');

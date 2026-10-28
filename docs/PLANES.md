@@ -1,4 +1,4 @@
-# Planes de Morfi
+# Planes de Fadido
 
 Guía interna: qué vendemos, a cuánto, contra quién competimos y cómo se asigna el plan de cada local.
 Los precios y módulos están en un solo archivo: `src/planes.js`. La landing (`landing/index.html`, sección `#precios`)
@@ -27,14 +27,14 @@ repite los precios a mano: si cambian, cambiarlos en los dos lugares.
 | Ganancias por día/semana/mes/año, plato, canal, horario y mozo; fugas; punto de equilibrio | | ✔ | ✔ |
 | Recetas y costo de cada plato | | ✔ | ✔ |
 | Contabilidad: gastos, IVA, resultados, libro diario | | ✔ | ✔ |
-| Panel Morfi Nube en el celular | | ✔ | ✔ |
+| Panel Fadido Nube en el celular | | ✔ | ✔ |
 | Varias sucursales y precios centrales | | | ✔ |
 
 **Extra:** Asistente IA por WhatsApp, +$19.900/mes sobre cualquier plan. El consumo de la IA va en la cuenta de
 Anthropic del local (su propia clave), así el precio no depende de cuánto lo usen.
 
 **Condiciones:** 30 días de prueba con todo, sin tarjeta. Semestral 10 % menos; anual, 2 meses gratis. Alta remota,
-carga de la carta y capacitación sin cargo. Precios finales: si la facturación de Morfi pasa a discriminar IVA,
+carga de la carta y capacitación sin cargo. Precios finales: si la facturación de Fadido pasa a discriminar IVA,
 revisar si se mantienen como precio final.
 
 ## Contra quién competimos (precios relevados el 23/10/2026)
@@ -52,7 +52,7 @@ después con costo.
 
 ### Lo que paga de verdad un restaurante
 
-| Caso | Fudo | Maxirest | Morfi |
+| Caso | Fudo | Maxirest | Fadido |
 |---|---|---|---|
 | Bar chico con mesas y factura | Inicial + Mesas + Facturación = **$44.500** | $89.000 | Esencial **$24.900** |
 | Restaurante con mesas, factura, stock y recetas | Avanzado + Mesas + Facturación = **$65.900** | $89.000 | Pro **$49.900** |
@@ -60,7 +60,7 @@ después con costo.
 | Todo + resultados y arqueo ciego | Pro + Mesas + Fact. + Delivery = **$111.000** | $89.000 | Pro **$49.900** |
 | Atención por IA | +$55.000 | no publicado | +$19.900 |
 
-Argumento de venta: en Morfi, mesas y factura electrónica vienen en el plan más barato; Pro cuesta menos que el
+Argumento de venta: en Fadido, mesas y factura electrónica vienen en el plan más barato; Pro cuesta menos que el
 plan intermedio de Fudo con sus módulos, y además funciona sin internet, cosa que ninguno de los dos ofrece.
 En la landing pública no se nombra a la competencia ("otros sistemas"): sus precios cambian y la comparación con
 nombre propio tiene que estar siempre actualizada y ser exacta.
@@ -83,7 +83,7 @@ Revisar estos precios cada 2 o 3 meses (inflación) y actualizar `src/planes.js`
 
 ## Asignar o cambiar un plan (soporte)
 
-En el servidor de Morfi Nube:
+En el servidor de Fadido Nube:
 
 ```bash
 # Local nuevo: arranca en prueba 30 días (o con --plan directamente)
@@ -105,10 +105,10 @@ archivo). La clave se generó el 23/10/2026 y está **fuera del repositorio** en
 actualizar todos los locales. Sin la clave configurada, la nube no firma y cada local sigue con la última licencia
 que recibió.
 
-**Local sin Morfi Nube:** soporte genera la licencia en la nube y el administrador del local la pega en
+**Local sin Fadido Nube:** soporte genera la licencia en la nube y el administrador del local la pega en
 *Tu plan → Licencia*.
 
 **Contacto de ventas:** WhatsApp **11 2390-0155** (`5491123900155`, por defecto en `src/planes.js`). Lo usan el botón
 "Quiero este plan" de *Tu plan* y los botones de la landing (precios y contacto), con el mensaje ya escrito.
-Para que un local muestre otro contacto (por ejemplo, un revendedor): `MORFI_VENTAS_WHATSAPP` (solo números, con 549)
-o `MORFI_VENTAS_EMAIL` en su `.env`. Si se cambia el número de Morfi: `src/planes.js` y `landing/index.html`.
+Para que un local muestre otro contacto (por ejemplo, un revendedor): `FADIDO_VENTAS_WHATSAPP` (solo números, con 549)
+o `FADIDO_VENTAS_EMAIL` en su `.env`. Si se cambia el número de Fadido: `src/planes.js` y `landing/index.html`.

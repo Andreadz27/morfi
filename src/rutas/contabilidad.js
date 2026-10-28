@@ -1,11 +1,12 @@
 'use strict';
 const {
-  run, get, all, transaccion, LOCAL, fechaLocal, errorHttp, errorInterno, autenticar, requiere, tienePermiso
+  run, get, all, transaccion, LOCAL, fechaLocal, errorHttp, errorInterno, autenticar, requiere, tienePermiso, emitEvento
 } = require('../contexto');
 const express = require('express');
 const {
   MAX_BYTES, guardarAdjunto, vincularAdjuntos, adjuntosDe, obtenerAdjunto, borrarAdjunto, leerFactura, lecturaDisponible
 } = require('../servicios/adjuntos-gastos');
+const { registrarArticulosCompraTx, revertirArticulosCompraTx, articulosDe } = require('../servicios/inventario');
 
 module.exports = function registrarRutas(app) {
 
@@ -54,7 +55,7 @@ const CUENTAS = {
   caja_menores: { codigo: '5.2.09', nombre: 'Gastos menores de caja' }
 };
 const CUENTA_DE_MEDIO = {
-  efectivo: 'caja', tarjeta: 'bancos', transferencia: 'bancos', cheque: 'bancos', mercadopago: 'mp', giftcard: 'giftcards'
+  efectivo: 'caja', tarjeta: 'bancos', transferencia: 'bancos', modo: 'bancos', cuentadni: 'bancos', cheque: 'bancos', mercadopago: 'mp', giftcard: 'giftcards'
 };
 const cuentaDeMedio = metodo => CUENTA_DE_MEDIO[metodo] || 'otros_medios';
 
@@ -198,8 +199,9 @@ app.get('/api/contabilidad/gastos', autenticar, requiere('contabilidad'), async 
     if (CATEGORIA[req.query.categoria]) { where.push('g.categoria = ?'); params.push(req.query.categoria); }
     if (req.query.proveedor_id) { where.push('g.proveedor_id = ?'); params.push(req.query.proveedor_id); }
     const gastos = await all(`${SELECT_GASTO} WHERE ${where.join(' AND ')} ORDER BY g.fecha DESC, g.id DESC LIMIT 1000`, params);
-    const adjuntos = await adjuntosDe(gastos.map(g => g.id));
-    res.json(gastos.map(g => ({ ...g, adjuntos: adjuntos[g.id] || [] })));
+    const ids = gastos.map(g => g.id);
+    const [adjuntos, articulos] = await Promise.all([adjuntosDe(ids), articulosDe(ids)]);
+    res.json(gastos.map(g => ({ ...g, adjuntos: adjuntos[g.id] || [], articulos: articulos[g.id] || [] })));
   } catch (err) {
     errorInterno(res, err);
   }
@@ -209,6 +211,7 @@ app.post('/api/contabilidad/gastos', autenticar, requiere('contabilidad'), async
   try {
     const body = req.body || {};
     const g = await validarGasto(body);
+    let stockTocado = [];
     const id = await transaccion(async () => {
       const r = await run(`INSERT INTO gastos (fecha, categoria, proveedor_id, descripcion, tipo_comprobante, numero_comprobante,
           neto, iva, otros_impuestos, total, vencimiento, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -217,11 +220,14 @@ app.post('/api/contabilidad/gastos', autenticar, requiere('contabilidad'), async
       await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)',
         [req.usuario.id, 'crear_gasto', `Gasto #${r.id}: ${g.descripcion} (${CATEGORIA[g.categoria].nombre}) ${g.total}`]);
       await vincularAdjuntos(r.id, body.adjuntos);
+      // Lo que trajo el proveedor: suma al stock y actualiza el costo (servicios/inventario.js)
+      stockTocado = await registrarArticulosCompraTx({ ...g, id: r.id }, body.articulos, req.usuario.id);
       // Pagado en el momento
       if (body.pagado) await pagarGastoTx({ ...g, id: r.id }, body, req.usuario);
       return r.id;
     });
-    res.status(201).json({ id, message: 'Gasto registrado' });
+    for (const producto_id of stockTocado) emitEvento('stock:actualizar', { producto_id, accion: 'compra' });
+    res.status(201).json({ id, message: stockTocado.length ? 'Compra registrada y stock actualizado' : 'Gasto registrado' });
   } catch (err) {
     errorInterno(res, err);
   }
@@ -239,6 +245,8 @@ app.put('/api/contabilidad/gastos/:id', autenticar, requiere('contabilidad'), as
         if (req.body && req.body[campo] !== undefined) datos[campo] = req.body[campo];
       }
       const g = await validarGasto(datos);
+      if (g.categoria !== 'mercaderia' && (await get('SELECT 1 AS x FROM gasto_articulos WHERE gasto_id = ?', [actual.id])))
+        throw errorHttp(400, 'Esta compra sumó artículos al stock: tiene que seguir siendo de mercadería');
       if (actual.estado === 'pagado' && (g.total !== r2(actual.total) || g.fecha > actual.fecha_pago))
         throw errorHttp(400, 'El gasto ya está pagado: para cambiar el importe o la fecha, anulalo y cargalo de nuevo');
       await run(`UPDATE gastos SET fecha = ?, categoria = ?, proveedor_id = ?, descripcion = ?, tipo_comprobante = ?,
@@ -272,14 +280,17 @@ app.post('/api/contabilidad/gastos/:id/pagar', autenticar, requiere('contabilida
 // porque el efectivo efectivamente salió; pasa a contarse como gasto menor de caja.
 app.delete('/api/contabilidad/gastos/:id', autenticar, requiere('contabilidad'), async (req, res) => {
   try {
+    let stockTocado = [];
     await transaccion(async () => {
       const gasto = await get('SELECT * FROM gastos WHERE id = ? AND anulado = 0', [req.params.id]);
       if (!gasto) throw errorHttp(404, 'Gasto no encontrado');
       await run('UPDATE gastos SET anulado = 1, caja_movimiento_id = NULL WHERE id = ?', [gasto.id]);
+      stockTocado = await revertirArticulosCompraTx(gasto, req.usuario.id);
       await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)',
         [req.usuario.id, 'anular_gasto', `Gasto #${gasto.id} anulado: ${gasto.descripcion} ${gasto.total}`]);
     });
-    res.json({ message: 'Gasto anulado' });
+    for (const producto_id of stockTocado) emitEvento('stock:actualizar', { producto_id, accion: 'compra_anulada' });
+    res.json({ message: stockTocado.length ? 'Compra anulada: se restó del stock lo que había sumado' : 'Gasto anulado' });
   } catch (err) {
     errorInterno(res, err);
   }

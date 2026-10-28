@@ -1,14 +1,14 @@
-# Documentos legales de Morfi
+# Documentos legales de Fadido
 
 | Documento | Archivo | Para quién |
 |---|---|---|
-| Política de privacidad (Ley 25.326) | `landing/privacidad.html` | Público: clientes de Morfi, visitantes de la web, comensales |
-| Términos y condiciones (contrato del servicio) | `landing/terminos.html` | Cada local que usa Morfi |
+| Política de privacidad (Ley 25.326) | `landing/privacidad.html` | Público: clientes de Fadido, visitantes de la web, comensales |
+| Términos y condiciones (contrato del servicio) | `landing/terminos.html` | Cada local que usa Fadido |
 | Orden de alta (para firmar) | `docs/legales/ORDEN-DE-ALTA.md` | Cada local nuevo, junto con los términos |
 | Aviso para los comensales del local | este archivo, más abajo | Para que el local lo muestre a sus clientes |
 
 Las dos páginas tienen enlaces en el pie de la landing. Lo que describen sale del código: qué se guarda en la PC, qué
-pasa por Morfi Nube (`src/servicios/sync-nube.js`, `nube/tienda.js`), los planes, la prueba y la gracia
+pasa por Fadido Nube (`src/servicios/sync-nube.js`, `nube/tienda.js`), los planes, la prueba y la gracia
 (`src/planes.js`, `src/licencia.js`) y la copia cifrada (`src/servicios/copia-nube.js`). **Si cambia algo de eso,
 hay que actualizar también estos textos.** Por ejemplo, si la nube empieza a recibir datos de clientes, o si cambian
 los días de prueba o de gracia o los precios.
@@ -16,7 +16,7 @@ los días de prueba o de gracia o los precios.
 ## Antes de publicarlas
 
 1. **Datos del titular**: ya están completos. Están en un solo archivo, `docs/legales/datos.json`. Para cambiarlos:
-   1. Editar `docs/legales/datos.json`. Por ejemplo: otro titular, el CUIT de una sociedad, un email de Morfi, otro
+   1. Editar `docs/legales/datos.json`. Por ejemplo: otro titular, el CUIT de una sociedad, un email de Fadido, otro
       horario de soporte o la fecha de vigencia de una versión nueva.
    2. Correr `npm run legales`. Pasa los datos a la política de privacidad, a los términos y a la orden de alta,
       incluidos los enlaces de email y WhatsApp.
@@ -36,15 +36,15 @@ los días de prueba o de gracia o los precios.
    - Fecha de vigencia: 24 de octubre de 2026. Cambiarla si la publicación es otro día.
    - Medios de pago: transferencia bancaria o Mercado Pago.
    - Soporte: de lunes a sábado de 10 a 20 h. Si el local no puede vender ni cobrar, se atiende primero.
-   - Hosting de Morfi Nube: "se informa a pedido". Cuando se elija, nombrarlo en `privacidad.html`, punto 6.
-   - Los datos de Morfi Nube se borran 30 días después de la baja.
+   - Hosting de Fadido Nube: "se informa a pedido". Cuando se elija, nombrarlo en `privacidad.html`, punto 6.
+   - Los datos de Fadido Nube se borran 30 días después de la baja.
    - Las consultas de quien no contrata se guardan 12 meses.
    - Tope de responsabilidad: lo pagado en los últimos 3 meses.
    - Reintegro en la baja: el mes en curso no se reintegra. En pagos semestrales o anuales se reintegran los meses
      enteros no usados, a precio mensual.
-3. **Inscribir la base de datos de clientes de Morfi** en el Registro Nacional de Bases de Datos de la Agencia de
+3. **Inscribir la base de datos de clientes de Fadido** en el Registro Nacional de Bases de Datos de la Agencia de
    Acceso a la Información Pública (AAIP). Es un trámite gratuito en Trámites a Distancia (TAD), con clave fiscal.
-   Se inscribe la base de "clientes y prospectos": dueños de locales, contactos y cuentas de Morfi Nube. Con el
+   Se inscribe la base de "clientes y prospectos": dueños de locales, contactos y cuentas de Fadido Nube. Con el
    número de inscripción, agregar en `privacidad.html`, punto 1: "Base de datos inscripta en el Registro Nacional
    de Bases de Datos con el número …".
 4. **Que lo revise un abogado.** Los textos siguen la Ley 25.326, el Código Civil y Comercial (contratos de adhesión,

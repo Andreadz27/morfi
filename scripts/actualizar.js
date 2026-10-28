@@ -1,4 +1,4 @@
-// Actualiza Morfi a la última versión de la rama main (la que pasó el CI).
+// Actualiza Fadido a la última versión de la rama main (la que pasó el CI).
 // 1. Si no hay versión nueva, no hace nada.
 // 2. Copia de seguridad de la base ANTES de tocar nada.
 // 3. Baja el código nuevo (git, solo avance rápido: nunca pisa cambios locales).
@@ -70,15 +70,16 @@ function instalarDependencias() {
   correr('npm', ['ci', '--omit=dev', '--no-audit', '--no-fund'], { timeout: 15 * 60000 });
 }
 
-// El proceso se llama "morfi"; antes del cambio de nombre, "gastromanager". Se manejan los dos: si quedara uno de
-// cada versión, serían dos servidores peleando por el mismo puerto.
-const PROCESOS = ['morfi', 'gastromanager'];
-// Morfi Nube corriendo en esta misma PC (docs/INSTALACION.md, 4b): usa el mismo node_modules, así que también se
+// El proceso se llama "fadido"; con los nombres anteriores, "morfi" y "gastromanager". Se manejan todos: si quedara
+// uno de cada versión, serían dos servidores peleando por el mismo puerto.
+const PROCESOS = ['fadido', 'morfi', 'gastromanager'];
+// Fadido Nube corriendo en esta misma PC (docs/INSTALACION.md, 4b): usa el mismo node_modules, así que también se
 // detiene antes de npm ci (si no, sqlite3 queda en uso y falla con EPERM) y se reinicia con el código nuevo.
 // Conserva sus variables (PORT, NUBE_DATOS...): pm2 restart no las borra.
-const NUBE = 'morfi-nube';
+// Instalada con el nombre anterior sigue como "morfi-nube" (conserva sus variables): se maneja con el que tenga.
+const NUBES = ['fadido-nube', 'morfi-nube'];
 function detener() {
-  for (const p of [...PROCESOS, NUBE]) { try { correr('pm2', ['stop', p]); } catch (e) { /* no existe con ese nombre */ } }
+  for (const p of [...PROCESOS, ...NUBES]) { try { correr('pm2', ['stop', p]); } catch (e) { /* no existe con ese nombre */ } }
 }
 // Se borran los dos y se levanta el de ecosystem.config.js (el nombre de la versión que quedó instalada)
 function reiniciar() {
@@ -86,22 +87,29 @@ function reiniciar() {
   log('Reiniciando el servidor...');
   for (const p of PROCESOS) { try { correr('pm2', ['delete', p]); } catch (e) { /* no existe con ese nombre */ } }
   correr('pm2', ['start', path.join(RAIZ, 'ecosystem.config.js'), '--env', 'production', '--update-env']);
-  try { correr('pm2', ['restart', NUBE]); } catch (e) { /* esta PC no tiene la nube */ }
+  for (const p of NUBES) { try { correr('pm2', ['restart', p]); } catch (e) { /* esta PC no tiene la nube (con ese nombre) */ } }
   try { correr('pm2', ['save']); } catch (e) { log('pm2 save: ' + e.message); }
 }
 
-// Volver a una versión de antes del cambio de nombre: esa versión busca data/gastromanager.db. Si la base ya se
-// llama morfi.db, crearía una vacía (el local sin carta ni ventas): se le devuelve el nombre viejo, con su -wal y -shm.
+// Volver a una versión de antes de un cambio de nombre: esa versión busca data/morfi.db (Morfi) o
+// data/gastromanager.db (GastroManager). Si la base se llama fadido.db, crearía una vacía (el local sin carta ni
+// ventas): se le devuelve el nombre que esa versión espera, con su -wal y -shm.
+function nombreBaseDeLaVersion() {
+  // Desde Morfi la base se abre con rutaBase() y el nombre está en src/archivo-base.js; antes, fijo en src/db.js
+  if (!fs.readFileSync(path.join(RAIZ, 'src', 'db.js'), 'utf8').includes('rutaBase(')) return 'gastromanager.db';
+  const m = fs.readFileSync(path.join(RAIZ, 'src', 'archivo-base.js'), 'utf8').match(/const ARCHIVO_BASE = '([^']+)'/);
+  return m ? m[1] : null;
+}
 function devolverNombreBase() {
-  // Las versiones de Morfi abren la base con rutaBase() (src/archivo-base.js); las anteriores, con el nombre fijo
-  if (fs.readFileSync(path.join(RAIZ, 'src', 'db.js'), 'utf8').includes('rutaBase(')) return;
+  const esperado = nombreBaseDeLaVersion();
+  if (!esperado || esperado === 'fadido.db') return;
   const { DATA_DIR } = require('../src/config');
-  const nueva = path.join(DATA_DIR, 'morfi.db');
-  const vieja = path.join(DATA_DIR, 'gastromanager.db');
+  const nueva = path.join(DATA_DIR, 'fadido.db');
+  const vieja = path.join(DATA_DIR, esperado);
   if (!fs.existsSync(nueva) || fs.existsSync(vieja)) return;
   if (!opcion('sin-reiniciar')) detener();
   for (const sufijo of ['-wal', '-shm', '']) if (fs.existsSync(nueva + sufijo)) fs.renameSync(nueva + sufijo, vieja + sufijo);
-  log('La versión anterior usa data/gastromanager.db: se le devolvió ese nombre a la base.');
+  log(`La versión anterior usa data/${esperado}: se le devolvió ese nombre a la base.`);
 }
 
 // La copia se hace en otro proceso: si este cargara sqlite3, Windows no deja borrar node_sqlite3.node y npm ci

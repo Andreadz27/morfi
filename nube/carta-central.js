@@ -1,5 +1,5 @@
 'use strict';
-// Morfi Nube, etapa 3: precios centrales para cadenas. El dueño ve cada producto con el precio de cada sucursal
+// Fadido Nube, etapa 3: precios centrales para cadenas. El dueño ve cada producto con el precio de cada sucursal
 // y lo cambia en todas (o en las que elija) desde el celular. El cambio queda en la nube y cada local lo aplica
 // al buscar pedidos (cada 10 s); si un local está sin internet, lo aplica cuando vuelve.
 // Los productos se reconocen por nombre entre sucursales (cada local tiene sus propios ids).

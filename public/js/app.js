@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Aplicación Principal
+// FADIDO - Aplicación Principal
 // Navegación, login y vistas
 // =============================================
 
@@ -71,8 +71,15 @@ const App = {
         if (App.currentView === 'pedidos') Pedidos.render();
       });
 
+      // Pedidos de mostrador y barra para retirar (pedido nuevo, listo, pagado, aviso de transferencia)
+      this.socket.on('retiro:actualizar', (data) => {
+        if (App.currentView === 'pos') POS.actualizarBadgeRetiro();
+        if (data && data.aviso === 'transferencia' && App.puede('pedidos.cobrar')) this.showToast('Un cliente de la barra avisó que transfirió: confirmalo en Venta → Para retirar', 'warning', 8000);
+      });
+
       // Cocina: nueva comanda o cambio de estado
       this.socket.on('cocina:actualizar', () => {
+        if (App.currentView === 'pos') POS.actualizarBadgeRetiro();
         if (App.currentView === 'cocina') {
           Cocina.refresh();
         } else {
@@ -766,7 +773,7 @@ const App = {
         .qr svg { width: 34mm; height: 34mm; }
       </style></head>
       <body>
-        <div class="center bold" style="font-size:15px">${esc(App && App.usuario ? (App.nombreNegocio || 'Morfi') : 'Morfi')}</div>
+        <div class="center bold" style="font-size:15px">${esc(App && App.usuario ? (App.nombreNegocio || 'Fadido') : 'Fadido')}</div>
         ${encabezadoFiscal}
         <div class="center">${esc(p.mesa_nombre || '')}</div>
         <div class="sep"></div>

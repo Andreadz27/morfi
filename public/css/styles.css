@@ -1,5 +1,5 @@
 /* =============================================
-   MORFI - Estilos CSS
+   FADIDO - Estilos CSS
    Sistema moderno y responsive
    ============================================= */
 
@@ -1104,7 +1104,7 @@ tr:hover td {
   color: var(--accent);
 }
 
-.pos-checkout-btn {
+.pos-checkout-btn, .pos-rapido-btn {
   width: 100%;
   padding: 13px;
   border: none;
@@ -1122,12 +1122,15 @@ tr:hover td {
   box-shadow: 0 4px 12px rgba(249,115,22,0.3);
 }
 
-.pos-checkout-btn:hover:not(:disabled) {
+/* Cobrar y enviar en un toque (mostrador / barra): arriba de "Procesar pedido" */
+.pos-rapido-btn { margin-bottom: 8px; }
+
+.pos-checkout-btn:hover:not(:disabled), .pos-rapido-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(249,115,22,0.4);
 }
 
-.pos-checkout-btn:disabled {
+.pos-checkout-btn:disabled, .pos-rapido-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
@@ -1337,7 +1340,7 @@ tr:hover td {
 }
 
 /* ============================================================
-   REDISEÑO PREMIUM v2 - MORFI
+   REDISEÑO PREMIUM v2 - FADIDO
    ============================================================ */
 
 /* Sidebar con gradiente moderno */
@@ -2225,7 +2228,7 @@ tr:hover td {
 .cobro-cliente-opcion:hover { background: rgba(249, 115, 22, .08); }
 .cobro-cliente-opcion small { color: var(--text-light); margin-left: 6px; }
 
-/* Marca Morfi: ícono (favicon.svg) y nombre en minúscula, como en el logo */
+/* Marca Fadido: ícono (favicon.svg) y nombre en minúscula, como en el logo */
 .marca-icono { display: block; flex-shrink: 0; border-radius: 23%; }
 .marca-texto { font-weight: 800; letter-spacing: -0.5px; }
 .login-logo { background: none; width: auto; height: auto; }

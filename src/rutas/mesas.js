@@ -1,7 +1,8 @@
 'use strict';
 const {
   run, get, all, actualizarParcial, errorHttp, errorInterno, autenticar, emitEvento, requiere, urlPublica, nuevoTokenMesa,
-  solicitudesPendientes, confirmarSolicitud, rechazarSolicitud, atenderSolicitud
+  solicitudesPendientes, confirmarSolicitud, rechazarSolicitud, atenderSolicitud, tokenBarra, tableroRetiro, marcarRetirado,
+  cobrarTransferencia
 } = require('../contexto');
 const QRCode = require('qrcode');
 
@@ -122,6 +123,44 @@ app.post('/api/mesas/:id/qr', autenticar, requiere('catalogo'), async (req, res)
 });
 
 // ============ PEDIDOS Y LLAMADOS DESDE LA MESA ============
+
+// QR de la barra (el cliente pide y paga sin pasar por la caja) y link de la pantalla de retiro para la TV
+app.get('/api/barra/qr', autenticar, requiere('catalogo'), async (req, res) => {
+  try {
+    const base = baseQr(req);
+    if (!base) return res.status(400).json({ error: 'Falta la dirección del sistema para armar los QR' });
+    const token = await tokenBarra({ nuevo: req.query.nuevo === '1' });
+    const url = `${base}/pedido.html?barra=${token}`;
+    res.json({ url, pantalla: `${base}/retiro.html?t=${token}`,
+      svg: await QRCode.toString(url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' }) });
+  } catch (err) { errorInterno(res, err); }
+});
+
+app.get('/api/retiro', autenticar, requiere('pedidos.ver'), async (req, res) => {
+  try { res.json(await tableroRetiro()); } catch (err) { errorInterno(res, err); }
+});
+
+app.post('/api/pedidos/:id/retirado', autenticar, requiere('pedidos.tomar'), async (req, res) => {
+  try { await marcarRetirado(Number(req.params.id)); res.json({ ok: true }); } catch (err) { errorInterno(res, err); }
+});
+
+// La caja vio la transferencia del cliente: cobra lo que falta y cierra (y libera la mesa si es de una mesa)
+app.post('/api/pedidos/:id/cobrar-transferencia', autenticar, requiere('pedidos.cobrar'), async (req, res) => {
+  try { res.json(await cobrarTransferencia(Number(req.params.id), req.usuario.id)); } catch (err) { errorInterno(res, err); }
+});
+
+// Desde el aviso "Paga por transferencia" de una mesa: cobra, cierra la mesa y da el aviso por atendido
+app.post('/api/mesas/solicitudes/:id/cobrar-transferencia', autenticar, requiere('pedidos.cobrar'), async (req, res) => {
+  try {
+    const s = await get("SELECT * FROM solicitudes_mesa WHERE id = ? AND tipo = 'cuenta' AND estado = 'pendiente'", [req.params.id]);
+    if (!s) return res.status(404).json({ error: 'El aviso ya se atendió' });
+    const pedido = await get("SELECT id FROM pedidos WHERE mesa_id = ? AND estado = 'abierto' LIMIT 1", [s.mesa_id]);
+    if (!pedido) return res.status(400).json({ error: 'La mesa no tiene una cuenta abierta' });
+    const r = await cobrarTransferencia(pedido.id, req.usuario.id);
+    await atenderSolicitud(s.id, req.usuario.id).catch(() => null);
+    res.json(r);
+  } catch (err) { errorInterno(res, err); }
+});
 
 app.get('/api/mesas/solicitudes', autenticar, requiere('pedidos.tomar'), async (req, res) => {
   try { res.json(await solicitudesPendientes()); } catch (err) { errorInterno(res, err); }

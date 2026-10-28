@@ -80,7 +80,7 @@ test('init-db --sin-ejemplos (instalar.ps1 -BaseLimpia): base vacía que igual s
     for (const tabla of ['productos', 'categorias', 'mesas', 'proveedores', 'promociones', 'pedidos']) {
       assert.equal((await limpio.q(`SELECT COUNT(*) c FROM ${tabla}`))[0].c, 0, tabla);
     }
-    assert.equal((await limpio.q("SELECT COUNT(*) c FROM usuarios WHERE email = 'admin@morfi.local'"))[0].c, 1);
+    assert.equal((await limpio.q("SELECT COUNT(*) c FROM usuarios WHERE email = 'admin@fadido.local'"))[0].c, 1);
     assert.equal((await limpio.q('SELECT COUNT(*) c FROM plataformas_delivery'))[0].c, 3);
     // Lo primero que hace el dueño: su categoría, su producto y su mesa
     const [stCat, cat] = await limpio.llamar('POST', '/api/categorias', { nombre: 'Brunch' }, limpio.tokenAdmin);

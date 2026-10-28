@@ -1,5 +1,5 @@
 // =============================================
-// MORFI - Mesas
+// FADIDO - Mesas
 // Gestor visual de mesas del sal\u00f3n
 // =============================================
 
@@ -110,7 +110,7 @@ const Mesas = {
         <button class="btn btn-success btn-sm" onclick="Mesas.confirmarSolicitud(${s.id})"><i class="fas fa-check"></i> Confirmar</button>
         <button class="btn btn-outline btn-sm" onclick="Mesas.corregirSolicitud(${s.id})"><i class="fas fa-edit"></i> Corregir</button>
         <button class="btn btn-danger btn-sm" onclick="Mesas.rechazarSolicitud(${s.id})"><i class="fas fa-times"></i> Rechazar</button>`
-        : `<button class="btn btn-primary btn-sm" onclick="Mesas.atenderSolicitud(${s.id})"><i class="fas fa-check"></i> ${s.tipo === 'pago' ? 'Visto' : 'Ya fui'}</button>`;
+        : `${s.tipo === 'cuenta' && s.notas === 'Paga por transferencia' && App.puede('pedidos.cobrar') ? `<button class="btn btn-success btn-sm" onclick="Mesas.cobrarTransferencia(${s.id})"><i class="fas fa-university"></i> Transferencia recibida: cobrar y cerrar</button> ` : ''}<button class="btn btn-primary btn-sm" onclick="Mesas.atenderSolicitud(${s.id})"><i class="fas fa-check"></i> ${s.tipo === 'pago' ? 'Visto' : 'Ya fui'}</button>`;
       return `
         <div class="solicitud-mesa solicitud-${s.tipo}">
           <div class="solicitud-cabecera">
@@ -178,6 +178,15 @@ const Mesas = {
 
   async atenderSolicitud(id) {
     try { await API.atenderSolicitudMesa(id); } catch (err) { App.showToast(err.message, 'error'); }
+    this.render();
+  },
+  // La mesa avisó que paga por transferencia: cuando la plata entró, un toque cobra lo que falta y cierra la mesa
+  async cobrarTransferencia(id) {
+    if (!confirm('¿Ya viste la transferencia en la cuenta? Se cobra lo que falta y la mesa se cierra.')) return;
+    try {
+      const r = await API.cobrarTransferenciaMesa(id);
+      App.showToast(`${r.numero_pedido}: cobrado ${fmtMoneda(r.monto)} por transferencia${r.cerrado ? ' · mesa cerrada' : ''}`, 'success');
+    } catch (err) { App.showToast(err.message, 'error'); }
     this.render();
   },
 nueva() {

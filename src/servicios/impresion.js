@@ -65,7 +65,7 @@ public class GmRawPrinter {
     if (!OpenPrinter(impresora, out h, IntPtr.Zero))
       throw new Exception("No se encontró la impresora '" + impresora + "' en Windows (error " + Marshal.GetLastWin32Error() + ")");
     try {
-      DOCINFO di = new DOCINFO(); di.pDocName = "Morfi"; di.pDataType = "RAW";
+      DOCINFO di = new DOCINFO(); di.pDocName = "Fadido"; di.pDataType = "RAW";
       if (StartDocPrinter(h, 1, di) == 0) throw new Exception("La impresora rechazó el trabajo (error " + Marshal.GetLastWin32Error() + ")");
       StartPagePrinter(h);
       int escritos;
@@ -194,7 +194,7 @@ const fechaHora = s => formatoFecha(s, { day: '2-digit', month: '2-digit', year:
 const moneda = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(n) || 0);
 const cantidad = n => (Number.isInteger(Number(n)) ? String(Number(n)) : String(Number(n).toFixed(2)).replace('.', ','));
 const TIPOS = { salon: 'SALÓN', mostrador: 'MOSTRADOR', takeaway: 'PARA LLEVAR', delivery: 'DELIVERY' };
-const METODOS = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', transferencia: 'Transferencia', otro: 'Otro' };
+const METODOS = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', mercadopago: 'Mercado Pago', modo: 'MODO', cuentadni: 'Cuenta DNI', transferencia: 'Transferencia', otro: 'Otro' };
 
 // Comanda para cocina/barra. titulo: COMANDA | AGREGADO | ANULADO
 function plantillaComanda(pedido, items, impresora, titulo) {
@@ -221,7 +221,7 @@ function plantillaComanda(pedido, items, impresora, titulo) {
 function plantillaTicket(pedido, negocio, opciones, impresora, extra = {}) {
   const t = new Ticket(impresora.ancho === 58 ? 32 : 48);
   const f = pedido.fiscal;
-  t.alinear('centro').negrita().tamano(2, 2).linea(negocio.nombre_negocio || 'Morfi').normal().alinear('centro');
+  t.alinear('centro').negrita().tamano(2, 2).linea(negocio.nombre_negocio || 'Fadido').normal().alinear('centro');
   if (negocio.eslogan) t.linea(negocio.eslogan);
   if (f) {
     // Encabezado de factura: datos del emisor (RG 1415), letra y número
@@ -268,7 +268,13 @@ function plantillaTicket(pedido, negocio, opciones, impresora, extra = {}) {
   t.negrita().tamano(2, 2).columnas2('TOTAL', moneda(pedido.total)).normal();
   for (const pago of pedido.pagos) t.columnas2(`Pago ${METODOS[pago.metodo] || pago.metodo}`, moneda(pago.monto));
   if (extra.vuelto > 0) t.columnas2('Vuelto', moneda(extra.vuelto));
-  if (pedido.estado !== 'pagado') t.alinear('centro').negrita().linea('*** PRECUENTA ***').normal();
+  if (pedido.estado !== 'pagado') {
+    t.alinear('centro').negrita().linea('*** PRECUENTA ***').normal();
+    if (negocio.alias_transferencia) {
+      t.linea(`Transferencias: ${negocio.alias_transferencia}`);
+      if (negocio.titular_transferencia) t.linea(`Titular: ${negocio.titular_transferencia}`);
+    }
+  }
   t.separador();
   if (f) {
     // La propina no se factura: el importe fiscal puede ser menor que el TOTAL cobrado
@@ -352,7 +358,7 @@ async function imprimirComanda(pedidoId, { itemIds = null, titulo = 'COMANDA' } 
 async function imprimirTicket(pedidoId, extra = {}) {
   const [pedido, impresoras, negocio, opciones] = await Promise.all([
     datosPedido(pedidoId), impresorasActivas('ticket'),
-    get('SELECT nombre_negocio, eslogan, direccion, telefono, cuit FROM configuracion WHERE id = 1'), opcionesImpresion()
+    get('SELECT nombre_negocio, eslogan, direccion, telefono, cuit, alias_transferencia, titular_transferencia FROM configuracion WHERE id = 1'), opcionesImpresion()
   ]);
   if (!pedido || !impresoras.length) return [];
   const resultados = [];

@@ -1,4 +1,4 @@
-# Landing de Morfi
+# Landing de Fadido
 
 Página de presentación estática (`index.html`, `styles.css`, `app.js`), sin build. Se abre directo en el navegador.
 

@@ -9,7 +9,7 @@ const { PaginaCocina } = require('./paginas/cocina');
 const { PaginaCarta } = require('./paginas/carta');
 
 const test = base.test.extend({
-  baseURL: async ({}, use) => { await use(process.env.MORFI_QA_URL); },
+  baseURL: async ({}, use) => { await use(process.env.FADIDO_QA_URL); },
 
   // Cualquier error de JavaScript en la página hace fallar el caso, aunque la pantalla "se vea bien"
   page: async ({ page }, use) => {
@@ -23,7 +23,7 @@ const test = base.test.extend({
 
   // api.como('cajero').post('/api/pedidos', {...}) → { status, body }
   api: async ({ playwright }, use) => {
-    const contexto = await playwright.request.newContext({ baseURL: process.env.MORFI_QA_URL });
+    const contexto = await playwright.request.newContext({ baseURL: process.env.FADIDO_QA_URL });
     const tokens = {};
     const token = async rol => {
       if (!tokens[rol]) {
