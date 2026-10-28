@@ -480,6 +480,42 @@ async function migrarEsquema() {
   await agregarColumna('productos', 'para_llevar', 'INTEGER NOT NULL DEFAULT 0');
   await agregarColumna('categorias', 'nombre_para_llevar', "TEXT NOT NULL DEFAULT ''");
   await agregarColumna('momentos_carta', 'solo_para_llevar', 'INTEGER NOT NULL DEFAULT 0');
+
+  // Inventario (servicios/inventario.js). Artículos de una compra de mercadería: al guardarla suman al stock y
+  // actualizan el costo del producto. monto = lo que costó esa línea (sin IVA en factura A).
+  await run(`CREATE TABLE IF NOT EXISTS gasto_articulos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gasto_id INTEGER NOT NULL,
+    producto_id INTEGER NOT NULL,
+    cantidad REAL NOT NULL,
+    monto REAL NOT NULL DEFAULT 0,
+    costo_anterior REAL,
+    FOREIGN KEY (gasto_id) REFERENCES gastos(id),
+    FOREIGN KEY (producto_id) REFERENCES productos(id)
+  )`);
+  await run('CREATE INDEX IF NOT EXISTS idx_gasto_articulos_gasto ON gasto_articulos(gasto_id)');
+  // Conteo de inventario: lo que había según el sistema, lo contado y la diferencia valorizada al costo de ese día
+  await run(`CREATE TABLE IF NOT EXISTS conteos_stock (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT DEFAULT CURRENT_TIMESTAMP,
+    notas TEXT NOT NULL DEFAULT '',
+    productos INTEGER NOT NULL DEFAULT 0,
+    con_diferencia INTEGER NOT NULL DEFAULT 0,
+    valor_diferencia REAL NOT NULL DEFAULT 0,
+    usuario_id INTEGER,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS conteo_stock_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conteo_id INTEGER NOT NULL,
+    producto_id INTEGER NOT NULL,
+    sistema REAL NOT NULL,
+    contado REAL NOT NULL,
+    diferencia REAL NOT NULL,
+    costo REAL NOT NULL DEFAULT 0,
+    FOREIGN KEY (conteo_id) REFERENCES conteos_stock(id),
+    FOREIGN KEY (producto_id) REFERENCES productos(id)
+  )`);
 }
 
 // ============ Migración segura (lo que usa server.js) ============
