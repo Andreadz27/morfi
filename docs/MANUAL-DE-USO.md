@@ -151,6 +151,15 @@ después hubo más ventas). Cada cierre se puede abrir e **imprimir** desde la l
 **Inventario**: stock de cada producto e insumo, con recetas que descuentan los insumos solos. **Proveedores**:
 datos y compras.
 
+- **Compras que suman solas**: en **Contabilidad → Gastos y compras**, al cargar una compra de *Mercadería e
+  insumos* agregá los **artículos** que trajo el proveedor (producto, cantidad, importe). Al guardar, cada uno se
+  suma al stock y el producto pasa a costar lo que pagaste, así la rentabilidad de los platos se actualiza sola.
+  Los productos en gramos o mililitros se pueden cargar en kg o litros. Si anulás la compra, se resta lo sumado.
+- **Contar inventario**: en **Inventario**, botón *Contar inventario*. Anotá lo que hay de cada producto (lo que
+  dejes vacío no se toca). Al guardar, el stock pasa a ser lo contado y queda el detalle de las diferencias, en
+  cantidad y en plata. Conviene hacerlo una vez por semana, con el local cerrado.
+- **Entrada / Salida**: para lo que no es compra ni conteo (una merma puntual, consumo del personal, una devolución).
+
 ### Clientes y fidelización
 **Clientes**: datos para delivery y factura A. **Fidelización** (plan Pro): puntos, cupones y gift cards.
 Los clientes pueden pedir ver o borrar sus datos (Ley 25.326): se editan o se borran desde **Clientes**.
