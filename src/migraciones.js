@@ -391,6 +391,12 @@ async function migrarEsquema() {
   await agregarColumna('pedidos', 'retirado_en', 'TEXT');
   await agregarColumna('pedidos', 'aviso_pago', "TEXT DEFAULT ''");
   await run('CREATE UNIQUE INDEX IF NOT EXISTS idx_pedidos_codigo_cliente ON pedidos(codigo_cliente)');
+  // Autoservicio (qr_mesa_modo = 'retiro'): el cliente pide y paga desde la mesa y lo retira en el mostrador.
+  // lugar = de qué mesa pidió; llamado_en = la caja lo volvió a llamar (el celular y la TV avisan de nuevo);
+  // telefono_aviso = el cliente pidió el aviso por WhatsApp (escribió él primero: el aviso es gratis dentro de las 24 h)
+  await agregarColumna('pedidos', 'lugar', "TEXT DEFAULT ''");
+  await agregarColumna('pedidos', 'llamado_en', 'TEXT');
+  await agregarColumna('pedidos', 'telefono_aviso', "TEXT DEFAULT ''");
   await agregarColumna('caja', 'pendiente_arqueo', 'INTEGER NOT NULL DEFAULT 0');
   await agregarColumna('caja', 'arqueo_por', 'INTEGER');
   await agregarColumna('caja', 'arqueo_en', 'TEXT');

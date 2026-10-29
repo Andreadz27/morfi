@@ -83,6 +83,21 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
   cliente avisó que transfirió, aparece **Avisó transferencia**: cuando la ves en la cuenta, *Transferencia
   recibida* cobra y cierra. Al entregarlo, **Entregado** lo saca de la pantalla.
 - Cuando la cocina toca **Listo**, el celular del cliente vibra y suena: "¡Listo! Retiralo en la barra".
+  Suena cada 3 segundos hasta que el cliente toca **¡Voy!** (el navegador exige un toque antes: por eso el botón
+  *Activar sonido y vibración*).
+- **Avisame por WhatsApp** (con WhatsApp conectado en Integraciones): el cliente toca el botón, se abre su WhatsApp
+  con un mensaje ya escrito y lo envía. Fadido le contesta y le escribe cuando el pedido está listo. Le llega aunque
+  bloquee el celular y **no le cuesta nada al local**, porque el cliente escribió primero. Cargá el *Número de
+  WhatsApp del local* en Integraciones → WhatsApp.
+- **Llamar de nuevo** (en *Para retirar*, en los listos): si el cliente no viene, vuelve a sonar en su celular, en la
+  pantalla de retiro y por WhatsApp.
+
+### Autoservicio desde la mesa (piden y pagan en la mesa, retiran en el mostrador)
+En Configuración → *Pedidos desde el QR de la mesa* elegí **Autoservicio**. Cada persona escanea el QR de su mesa,
+pide con su nombre y paga desde el celular (Mercado Pago, transferencia o en la caja al retirar). El pedido va
+directo a la cocina con la mesa anotada (la comanda dice "Mesa 4"), cada uno tiene su propio pedido y su cuenta, y
+la mesa no queda ocupada. Se avisa igual que en la barra: celular, pantalla de retiro (con la mesa) y WhatsApp. El
+que no pagó desde el celular paga en el mostrador al retirar: *Para retirar* muestra lo que falta cobrar.
 
 ### Cobrar una mesa
 - Desde **Mesas** o **Pedidos**, **Cobrar**.

@@ -511,6 +511,50 @@ test('pedido desde el QR de la mesa: el cliente pide, el mozo recibe el aviso y 
   await mozo.context().close();
 });
 
+test('autoservicio desde la mesa: pide con su nombre, sigue el pedido, suena al estar listo y la caja lo vuelve a llamar', async () => {
+  const token = 'e2e1'.repeat(6);
+  await s.q("INSERT INTO mesas (nombre, capacidad, sector, orden, qr_token) VALUES ('Mesa Auto', 4, 'Principal', 61, ?)", [token]);
+  await s.q("UPDATE configuracion SET qr_mesa_modo = 'retiro'");
+  try {
+    const cliente = await nuevaPagina();
+    await cliente.goto(`${s.base}/pedido.html?mesa=${token}`);
+    await cliente.waitForSelector('#negocioSub:has-text("retirar en el mostrador")');
+    assert.equal(await cliente.isVisible('#btnLlamarMozo'), false, 'no hay mozo a quien llamar');
+    await (await cliente.waitForSelector('.btn-agregar')).click();
+    await cliente.click('#btnConfirmar');
+    await cliente.fill('#clienteNombre', 'Lola');
+    await cliente.click('#btnEnviar');
+    await cliente.waitForURL(/seguimiento\.html\?p=[a-f0-9]{24}/);
+    await cliente.waitForSelector('.numero:has-text("Mesa Auto")');
+    await cliente.waitForSelector('.etapa:has-text("Estamos preparando")');
+    await cliente.click('button:has-text("Activar sonido y vibración")');
+    await cliente.waitForSelector('.aviso-ok:has-text("Sonido y vibración activados")');
+
+    const [p] = await s.q("SELECT id, lugar FROM pedidos WHERE cliente = 'Lola'");
+    assert.equal(p.lugar, 'Mesa Auto');
+    await s.llamar('PUT', `/api/cocina/${p.id}/listo`, {}, s.tokenAdmin);
+    await cliente.waitForSelector('.etapa.listo:has-text("Retiralo en el mostrador")', { timeout: 15000 });
+    await cliente.waitForSelector('#voy', { state: 'visible' });
+    await cliente.click('#voy');
+    await cliente.waitForSelector('#voy', { state: 'hidden' });
+
+    // La caja lo llama de nuevo desde "Para retirar": vuelve a sonar en el celular
+    const caja = await nuevaPagina();
+    await ingresarOk(caja, 'vendedor@test.com', 'vendedor123');
+    await ir(caja, 'pos');
+    await caja.click('button:has-text("Para retirar")');
+    await caja.click('tr:has-text("Lola") button:has-text("Llamar de nuevo")');
+    await toast(caja, 'success', 'llamando de nuevo');
+    await cliente.waitForSelector('#voy', { state: 'visible', timeout: 15000 });
+    sinErrores(cliente);
+    sinErrores(caja);
+    await cliente.context().close();
+    await caja.context().close();
+  } finally {
+    await s.q("UPDATE configuracion SET qr_mesa_modo = 'confirmar'");
+  }
+});
+
 test('pago desde la mesa: divide entre dos con propina, paga en Mercado Pago, vuelve y el mozo recibe el aviso', async () => {
   // Mercado Pago simulado y un servidor con dirección pública HTTPS (sin ella no se ofrece pagar desde la mesa)
   const mp = { preferencias: [], pagos: {} };

@@ -257,6 +257,10 @@ const Integraciones = {
               <div class="form-group"><label>Avisos de pedidos</label>
                 <select id="waAvisos">${opt(0, wa.avisar_pedidos ? 1 : 0, 'No avisar')}${opt(1, wa.avisar_pedidos ? 1 : 0, 'Listo para retirar y en camino')}</select>
               </div>
+              <div class="form-group"><label>Número de WhatsApp del local</label>
+                <input type="tel" id="waNumero" value="${esc(wa.numero || '')}" placeholder="11 2345-6789">
+                <small class="form-hint">El de esta cuenta de WhatsApp Business. Con él el cliente toca "Avisame por WhatsApp" y le avisamos gratis cuando su pedido está listo. Vacío = el teléfono del negocio.</small>
+              </div>
               <div class="form-group"><label>Recordatorio de reservas</label>
                 <select id="waRecordatorio">${[0, 1, 2, 3, 6, 24].map(h => opt(h, wa.recordatorio_horas || 0, h ? `${h} h antes` : 'No enviar')).join('')}</select>
               </div>
@@ -456,6 +460,7 @@ const Integraciones = {
         app_secret:      val('waSecret'),
         verify_token:    val('waVerify'),
         avisar_pedidos:  val('waAvisos') === '1',
+        numero:          val('waNumero'),
         recordatorio_horas: Number(val('waRecordatorio')) || 0,
         activa:          val('waActiva') === '1',
         idioma:          (this.cfg.whatsapp && this.cfg.whatsapp.idioma) || 'es_AR',

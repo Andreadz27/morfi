@@ -2,7 +2,7 @@
 const {
   run, get, all, actualizarParcial, errorHttp, errorInterno, autenticar, emitEvento, requiere, urlPublica, nuevoTokenMesa,
   solicitudesPendientes, confirmarSolicitud, rechazarSolicitud, atenderSolicitud, tokenBarra, tableroRetiro, marcarRetirado,
-  cobrarTransferencia
+  cobrarTransferencia, llamarDeNuevo
 } = require('../contexto');
 const QRCode = require('qrcode');
 
@@ -138,6 +138,11 @@ app.get('/api/barra/qr', autenticar, requiere('catalogo'), async (req, res) => {
 
 app.get('/api/retiro', autenticar, requiere('pedidos.ver'), async (req, res) => {
   try { res.json(await tableroRetiro()); } catch (err) { errorInterno(res, err); }
+});
+
+// "Llamar de nuevo": el cliente no viene a retirar; su celular, la pantalla y su WhatsApp vuelven a avisar
+app.post('/api/pedidos/:id/llamar', autenticar, requiere('pedidos.tomar'), async (req, res) => {
+  try { await llamarDeNuevo(Number(req.params.id)); res.json({ ok: true }); } catch (err) { errorInterno(res, err); }
 });
 
 app.post('/api/pedidos/:id/retirado', autenticar, requiere('pedidos.tomar'), async (req, res) => {
