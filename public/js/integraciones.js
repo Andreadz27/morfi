@@ -593,6 +593,13 @@ const Integraciones = {
                 </select>
               </div>
             </div>
+            <div class="form-group"><label>Facturar autom&aacute;ticamente cada venta</label>
+              <select id="afipFacturaAuto">
+                <option value="0" ${afip.factura_auto ? '' : 'selected'}>No: se factura desde el cobro cuando se elige</option>
+                <option value="1" ${afip.factura_auto ? 'selected' : ''}>S&iacute;: cada pedido pagado se factura solo a Consumidor Final (B si sos Responsable Inscripto, C si sos monotributista o exento)</option>
+              </select>
+              <small class="form-hint">Si en el cobro eleg&iacute;s una factura (por ejemplo A con CUIT), se hace esa. Incluye lo que pagan desde la mesa con Mercado Pago. Sin internet queda en espera y sale sola.</small>
+            </div>
             <div class="form-group"><label>Domicilio comercial</label>
               <input type="text" id="afipDomicilio" value="${esc(afip.domicilio||'')}" placeholder="Si queda vac&iacute;o se usa la direcci&oacute;n del negocio" maxlength="160">
             </div>
@@ -780,6 +787,7 @@ const Integraciones = {
         activa:       document.getElementById('afipActiva').value === '1',
         razon_social:       document.getElementById('afipRazonSocial').value.trim(),
         condicion_iva:      document.getElementById('afipCondicionIva').value,
+        factura_auto:       document.getElementById('afipFacturaAuto').value === '1',
         domicilio:          document.getElementById('afipDomicilio').value.trim(),
         iibb:               document.getElementById('afipIibb').value.trim(),
         inicio_actividades: document.getElementById('afipInicioActividades').value
