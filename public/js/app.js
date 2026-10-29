@@ -47,6 +47,7 @@ const App = {
   // ===== Socket.IO realtime =====
   initSocket() {
     if (this.socket) return; // ya conectado
+    this.prepararSonidoPedidos();
     try {
       this.socket = io({ transports: ['websocket', 'polling'], auth: { token: API.getToken() } });
 
@@ -283,10 +284,9 @@ const App = {
   avisarPedidoQR(data) {
     if (!this.puede('pedidos.ver')) return;
     const quien = `#${data.numero_corto || data.numero_pedido || ''} ${data.cliente || ''}${data.lugar ? ' · ' + data.lugar : ''}`.trim();
-    const abrir = () => { window.focus(); POS.verRetiro(); };
+    const abrir = () => { this.callarPedidos(); window.focus(); POS.verRetiro(); };
     this.showToast(`Nuevo pedido por QR: ${quien}. Tocá para verlo`, 'warning', 20000, abrir);
-    this.sonarAviso();
-    setTimeout(() => this.sonarAviso(), 700);
+    this.alarmaPedido(data);
     this._pedidosSinVer = (this._pedidosSinVer || 0) + 1;
     if (document.hidden || !document.hasFocus()) {
       if (!this._tituloBase) this._tituloBase = document.title;
@@ -300,6 +300,92 @@ const App = {
         n.onclick = () => { n.close(); abrir(); };
       }
     } catch (e) { /* sin notificación del escritorio queda el aviso en pantalla */ }
+  },
+
+  // ----- Sonido de pedidos en la caja -----
+  // El navegador no deja sonar hasta que alguien toca la página (por ejemplo, después de reiniciar la PC queda
+  // abierto Fadido sin que nadie lo toque). Mientras tanto se ve una franja "Tocá para activar el sonido".
+  prepararSonidoPedidos() {
+    if (this._sonidoPreparado || !this.puede('pedidos.ver')) return;
+    this._sonidoPreparado = true;
+    const activar = () => {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) this._audio = this._audio || new Ctx();
+        if (this._audio && this._audio.state === 'suspended') this._audio.resume();
+      } catch (e) {}
+      const f = document.getElementById('franjaSonido');
+      if (f) f.remove();
+    };
+    document.addEventListener('pointerdown', activar, { once: true });
+    document.addEventListener('keydown', activar, { once: true });
+    const yaTocada = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
+    if (yaTocada) return activar();
+    const f = document.createElement('div');
+    f.id = 'franjaSonido';
+    f.setAttribute('role', 'button');
+    f.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;padding:10px 16px;text-align:center;font-weight:600;cursor:pointer';
+    f.innerHTML = '<i class="fas fa-volume-xmark"></i> El sonido de los pedidos está apagado: tocá acá para activarlo';
+    document.body.appendChild(f);
+  },
+
+  // Campanada fuerte (tres notas) que se oye en la caja aunque haya ruido
+  campanada() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      this._audio = this._audio || new Ctx();
+      const a = this._audio, ahora = a.currentTime;
+      [[659, 0], [880, 0.28], [1319, 0.56]].forEach(([hz, t]) => {
+        for (const [mult, vol] of [[1, 0.5], [2, 0.12]]) { // nota + armónico: suena a campana, no a pitido
+          const o = a.createOscillator(), g = a.createGain();
+          o.type = 'sine'; o.frequency.value = hz * mult;
+          g.gain.setValueAtTime(0.0001, ahora + t);
+          g.gain.exponentialRampToValueAtTime(vol, ahora + t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, ahora + t + 0.9);
+          o.connect(g).connect(a.destination);
+          o.start(ahora + t); o.stop(ahora + t + 0.95);
+        }
+      });
+    } catch (e) { /* sin sonido queda el aviso en pantalla */ }
+  },
+
+  // Voz de Windows: "Nuevo pedido. Mesa 4. Ana"
+  decir(texto) {
+    try {
+      if (!('speechSynthesis' in window)) return;
+      const u = new SpeechSynthesisUtterance(texto);
+      u.lang = 'es-AR'; u.rate = 0.95; u.volume = 1;
+      const voz = speechSynthesis.getVoices().find(v => /^es/i.test(v.lang));
+      if (voz) u.voice = voz;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  },
+
+  // Suena y dice el pedido; repite cada 8 s (hasta 2 minutos) hasta que alguien toca el aviso o abre "Para retirar"
+  alarmaPedido(data) {
+    const voz = ['Nuevo pedido', data.lugar, data.cliente].filter(Boolean).join('. ');
+    let veces = 0;
+    const sonar = () => {
+      this.campanada();
+      if (veces % 2 === 0) setTimeout(() => this.decir(voz), 1100);
+      if (++veces >= 15) this.callarPedidos();
+    };
+    this.callarPedidos();
+    sonar();
+    this._alarmaPedidos = setInterval(sonar, 8000);
+  },
+
+  callarPedidos() {
+    if (this._alarmaPedidos) clearInterval(this._alarmaPedidos);
+    this._alarmaPedidos = null;
+    try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {}
+  },
+
+  // Botón "Probar sonido" de Para retirar
+  probarSonido() {
+    this.campanada();
+    setTimeout(() => this.decir('Así suena un pedido nuevo'), 1100);
   },
 
   // Permiso para las notificaciones del escritorio (se pide al abrir "Para retirar": hace falta un toque)

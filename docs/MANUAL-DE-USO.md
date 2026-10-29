@@ -99,6 +99,12 @@ notificación). Tocá el aviso y se abre **Para retirar** con lo que lleva cada 
 actualiza sola. **Listo** le avisa al cliente en su celular; **Cobrar** o *Transferencia recibida* si falta pagar;
 **Entregado** cuando se lo lleva. La primera vez, Windows pregunta si permitís notificaciones: tocá *Permitir*.
 
+**El sonido en la caja:** cada pedido nuevo suena con una campanada fuerte y una voz dice "Nuevo pedido. Mesa 4.
+Ana". Se repite cada 8 segundos (hasta 2 minutos) hasta que alguien toca el aviso o la ventana *Para retirar*.
+Usá **Probar sonido** (en *Para retirar*) para ajustar el volumen de la PC. Si después de reiniciar la PC aparece
+arriba una franja roja *"El sonido de los pedidos está apagado"*, tocala: el navegador no deja sonar hasta que
+alguien toca la pantalla una vez.
+
 ### Autoservicio desde la mesa (piden y pagan en la mesa, retiran en el mostrador)
 En Configuración → *Pedidos desde el QR de la mesa* elegí **Autoservicio**. Cada persona escanea el QR de su mesa,
 pide con su nombre y paga desde el celular (Mercado Pago, transferencia o en la caja al retirar). El pedido va
