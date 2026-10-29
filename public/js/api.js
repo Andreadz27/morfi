@@ -139,6 +139,7 @@ const API = {
   getQrBarra(base, nuevo) { return this.request('GET', `/barra/qr?base=${encodeURIComponent(base)}${nuevo ? '&nuevo=1' : ''}`); },
   getRetiro() { return this.request('GET', '/retiro'); },
   marcarRetirado(id) { return this.request('POST', `/pedidos/${id}/retirado`); },
+  marcarListo(id) { return this.request('PUT', `/cocina/${id}/listo`); },
   llamarDeNuevo(id) { return this.request('POST', `/pedidos/${id}/llamar`); },
   cobrarTransferencia(id) { return this.request('POST', `/pedidos/${id}/cobrar-transferencia`); },
   cobrarTransferenciaMesa(solicitudId) { return this.request('POST', `/mesas/solicitudes/${solicitudId}/cobrar-transferencia`); },

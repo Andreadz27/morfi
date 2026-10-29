@@ -72,7 +72,8 @@ async function crearPedidoBarra({ items, cliente, notas, lugar = '' } = {}) {
       [numero, nombre, [lugar, String(notas || '').trim()].filter(Boolean).join(' · ').slice(0, 300), codigo, String(lugar).slice(0, 40)]);
     for (const item of resueltos) await insertarItemTx(id, item);
     const { total } = await recalcularTotales(id);
-    emitEvento('pedido:nuevo', { id, numero_pedido: numero, tipo: 'mostrador', origen: 'barra', cliente: nombre });
+    emitEvento('pedido:nuevo', { id, numero_pedido: numero, numero_corto: numeroCorto(numero), tipo: 'mostrador', origen: 'barra',
+      cliente: nombreCorto(nombre), lugar: String(lugar).slice(0, 40) });
     emitEvento('cocina:actualizar', { pedido_id: id, accion: 'creado' });
     emitEvento('dashboard:actualizar', { motivo: 'pedido_creado' });
     emitEvento('retiro:actualizar', { pedido_id: id });
@@ -175,7 +176,15 @@ async function tableroRetiro() {
     ORDER BY id`);
   const saldos = {};
   for (const f of filas.filter(x => x.estado === 'abierto')) saldos[f.id] = (await saldoPedido(f.id)).saldo;
-  const fila = f => ({ id: f.id, numero_pedido: f.numero_pedido, numero_corto: numeroCorto(f.numero_pedido), nombre: nombreCorto(f.cliente), origen: f.origen || '',
+  // Qué lleva cada pedido: con una sola computadora, "Para retirar" es también la cocina
+  const items = {};
+  if (filas.length) {
+    for (const i of await all(`SELECT pedido_id, nombre_producto, cantidad, notas FROM pedido_items
+      WHERE pedido_id IN (${filas.map(() => '?').join(',')}) ORDER BY id`, filas.map(f => f.id))) {
+      (items[i.pedido_id] = items[i.pedido_id] || []).push({ nombre_producto: i.nombre_producto, cantidad: i.cantidad, notas: i.notas || '' });
+    }
+  }
+  const fila = f => ({ id: f.id, items: items[f.id] || [], numero_pedido: f.numero_pedido, numero_corto: numeroCorto(f.numero_pedido), nombre: nombreCorto(f.cliente), origen: f.origen || '',
     lugar: f.lugar || '', llamado_en: f.llamado_en || '', whatsapp: !!f.telefono_aviso,
     pagado: f.estado === 'pagado' || saldos[f.id] <= 0, saldo: f.estado === 'pagado' ? 0 : saldos[f.id], aviso_pago: f.aviso_pago || '' });
   return {

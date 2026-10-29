@@ -752,26 +752,43 @@ checkout() {
     } catch (e) { b.textContent = ''; }
   },
 
+  // Con una sola computadora este panel es la cocina, la caja y la pantalla de retiro: se ve qué preparar, se marca
+  // Listo (avisa al celular del cliente), se cobra y se entrega. Mientras está abierto se actualiza solo (app.js).
+  retiroAbierto() { return !!document.getElementById('panelRetiro'); },
+
   async verRetiro() {
+    App.pedirPermisoNotificaciones();
     try {
       const t = await API.getRetiro();
+      const items = p => (p.items || []).map(i => `${esc(i.cantidad)} × ${esc(i.nombre_producto)}${i.notas ? ` <em>(${esc(i.notas)})</em>` : ''}`).join(' · ');
       const fila = (p, listo) => `<tr>
-        <td><strong>#${esc(p.numero_corto)}</strong> ${esc(p.nombre || '')} <small class="text-muted">${esc(p.numero_pedido)}</small>${p.origen === 'barra' ? ` <span class="badge badge-orange">${p.lugar ? esc(p.lugar) : 'QR'}</span>` : ''}${p.whatsapp ? ' <i class="fab fa-whatsapp text-success" title="Pidió aviso por WhatsApp"></i>' : ''}</td>
+        <td><strong>#${esc(p.numero_corto)}</strong> ${esc(p.nombre || '')} <small class="text-muted">${esc(p.numero_pedido)}</small>${p.origen === 'barra' ? ` <span class="badge badge-orange">${p.lugar ? esc(p.lugar) : 'QR'}</span>` : ''}${p.whatsapp ? ' <i class="fab fa-whatsapp text-success" title="Pidió aviso por WhatsApp"></i>' : ''}
+          ${p.items && p.items.length ? `<div class="text-muted" style="font-size:13px;margin-top:2px">${items(p)}</div>` : ''}</td>
         <td>${listo ? '<span class="badge badge-green">Listo</span>' : '<span class="badge badge-gray">En preparación</span>'}</td>
         <td>${p.pagado ? '<span class="text-success">Pagado</span>' : `Falta ${fmtMoneda(p.saldo)}${p.aviso_pago === 'transferencia' ? ' <span class="badge badge-red">Avisó transferencia</span>' : ''}`}</td>
         <td style="white-space:nowrap">
           ${!p.pagado && p.aviso_pago === 'transferencia' && App.puede('pedidos.cobrar') ? `<button class="btn btn-success btn-sm" onclick="POS.transferenciaRecibida(${p.id})"><i class="fas fa-university"></i> Transferencia recibida</button>` : ''}
           ${!p.pagado && App.puede('pedidos.cobrar') ? `<button class="btn btn-outline btn-sm" onclick="App.closeModal();Cobro.abrir(${p.id})"><i class="fas fa-cash-register"></i> Cobrar</button>` : ''}
+          ${!listo && App.puede('cocina') ? `<button class="btn btn-success btn-sm" onclick="POS.marcarListo(${p.id}, this)" title="Le avisa al cliente en su celular (y por WhatsApp si lo pidió)"><i class="fas fa-bell"></i> Listo</button>` : ''}
           ${listo ? `<button class="btn btn-outline btn-sm" onclick="POS.llamarDeNuevo(${p.id})" title="Vuelve a sonar en su celular, en la pantalla de retiro y por WhatsApp"><i class="fas fa-bullhorn"></i> Llamar de nuevo</button>` : ''}
           <button class="btn btn-primary btn-sm" onclick="POS.entregado(${p.id}, ${p.pagado})"><i class="fas fa-check"></i> Entregado</button>
         </td></tr>`;
-      const filas = t.listos.map(p => fila(p, true)).join('') + t.preparando.map(p => fila(p, false)).join('');
-      App.showModal(filas ? `<div class="table-wrap"><table>
+      // Primero lo que hay que preparar (el más viejo arriba), después lo que espera que lo retiren
+      const filas = t.preparando.map(p => fila(p, false)).join('') + t.listos.map(p => fila(p, true)).join('');
+      App.showModal(`<div id="panelRetiro">${filas ? `<div class="table-wrap"><table>
         <thead><tr><th>Pedido</th><th>Estado</th><th>Pago</th><th></th></tr></thead><tbody>${filas}</tbody></table></div>
-        <p class="text-muted mt-10">Los listos salen de la pantalla de retiro al tocar <strong>Entregado</strong> (o solos a los 45 minutos).</p>`
-        : '<div class="empty-state"><i class="fas fa-bell-concierge"></i><p>No hay pedidos de mostrador ni de barra pendientes</p></div>',
+        <p class="text-muted mt-10">Dejá esta ventana abierta: se actualiza sola y suena cuando entra un pedido. <strong>Listo</strong> le avisa al
+          cliente en su celular; <strong>Entregado</strong> lo saca de la lista (los listos salen solos a los 45 minutos).</p>`
+        : '<div class="empty-state"><i class="fas fa-bell-concierge"></i><p>No hay pedidos de mostrador ni de barra pendientes</p><p class="text-muted">Dejá esta ventana abierta: suena cuando entra un pedido.</p></div>'}</div>`,
         { title: 'Para retirar', large: true });
     } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  async marcarListo(id, btn) {
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    try { await API.marcarListo(id); App.showToast('Listo: le avisamos al cliente', 'success'); } catch (err) { App.showToast(err.message, 'error'); }
+    this.verRetiro();
+    this.actualizarBadgeRetiro();
   },
 
   async transferenciaRecibida(id) {
