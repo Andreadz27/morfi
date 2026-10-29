@@ -186,6 +186,10 @@ después hubo más ventas). Cada cierre se puede abrir e **imprimir** desde la l
 ### Carta y precios
 - **Productos**: alta de productos, precios y categorías. Lo que se cambia acá se ve al instante en el
   sistema, en la carta QR y en la carta online.
+- **Fotos de la carta** (botón en Productos): todos los productos en una grilla. Tocá uno y elegí su foto (desde
+  el celular, entrando a Fadido por el WiFi del local, podés sacarla con la cámara): se guarda en el momento y
+  aparece en la carta. Para cargar muchas juntas, soltalas en el recuadro de arriba: cada foto va al producto con el
+  mismo nombre que el archivo (*Café con leche.jpg*). Las que no coinciden se avisan para elegirlas a mano.
 - **Opciones y adicionales** (en Productos): grupos como **"¿Qué leche?"** (se elige una: entera, descremada,
   vegetal +$1300) o **"Adicionales"** (se eligen varios, cada uno con su precio, con tope opcional). En cada grupo
   se agregan, editan o quitan opciones y se marcan los productos que lo usan (con "toda la categoría" de un toque).

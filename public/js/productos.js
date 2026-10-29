@@ -66,6 +66,7 @@ const Productos = {
           ${
             esAdmin ? `
             <button class="btn btn-primary" onclick="Productos.nuevaCategoria()"><i class="fas fa-tag"></i> Categoría</button>
+            <button class="btn btn-outline" onclick="Productos.verFotos()" title="Cargar las fotos de todos los platos en un solo lugar"><i class="fas fa-camera"></i> Fotos de la carta</button>
             <button class="btn btn-outline" onclick="Productos.verRecetario()"><i class="fas fa-book"></i> Recetario</button>
             <button class="btn btn-success" onclick="Productos.nuevo()"><i class="fas fa-plus"></i> Nuevo producto</button>
             ` : ''
@@ -346,11 +347,8 @@ const Productos = {
     }
   },
 
-  // Foto del plato: se achica en el navegador (lado mayor 1200 px, JPG) y se muestra antes de guardar
-  async elegirFoto(input) {
-    const original = input.files && input.files[0];
-    input.value = '';
-    if (!original) return;
+  // Foto del plato: se achica en el navegador (lado mayor 1200 px, JPG). Devuelve { jpg, vista } o null si no abre.
+  async achicarFoto(original) {
     const url = URL.createObjectURL(original);
     try {
       const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = url; });
@@ -363,15 +361,117 @@ const Productos = {
       ctx.fillRect(0, 0, lienzo.width, lienzo.height);
       ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
       const jpg = await new Promise(ok => lienzo.toBlob(ok, 'image/jpeg', 0.82));
-      if (!jpg) throw new Error();
-      this._foto = jpg;
-      document.getElementById('prodFotoVista').innerHTML = `<img src="${lienzo.toDataURL('image/jpeg', 0.6)}" alt="">`;
-      document.getElementById('prodFotoQuitar').hidden = false;
+      return jpg ? { jpg, vista: lienzo.toDataURL('image/jpeg', 0.6) } : null;
     } catch (e) {
-      App.showToast('No se pudo abrir la foto. Probá con una JPG o PNG.', 'error');
+      return null;
     } finally {
       URL.revokeObjectURL(url);
     }
+  },
+
+  // En el formulario del producto: se muestra antes de guardar y se sube al guardar
+  async elegirFoto(input) {
+    const original = input.files && input.files[0];
+    input.value = '';
+    if (!original) return;
+    const f = await this.achicarFoto(original);
+    if (!f) return App.showToast('No se pudo abrir la foto. Probá con una JPG o PNG.', 'error');
+    this._foto = f.jpg;
+    document.getElementById('prodFotoVista').innerHTML = `<img src="${f.vista}" alt="">`;
+    document.getElementById('prodFotoQuitar').hidden = false;
+  },
+
+  // ===== Fotos de la carta: todas juntas =====
+  // Una grilla con cada producto que se vende: un toque y se elige (o se saca, en el celular) la foto, que se sube
+  // en el momento. O se sueltan muchas fotos juntas y se asignan solas por el nombre del archivo ("Café con leche.jpg").
+  _normalizar(t) {
+    return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/\.[a-z0-9]{2,5}$/, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  },
+
+  _deVenta() {
+    return this.productos.filter(p => p.activo !== 0 && this.clase(p) === 'venta');
+  },
+
+  verFotos() {
+    const lista = this._deVenta();
+    const conFoto = lista.filter(p => p.foto).length;
+    const porCat = this.categorias.map(c => ({ c, ps: lista.filter(p => p.categoria_id === c.id) })).filter(x => x.ps.length);
+    const sinCat = lista.filter(p => !this.categorias.some(c => c.id === p.categoria_id));
+    if (sinCat.length) porCat.push({ c: { nombre: 'Sin categoría' }, ps: sinCat });
+    const tile = p => `<label class="foto-tile ${p.foto ? 'con' : ''}" id="fotoTile${Number(p.id)}" title="Tocá para ${p.foto ? 'cambiar' : 'elegir'} la foto">
+        <span class="foto-tile-img">${p.foto ? `<img src="/api/publico/fotos/${Number(p.id)}?v=${Number(p.foto)}" alt="" loading="lazy">` : '<i class="fas fa-camera"></i>'}</span>
+        <span class="foto-tile-nombre">${esc(p.nombre)}</span>
+        <input type="file" accept="image/*" hidden onchange="Productos.fotoDeTile(${Number(p.id)}, this)"></label>`;
+    App.showModal(`
+      <div class="foto-soltar" id="fotoSoltar" ondragover="event.preventDefault();this.classList.add('encima')" ondragleave="this.classList.remove('encima')"
+        ondrop="event.preventDefault();this.classList.remove('encima');Productos.fotosEnLote(event.dataTransfer.files)">
+        <i class="fas fa-images"></i>
+        <div><strong>Muchas fotos juntas:</strong> soltalas acá o <label class="link">elegilas<input type="file" accept="image/*" multiple hidden onchange="Productos.fotosEnLote(this.files);this.value=''"></label>.
+          Cada una va al producto con el mismo nombre que el archivo (por ejemplo <em>Café con leche.jpg</em>).</div>
+      </div>
+      <div id="fotoLoteEstado" class="mt-10"></div>
+      <p class="text-muted mt-10"><span id="fotoContador">${conFoto} de ${lista.length}</span> productos con foto. Tocá un producto para elegir su foto
+        (en el celular podés sacarla con la cámara). Se guarda en el momento y aparece en la carta.</p>
+      ${porCat.map(({ c, ps }) => `<h4 class="mt-10">${esc(c.nombre)}</h4><div class="foto-grilla">${ps.map(tile).join('')}</div>`).join('')}`,
+      { title: 'Fotos de la carta', large: true });
+  },
+
+  async _subirFotoDe(id, archivo) {
+    const f = await this.achicarFoto(archivo);
+    if (!f) throw new Error('No se pudo abrir la foto (probá con JPG o PNG)');
+    const r = await API.subirFotoProducto(id, f.jpg);
+    if (r && r.error) throw new Error(r.error);
+    const p = this.productos.find(x => x.id === id);
+    if (p) p.foto = (r && r.foto) || Date.now();
+    const t = document.getElementById('fotoTile' + id);
+    if (t) {
+      t.classList.add('con');
+      t.querySelector('.foto-tile-img').innerHTML = `<img src="${f.vista}" alt="">`;
+    }
+    const c = document.getElementById('fotoContador');
+    if (c) { const l = this._deVenta(); c.textContent = `${l.filter(x => x.foto).length} de ${l.length}`; }
+  },
+
+  async fotoDeTile(id, input) {
+    const archivo = input.files && input.files[0];
+    input.value = '';
+    if (!archivo) return;
+    const t = document.getElementById('fotoTile' + id);
+    if (t) t.classList.add('subiendo');
+    try { await this._subirFotoDe(id, archivo); App.showToast('Foto guardada', 'success'); } catch (err) { App.showToast(err.message, 'error'); }
+    if (t) t.classList.remove('subiendo');
+  },
+
+  // A qué producto va cada archivo: mismo nombre; si no, el único producto cuyo nombre está en el del archivo (o al revés)
+  _productoDeArchivo(nombreArchivo) {
+    const n = this._normalizar(nombreArchivo);
+    if (!n) return null;
+    const lista = this._deVenta().map(p => ({ p, n: this._normalizar(p.nombre) })).filter(x => x.n);
+    const exacto = lista.filter(x => x.n === n);
+    if (exacto.length === 1) return exacto[0].p;
+    const parecidos = lista.filter(x => n.includes(x.n) || x.n.includes(n));
+    // Si hay varios, el de nombre más largo ("Café con leche" antes que "Café"), solo si es el único así de largo
+    parecidos.sort((a, b) => b.n.length - a.n.length);
+    if (parecidos.length === 1 || (parecidos.length > 1 && parecidos[0].n.length > parecidos[1].n.length)) return parecidos[0].p;
+    return null;
+  },
+
+  async fotosEnLote(archivos) {
+    const lista = [...(archivos || [])].filter(a => /^image\//.test(a.type) || /\.(jpe?g|png|webp|heic)$/i.test(a.name));
+    if (!lista.length) return;
+    const estado = document.getElementById('fotoLoteEstado');
+    const sinProducto = [], conError = [];
+    let listas = 0;
+    for (const [i, a] of lista.entries()) {
+      if (estado) estado.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Subiendo ${i + 1} de ${lista.length}...`;
+      const p = this._productoDeArchivo(a.name);
+      if (!p) { sinProducto.push(a.name); continue; }
+      try { await this._subirFotoDe(p.id, a); listas++; } catch (err) { conError.push(`${a.name}: ${err.message}`); }
+    }
+    if (estado) estado.innerHTML = `<div class="text-success"><i class="fas fa-check"></i> ${listas} foto${listas === 1 ? '' : 's'} guardada${listas === 1 ? '' : 's'}.</div>` +
+      (sinProducto.length ? `<div class="text-muted">Sin producto con ese nombre (renombrá el archivo o elegila tocando el producto): ${sinProducto.map(esc).join(', ')}</div>` : '') +
+      (conError.length ? `<div class="text-danger">${conError.map(esc).join('<br>')}</div>` : '');
   },
   quitarFoto() {
     this._foto = 'quitar';

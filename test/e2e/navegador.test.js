@@ -511,6 +511,32 @@ test('pedido desde el QR de la mesa: el cliente pide, el mozo recibe el aviso y 
   await mozo.context().close();
 });
 
+test('fotos de la carta: todas en una grilla, una por producto y muchas juntas asignadas por el nombre del archivo', async () => {
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await s.q('UPDATE configuracion SET setup_completado = 1'); // sin el asistente de primer ingreso
+  const [a, b] = await s.q("SELECT id, nombre FROM productos WHERE activo = 1 AND clase = 'venta' AND id NOT IN (SELECT producto_id FROM producto_fotos) ORDER BY id LIMIT 2");
+  const page = await nuevaPagina();
+  await ingresarOk(page, 'admin@fadido.local', 'admin123');
+  await ir(page, 'productos');
+  await page.click('button[onclick="Productos.verFotos()"]');
+  await page.waitForSelector(`#fotoTile${a.id}`);
+  // Una sola: tocar el producto y elegir la foto (se guarda en el momento)
+  await page.setInputFiles(`#fotoTile${a.id} input[type=file]`, { name: 'cualquiera.png', mimeType: 'image/png', buffer: PNG });
+  await page.waitForSelector(`#fotoTile${a.id}.con img`);
+  await toast(page, 'success', 'Foto guardada');
+  // Muchas juntas: el nombre del archivo dice a qué producto va; la que no coincide se informa
+  await page.setInputFiles('#fotoSoltar input[type=file]', [
+    { name: `${b.nombre.toUpperCase()}.png`, mimeType: 'image/png', buffer: PNG },
+    { name: 'no-existe-este-plato-xyz.png', mimeType: 'image/png', buffer: PNG }
+  ]);
+  await page.waitForSelector('#fotoLoteEstado :text("1 foto guardada")');
+  await page.waitForSelector('#fotoLoteEstado :text("no-existe-este-plato-xyz.png")');
+  const fotos = await s.q('SELECT producto_id FROM producto_fotos WHERE producto_id IN (?, ?) ORDER BY producto_id', [a.id, b.id]);
+  assert.deepEqual(fotos.map(f => f.producto_id), [a.id, b.id].sort((x, y) => x - y));
+  sinErrores(page);
+  await page.context().close();
+});
+
 test('autoservicio desde la mesa: pide con su nombre, sigue el pedido, suena al estar listo y la caja lo vuelve a llamar', async () => {
   const token = 'e2e1'.repeat(6);
   await s.q("INSERT INTO mesas (nombre, capacidad, sector, orden, qr_token) VALUES ('Mesa Auto', 4, 'Principal', 61, ?)", [token]);

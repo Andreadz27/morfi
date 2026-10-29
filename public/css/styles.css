@@ -2517,3 +2517,18 @@ tr:hover td {
 @media (prefers-reduced-motion: reduce) {
   .pos-product-btn, .pos-prod-media img, .pos-cart-item, .pos-product-btn.pop .pos-prod-qty { transition: none; animation: none; }
 }
+
+/* Fotos de la carta (Productos → Fotos de la carta) */
+.foto-soltar { display: flex; gap: 14px; align-items: center; border: 2px dashed var(--border, #cbd5e1); border-radius: 12px; padding: 14px 16px; }
+.foto-soltar > i { font-size: 28px; color: var(--primary, #f97316); }
+.foto-soltar.encima { border-color: var(--primary, #f97316); background: rgba(249, 115, 22, .06); }
+.foto-soltar .link { color: var(--primary, #f97316); text-decoration: underline; cursor: pointer; }
+.foto-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.foto-tile { display: flex; flex-direction: column; gap: 6px; cursor: pointer; border-radius: 10px; padding: 6px; border: 1px solid var(--border, #e2e8f0); }
+.foto-tile:hover { border-color: var(--primary, #f97316); }
+.foto-tile-img { aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-secondary, #f1f5f9); color: var(--text-muted, #94a3b8); font-size: 22px; }
+.foto-tile-img img { width: 100%; height: 100%; object-fit: cover; }
+.foto-tile-nombre { font-size: 13px; line-height: 1.2; }
+.foto-tile:not(.con) .foto-tile-nombre { color: var(--text-muted, #64748b); }
+.foto-tile.subiendo { opacity: .5; pointer-events: none; }
