@@ -16,6 +16,7 @@ const { iniciarRecordatoriosWhatsApp } = require('./src/servicios/whatsapp');
 const { iniciarModoSinConexion } = require('./src/servicios/sin-conexion');
 const { iniciarSyncNube } = require('./src/servicios/sync-nube');
 const { iniciarCierreAutomatico } = require('./src/servicios/cierre-dia');
+const { iniciarFacturaAutomatica } = require('./src/servicios/facturacion-auto');
 
 iniciarRealtime(server);
 
@@ -43,6 +44,8 @@ migrarConRespaldo({ respaldar: crearBackup }).then(() => server.listen(PORT, () 
   iniciarSyncNube();
   // Cierre del día a la hora configurada (si está activado en Caja → Cierre del día)
   iniciarCierreAutomatico();
+  // Factura sola de cada venta pagada (si está activado en Integraciones → AFIP)
+  iniciarFacturaAutomatica();
 })).catch(err => {
   console.error('Error al migrar la base de datos:', err);
   process.exit(1);

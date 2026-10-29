@@ -178,6 +178,10 @@ const App = {
         this.revisarConexion();
       });
       this.socket.on('afip:pendientes', () => this.revisarConexion());
+      // Factura automática que ARCA rechazó: se reintenta desde el pedido (Pedidos → el pedido → Facturar)
+      this.socket.on('afip:factura_auto', (data) => {
+        if (data && !data.ok && this.puede('pedidos.cobrar')) this.showToast(`No se pudo facturar solo el pedido ${data.numero_pedido}: ${data.error}`, 'error', 15000);
+      });
       this.socket.on('afip:pendiente_emitida', (data) => {
         if (this.puede('pedidos.cobrar')) this.showToast(`${data.tipo_nombre} del pedido ${data.numero_pedido} emitida (estaba en espera)`, 'success', 8000);
       });

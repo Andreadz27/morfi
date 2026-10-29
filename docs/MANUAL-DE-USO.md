@@ -112,6 +112,13 @@ directo a la cocina con la mesa anotada (la comanda dice "Mesa 4"), cada uno tie
 la mesa no queda ocupada. Se avisa igual que en la barra: celular, pantalla de retiro (con la mesa) y WhatsApp. El
 que no pagó desde el celular paga en el mostrador al retirar: *Para retirar* muestra lo que falta cobrar.
 
+### Factura automática
+En Integraciones → AFIP, **Facturar automáticamente cada venta: Sí** hace que cada pedido pagado (en la caja, por el
+mozo, con Mercado Pago desde la mesa o con una transferencia confirmada) se facture solo a **Consumidor Final**:
+Factura B si el local es Responsable Inscripto, C si es monotributista o exento (revisá que la *Condición frente al
+IVA* esté bien cargada). Si en el cobro elegís otra factura (por ejemplo una A con el CUIT del cliente), se hace esa.
+Sin internet queda en espera y sale sola. Si ARCA la rechaza, aparece un aviso rojo y se reintenta desde el pedido.
+
 ### Cobrar una mesa
 - Desde **Mesas** o **Pedidos**, **Cobrar**.
 - **Dividir la cuenta**: **Partes iguales** (se elige cuántas personas) o **Por plato**: cada persona marca lo que

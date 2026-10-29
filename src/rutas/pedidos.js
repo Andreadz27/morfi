@@ -306,6 +306,8 @@ app.post('/api/pedidos/:id/cobro', autenticar, requiereCobro, async (req, res) =
     const factura = body.factura
       ? validarDatosFactura(body.factura.tipo_comprobante, body.factura.cuit_receptor, body.factura.condicion_iva_receptor)
       : null;
+    // La factura elegida en la caja manda: la automática no se hace para este pedido
+    if (factura) require('../servicios/facturacion-auto').marcarFacturaManual(pedidoId);
     if (!req.puedeCobrarTodo) {
       const p = await get('SELECT tipo, mesa_id FROM pedidos WHERE id = ?', [pedidoId]);
       if (p && !(p.tipo === 'salon' && p.mesa_id)) throw errorHttp(403, 'Tu usuario solo puede cobrar pedidos de mesa');
