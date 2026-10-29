@@ -72,6 +72,14 @@ test('quitar la foto: la carta vuelve a mostrar el plato sin foto', async () => 
   assert.equal((await s.llamar('DELETE', `/api/productos/${plato}/foto`, undefined, s.tokenAdmin))[0], 404);
 });
 
+test('quitar la foto y subir otra no repite la versión (el celular guardó la vieja con ese ?v=)', async () => {
+  const [, primera] = await subir(plato, JPG);
+  assert.equal((await s.llamar('DELETE', `/api/productos/${plato}/foto`, undefined, s.tokenAdmin))[0], 200);
+  const [, segunda] = await subir(plato, PNG, { tipo: 'image/png' });
+  assert.ok(segunda.foto > primera.foto, `${segunda.foto} > ${primera.foto}`);
+  assert.equal((await s.llamar('DELETE', `/api/productos/${plato}/foto`, undefined, s.tokenAdmin))[0], 200);
+});
+
 test('la foto de un producto dado de baja o de un insumo no se sirve en la carta pública', async () => {
   const baja = (await s.llamar('POST', '/api/productos', { nombre: 'Plato viejo', precio_venta: 100, categoria_id: cat }, s.tokenAdmin))[1].id;
   assert.equal((await subir(baja, JPG))[0], 200);

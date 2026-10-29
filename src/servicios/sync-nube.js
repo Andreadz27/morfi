@@ -99,17 +99,32 @@ const urlCartaNube = () => (configurada() ? linkCartaNube(urlCarta) : null);
 async function cartaLocal() {
   const categorias = await all(`SELECT c.id, c.nombre FROM categorias c
     WHERE c.activo = 1 AND EXISTS (SELECT 1 FROM productos p WHERE p.categoria_id = c.id AND p.activo = 1 AND p.clase = 'venta') ORDER BY c.orden, c.nombre`);
-  const productos = await all(`SELECT id, nombre, descripcion, precio_venta, categoria_id, tracking_stock, stock_actual, es_plato
+  const productos = await all(`SELECT id, nombre, descripcion, precio_venta, categoria_id, tracking_stock, stock_actual, es_plato, nuevo, recomendado,
+      (SELECT f.version FROM producto_fotos f WHERE f.producto_id = p.id) AS foto
     FROM productos p WHERE activo = 1 AND clase = 'venta' ORDER BY ${ORDEN_CARTA}`);
   const c = await get('SELECT nombre_negocio, eslogan, direccion, telefono, email, cuit FROM configuracion WHERE id = 1') || {};
   return { info: { nombre: c.nombre_negocio, eslogan: c.eslogan, direccion: c.direccion, telefono: c.telefono, email: c.email, cuit: c.cuit }, categorias, productos };
+}
+// Fotos de los platos: la nube contesta cuáles le faltan (o cambiaron) y se mandan de a FOTOS_POR_VUELTA.
+// Hasta que tiene todas, la carta se vuelve a mandar en cada vuelta para que la nube diga cuáles siguen faltando.
+const FOTOS_POR_VUELTA = 20;
+async function enviarFoto(productoId) {
+  const f = await get('SELECT tipo, datos, version FROM producto_fotos WHERE producto_id = ?', [productoId]);
+  if (!f) return;
+  const r = await fetch(`${process.env.NUBE_URL.replace(/\/$/, '')}/api/sync/fotos/${productoId}?v=${f.version}`, {
+    method: 'PUT', body: f.datos, signal: AbortSignal.timeout(60000),
+    headers: { 'Content-Type': f.tipo, Authorization: 'Bearer ' + process.env.NUBE_TOKEN }
+  });
+  if (!r.ok) throw Object.assign(new Error(`La nube respondió ${r.status} a la foto del producto ${productoId}`), { status: r.status });
 }
 async function enviarCarta() {
   const carta = JSON.stringify(await cartaLocal());
   if (carta === cartaEnviada) return false;
   const r = await enviar('/api/sync/carta', JSON.parse(carta));
   if (r && /^https?:\/\//.test(r.url || '')) urlCarta = r.url;
-  cartaEnviada = carta;
+  const faltan = Array.isArray(r && r.fotos_faltan) ? r.fotos_faltan : [];
+  for (const id of faltan.slice(0, FOTOS_POR_VUELTA)) await enviarFoto(Number(id));
+  if (faltan.length <= FOTOS_POR_VUELTA) cartaEnviada = carta;
   return true;
 }
 
