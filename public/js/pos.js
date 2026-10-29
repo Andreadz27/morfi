@@ -756,12 +756,13 @@ checkout() {
     try {
       const t = await API.getRetiro();
       const fila = (p, listo) => `<tr>
-        <td><strong>#${esc(p.numero_corto)}</strong> ${esc(p.nombre || '')} <small class="text-muted">${esc(p.numero_pedido)}</small>${p.origen === 'barra' ? ' <span class="badge badge-orange">QR</span>' : ''}</td>
+        <td><strong>#${esc(p.numero_corto)}</strong> ${esc(p.nombre || '')} <small class="text-muted">${esc(p.numero_pedido)}</small>${p.origen === 'barra' ? ` <span class="badge badge-orange">${p.lugar ? esc(p.lugar) : 'QR'}</span>` : ''}${p.whatsapp ? ' <i class="fab fa-whatsapp text-success" title="Pidió aviso por WhatsApp"></i>' : ''}</td>
         <td>${listo ? '<span class="badge badge-green">Listo</span>' : '<span class="badge badge-gray">En preparación</span>'}</td>
         <td>${p.pagado ? '<span class="text-success">Pagado</span>' : `Falta ${fmtMoneda(p.saldo)}${p.aviso_pago === 'transferencia' ? ' <span class="badge badge-red">Avisó transferencia</span>' : ''}`}</td>
         <td style="white-space:nowrap">
           ${!p.pagado && p.aviso_pago === 'transferencia' && App.puede('pedidos.cobrar') ? `<button class="btn btn-success btn-sm" onclick="POS.transferenciaRecibida(${p.id})"><i class="fas fa-university"></i> Transferencia recibida</button>` : ''}
           ${!p.pagado && App.puede('pedidos.cobrar') ? `<button class="btn btn-outline btn-sm" onclick="App.closeModal();Cobro.abrir(${p.id})"><i class="fas fa-cash-register"></i> Cobrar</button>` : ''}
+          ${listo ? `<button class="btn btn-outline btn-sm" onclick="POS.llamarDeNuevo(${p.id})" title="Vuelve a sonar en su celular, en la pantalla de retiro y por WhatsApp"><i class="fas fa-bullhorn"></i> Llamar de nuevo</button>` : ''}
           <button class="btn btn-primary btn-sm" onclick="POS.entregado(${p.id}, ${p.pagado})"><i class="fas fa-check"></i> Entregado</button>
         </td></tr>`;
       const filas = t.listos.map(p => fila(p, true)).join('') + t.preparando.map(p => fila(p, false)).join('');
@@ -781,6 +782,10 @@ checkout() {
     } catch (err) { App.showToast(err.message, 'error'); }
     this.verRetiro();
     this.actualizarBadgeRetiro();
+  },
+
+  async llamarDeNuevo(id) {
+    try { await API.llamarDeNuevo(id); App.showToast('Lo estamos llamando de nuevo', 'success'); } catch (err) { App.showToast(err.message, 'error'); }
   },
 
   async entregado(id, pagado) {

@@ -161,6 +161,58 @@ async function enviarComprobante(pedidoId, telefono) {
   });
 }
 
+// ----- Aviso "tu pedido está listo" pedido por el cliente (barra y autoservicio desde la mesa) -----
+// El cliente toca "Avisame por WhatsApp": se abre su WhatsApp con un mensaje ya escrito para el número del local
+// ("Avisame cuando esté listo mi pedido #12 (clave a3f9)"). Como escribió él primero, Meta deja contestarle con texto
+// libre durante 24 h sin plantilla aprobada y sin costo (conversación de servicio). La clave (4 letras del código del
+// pedido) evita que alguien se anote al pedido de otro escribiendo solo el número.
+const RE_ANOTARSE = /pedido\s*#?\s*(\d{1,5})\b[^a-f0-9]*\(?\s*clave\s*([a-f0-9]{4})\b/i;
+const claveAviso = codigo => String(codigo || '').slice(-4);
+
+// Número de WhatsApp del local para el link (el de Integraciones → WhatsApp; si no, el teléfono del negocio)
+async function numeroAvisos(cfg) {
+  cfg = cfg || await configWhatsApp();
+  if (!listo(cfg)) return '';
+  const tel = cfg.numero || ((await get('SELECT telefono FROM configuracion WHERE id = 1')) || {}).telefono;
+  return normalizarTelefono(tel) || '';
+}
+
+// Mensaje entrante: si es un pedido de aviso, se anota el teléfono al pedido y se contesta. Devuelve true si lo era.
+async function anotarAvisoListo(telefono, texto) {
+  const m = RE_ANOTARSE.exec(String(texto || ''));
+  if (!m) return false;
+  const numero = String(Number(m[1]));
+  const clave = m[2].toLowerCase();
+  const candidatos = await all(`SELECT id, numero_pedido, codigo_cliente, listo_en, retirado_en, lugar FROM pedidos
+    WHERE codigo_cliente IS NOT NULL AND estado IN ('abierto', 'pagado') AND retirado_en IS NULL
+      AND creado_en >= datetime('now', '-12 hours') ORDER BY id DESC`);
+  const p = candidatos.find(c => claveAviso(c.codigo_cliente) === clave && String(c.numero_pedido).split('-').pop().replace(/^0+(?=\d)/, '') === numero);
+  const enviar = t => enviarTexto({ telefono, texto: t, motivo: 'aviso_retiro' }).catch(e => console.error('[WhatsApp aviso de retiro]', e.message));
+  if (!p) {
+    await enviar('No encontramos ese pedido. Revisá el número en la pantalla de tu pedido o preguntá en el mostrador.');
+    return true;
+  }
+  await run('UPDATE pedidos SET telefono_aviso = ? WHERE id = ?', [String(telefono), p.id]);
+  emitEvento('retiro:actualizar', { pedido_id: p.id });
+  await enviar(p.listo_en
+    ? `¡Tu pedido #${numero} ya está listo! Retiralo en el mostrador de ${await nombreNegocio()}.`
+    : `¡Listo! Te avisamos por acá cuando tu pedido #${numero} esté para retirar en el mostrador.`);
+  return true;
+}
+
+// Cocina lo marcó listo o la caja lo vuelve a llamar. Nunca rechaza (se llama sin await).
+async function avisarRetiroWhatsApp(pedidoId, { otraVez = false } = {}) {
+  try {
+    const p = await get('SELECT numero_pedido, telefono_aviso, lugar FROM pedidos WHERE id = ?', [pedidoId]);
+    if (!p || !p.telefono_aviso) return null;
+    const numero = String(p.numero_pedido).split('-').pop().replace(/^0+(?=\d)/, '');
+    const negocio = await nombreNegocio();
+    return await enviarTexto({ telefono: p.telefono_aviso, motivo: 'aviso_retiro', texto: otraVez
+      ? `🔔 Te estamos esperando: tu pedido #${numero} está listo en el mostrador de ${negocio}.`
+      : `🔔 ¡Tu pedido #${numero} está listo! Pasá a retirarlo por el mostrador de ${negocio}. Decí tu número al retirar.` });
+  } catch (e) { console.error('[WhatsApp aviso de retiro]', e.message); return null; }
+}
+
 // Aviso de estado de pedido: {{1}} cliente, {{2}} número, {{3}} negocio, {{4}} "listo para retirar" / "en camino".
 // Automático y sin repetir; si falla solo queda en el registro (no corta la operación de cocina o delivery).
 // Se llama sin await: nunca rechaza (una promesa rechazada sin manejar tira el proceso en pleno servicio).
@@ -253,6 +305,8 @@ async function procesarWebhook(body) {
         await run('INSERT INTO whatsapp_entrantes (wa_message_id, telefono, nombre, texto) VALUES (?, ?, ?, ?)',
           [String(m.id), String(m.from || ''), contactos[m.from] || '', String(texto).slice(0, 2000)]);
         emitEvento('whatsapp:entrante', { telefono: m.from, nombre: contactos[m.from] || '', texto: String(texto).slice(0, 200) });
+        // "Avisame cuando esté listo mi pedido #12": lo contesta Fadido (no el asistente)
+        if (m.from && await anotarAvisoListo(String(m.from), texto)) continue;
         // Asistente IA (si está activo): contesta en segundo plano; no a mensajes viejos (Meta reintenta tras un corte)
         const reciente = !m.timestamp || Date.now() / 1000 - Number(m.timestamp) < 30 * 60;
         if (reciente && m.from && await tiene('asistente')) {
@@ -267,5 +321,6 @@ async function procesarWebhook(body) {
 
 module.exports = {
   normalizarTelefono, configWhatsApp, enviarPlantilla, enviarTexto, enviarComprobante, avisarEstadoPedido, whatsappListo: listo,
-  enviarRecordatoriosReservas, iniciarRecordatoriosWhatsApp, firmaValida, procesarWebhook, PLANTILLAS_POR_DEFECTO
+  enviarRecordatoriosReservas, iniciarRecordatoriosWhatsApp, firmaValida, procesarWebhook, PLANTILLAS_POR_DEFECTO,
+  claveAviso, numeroAvisos, anotarAvisoListo, avisarRetiroWhatsApp
 };

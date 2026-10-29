@@ -15,6 +15,7 @@ const { controlarHorarios } = require('./venta-cruzada');
 const { comandaAutomatica } = require('./impresion');
 const { getIntCfg, urlPublica, mpRequest } = require('./integraciones');
 const { pagoMesaDisponible, aplicarPagoMercadoPago } = require('./pago-mesa');
+const { claveAviso, numeroAvisos, avisarRetiroWhatsApp } = require('./whatsapp');
 
 const MAX_ITEMS = 30;
 const MAX_CANTIDAD = 20;
@@ -48,7 +49,8 @@ async function datosTransferencia() {
 const numeroCorto = numero => (String(numero || '').split('-').pop() || '').replace(/^0+(?=\d)/, '');
 const nombreCorto = cliente => String(cliente || '').replace(/\(.*\)/, '').trim().split(/\s+/)[0].slice(0, 16);
 
-async function crearPedidoBarra({ items, cliente, notas } = {}) {
+// lugar: con el autoservicio desde la mesa (qr_mesa_modo = 'retiro') el pedido dice de qué mesa es
+async function crearPedidoBarra({ items, cliente, notas, lugar = '' } = {}) {
   const nombre = String(cliente || '').trim().slice(0, 40);
   if (!nombre) throw errorHttp(400, 'Poné tu nombre: con él te llamamos cuando esté listo');
   if (!Array.isArray(items) || !items.length) throw errorHttp(400, 'Agregá algo al pedido');
@@ -65,8 +67,9 @@ async function crearPedidoBarra({ items, cliente, notas } = {}) {
     const resueltos = await resolverItems(limpios);
     if (resueltos.some(i => !(i.precio > 0))) throw errorHttp(400, 'Producto no disponible');
     const numero = await generarNumeroPedido();
-    const { id } = await run(`INSERT INTO pedidos (numero_pedido, tipo, cliente, usuario_id, notas, descuento, propina, origen, codigo_cliente)
-      VALUES (?, 'mostrador', ?, NULL, ?, 0, 0, 'barra', ?)`, [numero, nombre, String(notas || '').trim().slice(0, 300), codigo]);
+    const { id } = await run(`INSERT INTO pedidos (numero_pedido, tipo, cliente, usuario_id, notas, descuento, propina, origen, codigo_cliente, lugar)
+      VALUES (?, 'mostrador', ?, NULL, ?, 0, 0, 'barra', ?, ?)`,
+      [numero, nombre, [lugar, String(notas || '').trim()].filter(Boolean).join(' · ').slice(0, 300), codigo, String(lugar).slice(0, 40)]);
     for (const item of resueltos) await insertarItemTx(id, item);
     const { total } = await recalcularTotales(id);
     emitEvento('pedido:nuevo', { id, numero_pedido: numero, tipo: 'mostrador', origen: 'barra', cliente: nombre });
@@ -95,14 +98,21 @@ function etapa(p) {
 async function estadoParaCliente(codigo) {
   const p = await pedidoPorCodigo(codigo);
   if (!p) throw errorHttp(404, 'No encontramos ese pedido');
-  const [items, { saldo }, c] = await Promise.all([
+  const [items, { saldo }, c, numeroWA] = await Promise.all([
     all('SELECT nombre_producto, cantidad, subtotal FROM pedido_items WHERE pedido_id = ? ORDER BY id', [p.id]),
     saldoPedido(p.id),
-    get('SELECT nombre_negocio FROM configuracion WHERE id = 1')
+    get('SELECT nombre_negocio FROM configuracion WHERE id = 1'),
+    numeroAvisos().catch(() => '')
   ]);
+  const corto = numeroCorto(p.numero_pedido);
+  const enCurso = !['cancelado', 'retirado'].includes(etapa(p));
   return {
-    numero_pedido: p.numero_pedido, numero_corto: numeroCorto(p.numero_pedido), cliente: nombreCorto(p.cliente), negocio: (c && c.nombre_negocio) || '',
-    etapa: etapa(p), pagado: p.estado === 'pagado' || saldo <= 0, aviso_pago: p.aviso_pago || '',
+    numero_pedido: p.numero_pedido, numero_corto: corto, cliente: nombreCorto(p.cliente), negocio: (c && c.nombre_negocio) || '',
+    etapa: etapa(p), lugar: p.lugar || '', llamado_en: p.llamado_en || '',
+    // Aviso por WhatsApp: link que abre el WhatsApp del cliente con el mensaje escrito (lo contesta servicios/whatsapp.js)
+    aviso_whatsapp: !enCurso || !numeroWA ? null : p.telefono_aviso ? { anotado: true } : {
+      link: `https://wa.me/${numeroWA}?text=${encodeURIComponent(`Avisame cuando esté listo mi pedido #${corto} (clave ${claveAviso(p.codigo_cliente)})`)}`
+    }, pagado: p.estado === 'pagado' || saldo <= 0, aviso_pago: p.aviso_pago || '',
     cuenta: { items, total: p.total, saldo: p.estado === 'pagado' ? 0 : saldo },
     pago: { mercadopago: await pagoMesaDisponible(), transferencia: await datosTransferencia() }
   };
@@ -157,7 +167,7 @@ async function avisarTransferencia(codigo) {
 // ----- Pantalla de retiro (TV de la barra) y panel de la caja -----
 // Pedidos de mostrador y para llevar de las últimas horas que todavía no se entregaron
 async function tableroRetiro() {
-  const filas = await all(`SELECT id, numero_pedido, cliente, origen, estado, total, aviso_pago, listo_en, creado_en,
+  const filas = await all(`SELECT id, numero_pedido, cliente, origen, estado, total, aviso_pago, listo_en, creado_en, lugar, llamado_en, telefono_aviso,
       CAST((julianday('now') - julianday(listo_en)) * 24 * 60 AS INTEGER) AS minutos_listo
     FROM pedidos
     WHERE tipo IN ('mostrador', 'takeaway') AND estado IN ('abierto', 'pagado') AND retirado_en IS NULL
@@ -166,6 +176,7 @@ async function tableroRetiro() {
   const saldos = {};
   for (const f of filas.filter(x => x.estado === 'abierto')) saldos[f.id] = (await saldoPedido(f.id)).saldo;
   const fila = f => ({ id: f.id, numero_pedido: f.numero_pedido, numero_corto: numeroCorto(f.numero_pedido), nombre: nombreCorto(f.cliente), origen: f.origen || '',
+    lugar: f.lugar || '', llamado_en: f.llamado_en || '', whatsapp: !!f.telefono_aviso,
     pagado: f.estado === 'pagado' || saldos[f.id] <= 0, saldo: f.estado === 'pagado' ? 0 : saldos[f.id], aviso_pago: f.aviso_pago || '' });
   return {
     preparando: filas.filter(f => !f.listo_en).map(fila),
@@ -176,7 +187,7 @@ async function tableroRetiro() {
 // La pantalla de la TV muestra solo número y nombre
 async function tableroPublico() {
   const t = await tableroRetiro();
-  const corto = f => ({ numero_pedido: f.numero_pedido, numero_corto: f.numero_corto, nombre: f.nombre });
+  const corto = f => ({ numero_pedido: f.numero_pedido, numero_corto: f.numero_corto, nombre: f.nombre, lugar: f.lugar, llamado_en: f.llamado_en });
   return { preparando: t.preparando.map(corto), listos: t.listos.map(corto) };
 }
 
@@ -186,6 +197,16 @@ async function marcarRetirado(id) {
   await run('UPDATE pedidos SET retirado_en = CURRENT_TIMESTAMP, listo_en = COALESCE(listo_en, CURRENT_TIMESTAMP) WHERE id = ?', [p.id]);
   emitEvento('retiro:actualizar', { pedido_id: p.id });
   emitEvento('cocina:actualizar', { pedido_id: p.id, accion: 'listo' });
+}
+
+// La caja vuelve a llamar a un cliente que no viene a retirar: su celular, la TV y su WhatsApp (si lo pidió) avisan otra vez
+async function llamarDeNuevo(id) {
+  const p = await get("SELECT id, listo_en FROM pedidos WHERE id = ? AND estado IN ('abierto', 'pagado') AND retirado_en IS NULL", [id]);
+  if (!p) throw errorHttp(404, 'Pedido no encontrado o ya entregado');
+  if (!p.listo_en) throw errorHttp(400, 'Todavía no está listo');
+  await run('UPDATE pedidos SET llamado_en = CURRENT_TIMESTAMP WHERE id = ?', [p.id]);
+  emitEvento('retiro:actualizar', { pedido_id: p.id });
+  avisarRetiroWhatsApp(p.id, { otraVez: true });
 }
 
 // La caja vio la transferencia: se cobra lo que falta por transferencia y el pedido se cierra
@@ -208,5 +229,5 @@ async function cobrarTransferencia(pedidoId, usuarioId) {
 
 module.exports = {
   tokenBarra, barraValida, crearPedidoBarra, estadoParaCliente, iniciarPagoCliente, verificarPagoCliente,
-  avisarTransferencia, tableroRetiro, tableroPublico, marcarRetirado, cobrarTransferencia
+  avisarTransferencia, tableroRetiro, tableroPublico, marcarRetirado, cobrarTransferencia, llamarDeNuevo
 };

@@ -2,7 +2,7 @@
 const {
   run, get, all, transaccion, LOCAL, errorHttp, errorInterno, autenticar, emitEvento, generarNumeroPedido, resolverItems, insertarItemTx, importe, recalcularTotales, registrarPagoTx, METODOS_PAGO, comandaAutomatica, ticketAlCobrar, requiere,
   registrarCobroTx, saldoPedido, requiereCobro, facturarOEncolar, validarDatosFactura, avisarEstadoPedido,
-  autorizar, requiereAutorizacion, facturaVigente, datosTicketFiscalConQR, getIntCfg, revertirFidelizacionTx
+  autorizar, requiereAutorizacion, facturaVigente, datosTicketFiscalConQR, getIntCfg, revertirFidelizacionTx, avisarRetiroWhatsApp
 } = require('../contexto');
 const { idempotente } = require('../idempotencia');
 
@@ -163,6 +163,9 @@ async function marcarListo(req, res) {
     emitEvento('cocina:actualizar', { pedido_id: pedido.id, numero_pedido: pedido.numero_pedido, accion: 'listo' });
     // Para llevar: aviso por WhatsApp al cliente (si está activado); no demora la respuesta
     avisarEstadoPedido(pedido.id, 'listo');
+    // Barra y autoservicio: al que pidió el aviso por WhatsApp (gratis: escribió él primero)
+    avisarRetiroWhatsApp(pedido.id);
+    emitEvento('retiro:actualizar', { pedido_id: pedido.id });
     res.json({ ok: true, numero_pedido: pedido.numero_pedido });
   } catch (err) {
     errorInterno(res, err);

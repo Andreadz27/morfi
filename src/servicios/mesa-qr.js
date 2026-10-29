@@ -2,6 +2,8 @@
 // Pedido desde el QR de la mesa: el cliente pide, llama al mozo o pide la cuenta desde su celular.
 // Lo que pide queda como "solicitud" hasta que un mozo la confirma (va a cocina) o la rechaza.
 // Con qr_mesa_modo = 'directo' el pedido va a cocina sin esperar al mozo.
+// Con 'retiro' (autoservicio) cada cliente hace y paga su propio pedido desde la mesa y lo retira en el mostrador
+// cuando su celular avisa que está listo: es un pedido de barra (servicios/barra.js) que dice de qué mesa es.
 const crypto = require('crypto');
 const { run, get, all, transaccion } = require('../db');
 const { emitEvento } = require('../realtime');
@@ -13,7 +15,7 @@ const { pagoMesaDisponible } = require('./pago-mesa');
 const { configWhatsApp, whatsappListo } = require('./whatsapp');
 const { tiene } = require('../licencia');
 
-const MODOS_QR_MESA = ['confirmar', 'directo', 'solo_carta'];
+const MODOS_QR_MESA = ['confirmar', 'directo', 'solo_carta', 'retiro'];
 // pago: aviso al mozo de que la mesa pagó con Mercado Pago desde el celular (lo crea pago-mesa.js)
 const TIPOS_SOLICITUD = ['pedido', 'mozo', 'cuenta', 'pago'];
 // Con qué paga el que pide la cuenta (así el mozo lleva el posnet o el cambio)
@@ -53,6 +55,8 @@ const resumenSolicitud = s => ({
 async function solicitarPedidoMesa(mesa, { items, notas, cliente }) {
   const modo = await modoQrMesa();
   if (modo === 'solo_carta') throw errorHttp(403, 'En este local los pedidos se hacen con el mozo');
+  if (modo === 'retiro' && !(await tiene('mesa_qr'))) throw errorHttp(403, 'En este local los pedidos se hacen en el mostrador');
+  if (modo === 'retiro') return require('./barra').crearPedidoBarra({ items, notas, cliente, lugar: mesa.nombre });
   const pedidos = itemsDelCliente(items);
   const id = await transaccion(async () => {
     const { n } = await get("SELECT COUNT(*) n FROM solicitudes_mesa WHERE mesa_id = ? AND tipo = 'pedido' AND estado = 'pendiente'", [mesa.id]);

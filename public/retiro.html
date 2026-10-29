@@ -23,6 +23,7 @@
     .pedido { background: rgba(255,255,255,.08); border-radius: 1.5vh; padding: 1.5vh 2vh; min-width: 22vh; }
     .pedido strong { display: block; font-size: 6vh; line-height: 1; }
     .pedido span { font-size: 3vh; opacity: .85; }
+    .pedido small { display: block; font-size: 2.2vh; opacity: .75; }
     .listos .pedido { background: #16a34a; }
     .listos .pedido.nuevo { animation: llama 1s ease-in-out 6; }
     @keyframes llama { 50% { background: #f97316; transform: scale(1.05); } }
@@ -58,7 +59,7 @@
       },
       pintar(id, lista, nuevos) {
         document.getElementById(id).innerHTML = lista.length
-          ? lista.map(p => `<div class="pedido ${nuevos.has(p.numero_pedido) ? 'nuevo' : ''}"><strong>#${this.esc(p.numero_corto || p.numero_pedido)}</strong><span>${this.esc(p.nombre || '')}</span></div>`).join('')
+          ? lista.map(p => `<div class="pedido ${nuevos.has(p.numero_pedido) ? 'nuevo' : ''}"><strong>#${this.esc(p.numero_corto || p.numero_pedido)}</strong><span>${this.esc(p.nombre || '')}</span>${p.lugar ? `<small>${this.esc(p.lugar)}</small>` : ''}</div>`).join('')
           : '<div class="vacio">—</div>';
       },
       async cargar() {
@@ -66,12 +67,12 @@
           const r = await fetch('/api/publico/retiro/' + encodeURIComponent(this.token));
           if (!r.ok) { document.getElementById('preparando').innerHTML = '<div class="vacio">Este link no corresponde a la barra: abrilo de nuevo desde Fadido (Menú QR).</div>'; return; }
           const d = await r.json();
-          const ahora = new Set(d.listos.map(p => p.numero_pedido));
+          const ahora = new Set(d.listos.map(p => p.numero_pedido + '|' + (p.llamado_en || '')));
           const nuevos = new Set(this.vistos ? [...ahora].filter(n => !this.vistos.has(n)) : []);
           if (nuevos.size) this.sonar();
           this.vistos = ahora;
           this.pintar('preparando', d.preparando, new Set());
-          this.pintar('listos', d.listos, nuevos);
+          this.pintar('listos', d.listos, new Set(d.listos.filter(p => nuevos.has(p.numero_pedido + '|' + (p.llamado_en || ''))).map(p => p.numero_pedido)));
         } catch (e) { /* sin conexión un momento: se reintenta */ }
       }
     };

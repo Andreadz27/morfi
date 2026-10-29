@@ -4,7 +4,7 @@
 // (Antes era cache-first: después de una actualización los celulares seguían con el JS viejo.)
 // =============================================
 
-const CACHE_NAME = 'fadido-v23';
+const CACHE_NAME = 'fadido-v24';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -91,4 +91,14 @@ self.addEventListener('fetch', (event) => {
         cached || (event.request.mode === 'navigate' ? caches.match('/index.html') : Response.error()))
     )
   );
+});
+
+// Aviso "tu pedido está listo" (seguimiento.html): tocar la notificación vuelve a la página del pedido
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ventanas) => {
+    const abierta = ventanas.find((v) => v.url === url);
+    return abierta ? abierta.focus() : self.clients.openWindow(url);
+  }));
 });

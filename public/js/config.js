@@ -133,6 +133,7 @@ const ConfigView = {
               <select id="cfgQrMesa" title="El cliente escanea el QR de su mesa y pide desde el celular. Los QR se imprimen en Menú QR.">
                 <option value="confirmar" ${!c.qr_mesa_modo || c.qr_mesa_modo === 'confirmar' ? 'selected' : ''}>El mozo confirma cada pedido</option>
                 <option value="directo" ${c.qr_mesa_modo === 'directo' ? 'selected' : ''}>Sin mozo: el cliente pide (va directo a cocina) y paga desde el celular</option>
+                <option value="retiro" ${c.qr_mesa_modo === 'retiro' ? 'selected' : ''}>Autoservicio: el cliente pide y paga desde la mesa y lo retira en el mostrador cuando su celular avisa</option>
                 <option value="solo_carta" ${c.qr_mesa_modo === 'solo_carta' ? 'selected' : ''}>Solo ver la carta y llamar al mozo</option>
               </select>
             </div>
