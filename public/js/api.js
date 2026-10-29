@@ -366,6 +366,8 @@ const API = {
   // ===== Copias de seguridad (admin) =====
   getBackups()  { return this.request('GET', '/backups'); },
   crearBackup() { return this.request('POST', '/backups'); },
+  getActualizacion(refrescar) { return this.request('GET', '/sistema/actualizacion' + (refrescar ? '?refrescar=1' : '')); },
+  actualizarAhora() { return this.request('POST', '/sistema/actualizar'); },
   async descargarBackup(nombre) {
     const r = await fetch(`${this.baseURL}/backups/${encodeURIComponent(nombre)}`, {
       headers: { Authorization: `Bearer ${this.getToken()}` }

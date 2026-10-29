@@ -27,6 +27,7 @@ const BLOQUEADAS = [
   [/^\/api\/integraciones\//, ['POST', 'PUT', 'DELETE']],
   [/^\/api\/delivery\/plataformas\/[^/]+\/integracion/, ['POST', 'PUT']],
   [/^\/api\/backups$/, ['POST']],
+  [/^\/api\/sistema\/actualizar$/, ['POST']],
   [/^\/api\/backups\/.+/, ['GET']],
   [/^\/api\/(mp\/notificacion|tiendanube\/webhook)$/, ['POST']],
   // WhatsApp manda mensajes a teléfonos reales: en la demo no se envía nada

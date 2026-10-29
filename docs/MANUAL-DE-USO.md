@@ -246,6 +246,13 @@ tarde y ausencias, y **Repartir propinas** por horas trabajadas o en partes igua
 Fadido hace **una copia de la base todos los días**, sola. Conviene tener también la **copia fuera del local** (ver
 `docs/INSTALACION.md`): si se roba o se rompe la PC, con esa copia se recupera todo en otra PC.
 
+### Actualizaciones
+Fadido **se actualiza solo** cuando sale una versión nueva y el local está tranquilo: sin pedidos abiertos, con la
+caja cerrada y 30 minutos sin movimiento (normalmente después de cerrar). En Configuración → **Actualizaciones** ves
+la versión instalada y si hay una nueva. **Actualizar ahora** la instala en menos de 5 minutos, sin que Windows pida
+permiso; Fadido se detiene entre 2 y 5 minutos. Antes de actualizar hace una copia y, si algo sale mal, vuelve solo a
+la versión anterior. Si preferís elegir vos el momento, poné *Actualización automática: No*.
+
 ---
 
 ## Si algo falla
