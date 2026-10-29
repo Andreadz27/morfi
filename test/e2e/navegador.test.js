@@ -516,6 +516,9 @@ test('autoservicio desde la mesa: pide con su nombre, sigue el pedido, suena al 
   await s.q("INSERT INTO mesas (nombre, capacidad, sector, orden, qr_token) VALUES ('Mesa Auto', 4, 'Principal', 61, ?)", [token]);
   await s.q("UPDATE configuracion SET qr_mesa_modo = 'retiro'");
   try {
+    // Una sola computadora: la caja está en otra pantalla cuando entra el pedido
+    const caja = await nuevaPagina();
+    await ingresarOk(caja, 'vendedor@test.com', 'vendedor123');
     const cliente = await nuevaPagina();
     await cliente.goto(`${s.base}/pedido.html?mesa=${token}`);
     await cliente.waitForSelector('#negocioSub:has-text("retirar en el mostrador")');
@@ -532,18 +535,18 @@ test('autoservicio desde la mesa: pide con su nombre, sigue el pedido, suena al 
 
     const [p] = await s.q("SELECT id, lugar FROM pedidos WHERE cliente = 'Lola'");
     assert.equal(p.lugar, 'Mesa Auto');
-    await s.llamar('PUT', `/api/cocina/${p.id}/listo`, {}, s.tokenAdmin);
+    // A la caja le llega el aviso; tocándolo abre "Para retirar" con lo que lleva el pedido y lo marca Listo
+    await caja.click('#toastContainer .toast.warning:has-text("Nuevo pedido por QR")', { timeout: 10000 });
+    await caja.waitForSelector('#panelRetiro tr:has-text("Lola"):has-text("Mesa Auto") :text("1 ×")');
+    await caja.click('#panelRetiro tr:has-text("Lola") button:has-text("Listo")');
+    await toast(caja, 'success', 'le avisamos al cliente');
     await cliente.waitForSelector('.etapa.listo:has-text("Retiralo en el mostrador")', { timeout: 15000 });
     await cliente.waitForSelector('#voy', { state: 'visible' });
     await cliente.click('#voy');
     await cliente.waitForSelector('#voy', { state: 'hidden' });
 
-    // La caja lo llama de nuevo desde "Para retirar": vuelve a sonar en el celular
-    const caja = await nuevaPagina();
-    await ingresarOk(caja, 'vendedor@test.com', 'vendedor123');
-    await ir(caja, 'pos');
-    await caja.click('button:has-text("Para retirar")');
-    await caja.click('tr:has-text("Lola") button:has-text("Llamar de nuevo")');
+    // El panel quedó abierto y se actualizó solo; si no viene, la caja lo llama de nuevo y vuelve a sonar en el celular
+    await caja.click('#panelRetiro tr:has-text("Lola") button:has-text("Llamar de nuevo")');
     await toast(caja, 'success', 'llamando de nuevo');
     await cliente.waitForSelector('#voy', { state: 'visible', timeout: 15000 });
     sinErrores(cliente);

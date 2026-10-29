@@ -92,6 +92,13 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
 - **Llamar de nuevo** (en *Para retirar*, en los listos): si el cliente no viene, vuelve a sonar en su celular, en la
   pantalla de retiro y por WhatsApp.
 
+### Con una sola computadora
+La misma PC hace de caja, cocina y pantalla. Cuando un cliente manda un pedido desde su celular, la PC **suena** y
+aparece un aviso *Nuevo pedido por QR* (si estás en otra ventana, la pestaña parpadea y Windows muestra una
+notificación). Tocá el aviso y se abre **Para retirar** con lo que lleva cada pedido. Dejá esa ventana abierta: se
+actualiza sola. **Listo** le avisa al cliente en su celular; **Cobrar** o *Transferencia recibida* si falta pagar;
+**Entregado** cuando se lo lleva. La primera vez, Windows pregunta si permitís notificaciones: tocá *Permitir*.
+
 ### Autoservicio desde la mesa (piden y pagan en la mesa, retiran en el mostrador)
 En Configuración → *Pedidos desde el QR de la mesa* elegí **Autoservicio**. Cada persona escanea el QR de su mesa,
 pide con su nombre y paga desde el celular (Mercado Pago, transferencia o en la caja al retirar). El pedido va

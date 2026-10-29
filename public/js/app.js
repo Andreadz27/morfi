@@ -60,7 +60,9 @@ const App = {
 
       // Nuevos pedidos — notificación global
       this.socket.on('pedido:nuevo', (data) => {
-        this.showToast(
+        // Pedido del QR (barra o autoservicio desde la mesa): nadie lo tomó en persona, así que suena
+        if (data && data.origen === 'barra') this.avisarPedidoQR(data);
+        else this.showToast(
           `Nuevo pedido: ${data.numero_pedido || ''} — ${data.tipo || ''}`,
           'info',
           6000
@@ -74,12 +76,14 @@ const App = {
       // Pedidos de mostrador y barra para retirar (pedido nuevo, listo, pagado, aviso de transferencia)
       this.socket.on('retiro:actualizar', (data) => {
         if (App.currentView === 'pos') POS.actualizarBadgeRetiro();
+        this._refrescarRetiro();
         if (data && data.aviso === 'transferencia' && App.puede('pedidos.cobrar')) this.showToast('Un cliente de la barra avisó que transfirió: confirmalo en Venta → Para retirar', 'warning', 8000);
       });
 
       // Cocina: nueva comanda o cambio de estado
       this.socket.on('cocina:actualizar', () => {
         if (App.currentView === 'pos') POS.actualizarBadgeRetiro();
+        this._refrescarRetiro();
         if (App.currentView === 'cocina') {
           Cocina.refresh();
         } else {
@@ -270,6 +274,44 @@ const App = {
       el.textContent = n > 99 ? '99+' : n;
       el.style.display = n > 0 ? 'inline-flex' : 'none';
     }
+  },
+
+  // El cliente mandó un pedido desde su celular (QR de la barra o de la mesa en autoservicio). Nadie lo tomó en
+  // persona, así que el aviso tiene que llegar aunque la caja esté en otra pantalla o en otra ventana:
+  // suena, aparece un aviso que al tocarlo abre "Para retirar", la pestaña parpadea y, si Windows lo permite
+  // (localhost cuenta como sitio seguro), sale una notificación del escritorio.
+  avisarPedidoQR(data) {
+    if (!this.puede('pedidos.ver')) return;
+    const quien = `#${data.numero_corto || data.numero_pedido || ''} ${data.cliente || ''}${data.lugar ? ' · ' + data.lugar : ''}`.trim();
+    const abrir = () => { window.focus(); POS.verRetiro(); };
+    this.showToast(`Nuevo pedido por QR: ${quien}. Tocá para verlo`, 'warning', 20000, abrir);
+    this.sonarAviso();
+    setTimeout(() => this.sonarAviso(), 700);
+    this._pedidosSinVer = (this._pedidosSinVer || 0) + 1;
+    if (document.hidden || !document.hasFocus()) {
+      if (!this._tituloBase) this._tituloBase = document.title;
+      document.title = `(${this._pedidosSinVer}) Nuevo pedido · ${this._tituloBase}`;
+      const volver = () => { document.title = this._tituloBase; this._tituloBase = null; this._pedidosSinVer = 0; window.removeEventListener('focus', volver); };
+      window.addEventListener('focus', volver);
+    } else this._pedidosSinVer = 0;
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const n = new Notification('Nuevo pedido por QR', { body: quien, tag: 'pedido-qr-' + (data.id || ''), requireInteraction: true, icon: '/favicon.svg' });
+        n.onclick = () => { n.close(); abrir(); };
+      }
+    } catch (e) { /* sin notificación del escritorio queda el aviso en pantalla */ }
+  },
+
+  // Permiso para las notificaciones del escritorio (se pide al abrir "Para retirar": hace falta un toque)
+  pedirPermisoNotificaciones() {
+    try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+  },
+
+  // "Para retirar" abierto: se vuelve a pintar con lo nuevo (varios avisos seguidos = una sola vez)
+  _refrescarRetiro() {
+    if (typeof POS === 'undefined' || !POS.retiroAbierto()) return;
+    clearTimeout(this._tRetiro);
+    this._tRetiro = setTimeout(() => { if (POS.retiroAbierto()) POS.verRetiro(); }, 400);
   },
 
   // Dos tonos cortos (sin archivo de sonido). El navegador solo deja sonar después de que el usuario tocó la página.
@@ -694,7 +736,7 @@ const App = {
     }
   },
 
-  showToast(message, type = 'info', duration = 3500) {
+  showToast(message, type = 'info', duration = 3500, alTocar = null) {
     const container = document.getElementById('toastContainer');
     if (!container) return;
     const toast = document.createElement('div');
@@ -703,8 +745,9 @@ const App = {
     const icono = document.createElement('i');
     icono.className = `fas fa-${this.iconFor(type)}`;
     toast.append(icono, ' ', String(message == null ? '' : message));
-    // Allow closing on click
-    toast.addEventListener('click', () => toast.remove());
+    // Allow closing on click (alTocar: además abre lo que corresponde, ej. el pedido nuevo)
+    if (alTocar) toast.style.cursor = 'pointer';
+    toast.addEventListener('click', () => { toast.remove(); if (alTocar) alTocar(); });
     container.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = '0';

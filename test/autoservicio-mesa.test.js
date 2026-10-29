@@ -78,6 +78,10 @@ test('cada cliente hace su pedido: va a cocina sin mozo, dice la mesa y no ocupa
   assert.deepEqual([e.etapa, e.lugar, e.cliente, e.llamado_en, e.aviso_whatsapp], ['preparando', mesa.nombre, 'Ana', '', null]);
   const [, tv] = await s.llamar('GET', `/api/publico/retiro/${tokenBarra}`);
   assert.ok(tv.preparando.some(p => p.nombre === 'Ana' && p.lugar === mesa.nombre));
+  assert.ok(tv.preparando.every(p => p.items === undefined), 'la TV no muestra qué pidió cada uno');
+  // Con una sola computadora "Para retirar" es la cocina: muestra qué lleva cada pedido
+  const [, panel] = await s.llamar('GET', '/api/retiro', undefined, s.tokenAdmin);
+  assert.deepEqual(panel.preparando.find(p => p.id === ped.id).items.map(i => i.cantidad), [2]);
 });
 
 test('aviso por WhatsApp: el cliente escribe con su clave, Fadido le contesta al estar listo y al volver a llamarlo', async () => {
