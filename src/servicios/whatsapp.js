@@ -21,7 +21,8 @@ const VERSION_API = 'v21.0';
 const PLANTILLAS_POR_DEFECTO = {
   comprobante: 'comprobante_compra',
   pedido_estado: 'estado_pedido',
-  recordatorio_reserva: 'recordatorio_reserva'
+  recordatorio_reserva: 'recordatorio_reserva',
+  resumen_diario: 'resumen_diario'
 };
 
 async function configWhatsApp() {
