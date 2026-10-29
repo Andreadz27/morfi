@@ -70,14 +70,7 @@ const POS = {
     })).join('');
 
     const filtered = this.filtrados();
-
-    const productBtns = filtered.map(p => `
-      <button class="pos-product-btn" onclick="POS.addToCart(${p.id}, ${jsArg(p.nombre)}, ${Number(p.precio_venta) || 0})">
-        <div class="product-icon"><i class="fas ${p.grupos && p.grupos.length ? 'fa-sliders-h' : 'fa-utensils'}"></i></div>
-        <div class="product-name">${esc(p.nombre)}</div>
-        <div class="product-price">${fmtMoneda(p.precio_venta)}</div>
-      </button>
-    `).join('');
+    const productBtns = filtered.map(p => this.tarjeta(p)).join('');
 
     view.innerHTML = `
       <div class="pos-layout">
@@ -89,7 +82,7 @@ const POS = {
           </div>
           <div class="pos-buscador">
             <i class="fas fa-search"></i>
-            <input type="search" id="posBuscar" placeholder="Buscar producto... (Enter agrega el primero)" value="${esc(this.busqueda)}"
+            <input type="search" id="posBuscar" placeholder="Buscar producto ( / )  ·  Enter agrega el primero" value="${esc(this.busqueda)}"
               oninput="POS.buscar(this.value)" onkeydown="POS.teclaBuscar(event)" aria-label="Buscar producto" autocomplete="off">
           </div>
           <div class="pos-categories">${catBtns}</div>
@@ -103,7 +96,7 @@ const POS = {
           <div class="pos-cart-header">
             <h3><i class="fas fa-shopping-cart"></i> Pedido actual</h3>
             <div class="pos-cart-header-right">
-              <span class="pos-cart-count">${this.cart.reduce((s,i)=>s+i.cantidad,0)} items</span>
+              <span class="pos-cart-count">${this.textoItems()}</span>
               <button class="pos-cart-clear" onclick="POS.clearCart()" title="Vaciar pedido" ${this.cart.length === 0 ? 'disabled' : ''}><i class="fas fa-trash"></i></button>
             </div>
           </div>
@@ -147,27 +140,89 @@ const POS = {
       </div>
     `;
     this.actualizarBadgeRetiro();
+    // "/" lleva al buscador; el escuchador se registra una sola vez
+    if (!this._atajo) {
+      this._atajo = true;
+      document.addEventListener('keydown', e => {
+        const v = document.getElementById('view-pos');
+        if (e.key !== '/' || !v || v.offsetParent === null || /input|textarea|select/i.test(e.target.tagName)) return;
+        e.preventDefault();
+        const b = document.getElementById('posBuscar');
+        if (b) b.focus();
+      });
+    }
+  },
+
+  // ===== Tarjeta del producto: la foto (Productos → "Foto para la carta") o el color e ícono de su categoría,
+  // y cuántos hay en el pedido. Tocarla lo agrega. =====
+  foto(p) {
+    return p && p.foto ? `/api/publico/fotos/${Number(p.id)}?v=${encodeURIComponent(p.foto)}` : '';
+  },
+  colorDe(p) {
+    const c = String((p && p.categoria_color) || '');
+    return /^#[0-9a-f]{3,8}$/i.test(c) ? c : '#64748b';
+  },
+  textoItems() {
+    const n = this.cart.reduce((s, i) => s + i.cantidad, 0);
+    return n === 1 ? '1 ítem' : `${n} ítems`;
+  },
+  enCarrito(id) {
+    return this.cart.filter(i => i.producto_id === id).reduce((s, i) => s + i.cantidad, 0);
+  },
+  tarjeta(p) {
+    const foto = this.foto(p);
+    const q = this.enCarrito(p.id);
+    const sinStock = p.tracking_stock && Number(p.stock_actual) <= 0;
+    const cat = this.categorias.find(c => c.id == p.categoria_id);
+    return `<button class="pos-product-btn${foto ? ' con-foto' : ''}${q ? ' en-pedido' : ''}${sinStock ? ' sin-stock' : ''}" data-id="${p.id}"
+        style="--prod-color:${this.colorDe(p)}" onclick="POS.addToCart(${p.id}, ${jsArg(p.nombre)}, ${Number(p.precio_venta) || 0})"
+        aria-label="Agregar ${esc(p.nombre)}">
+      <span class="pos-prod-media">${foto
+        ? `<img src="${foto}" alt="" loading="lazy" decoding="async" onerror="this.closest('.pos-product-btn').classList.remove('con-foto');this.remove()">`
+        : ''}<i class="fas ${this.catIcon(cat ? cat.nombre : '')}"></i></span>
+      <span class="pos-prod-qty" aria-hidden="true">${q || ''}</span>
+      ${p.grupos && p.grupos.length ? '<span class="pos-prod-tag" title="Tiene opciones"><i class="fas fa-sliders-h"></i></span>' : ''}
+      ${sinStock ? '<span class="pos-prod-agotado">Sin stock</span>' : ''}
+      <span class="pos-prod-info">
+        <span class="product-name">${esc(p.nombre)}</span>
+        <span class="product-price">${fmtMoneda(p.precio_venta)}</span>
+      </span>
+    </button>`;
+  },
+  // Actualiza los contadores de las tarjetas sin volver a dibujar la grilla
+  marcarEnCarrito(animarId) {
+    document.querySelectorAll('#view-pos .pos-product-btn[data-id]').forEach(b => {
+      const id = Number(b.dataset.id);
+      const q = this.enCarrito(id);
+      b.classList.toggle('en-pedido', q > 0);
+      const el = b.querySelector('.pos-prod-qty');
+      if (el) el.textContent = q || '';
+      if (id === animarId && q) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+    });
   },
 
   renderCartItems() {
     if (this.cart.length === 0) {
       return '<div class="empty-state"><i class="fas fa-shopping-cart"></i><p>Agreg\u00e1 productos al pedido</p></div>';
     }
-    return this.cart.map((item, idx) => `
-      <div class="pos-cart-item">
+    return this.cart.map((item, idx) => {
+      const p = this.productos.find(x => x.id === item.producto_id);
+      const foto = this.foto(p);
+      return `
+      <div class="pos-cart-item" style="--prod-color:${this.colorDe(p)}">
+        <span class="pos-cart-thumb">${foto ? `<img src="${foto}" alt="" loading="lazy">` : esc((item.nombre || '?').trim().charAt(0).toUpperCase())}</span>
         <div class="pos-cart-item-info">
           <div class="pos-cart-item-name">${esc(item.nombre)}</div>
           <div class="pos-cart-item-price">${fmtMoneda(item.precio)} c/u</div>
         </div>
         <div class="pos-qty-controls">
-          <button class="pos-qty-btn" onclick="POS.changeQty(${idx}, -1)">-</button>
+          <button class="pos-qty-btn" onclick="POS.changeQty(${idx}, -1)" aria-label="${item.cantidad === 1 ? 'Quitar' : 'Uno menos'}">${item.cantidad === 1 ? '<i class="fas fa-trash-alt"></i>' : '&#8722;'}</button>
           <span class="pos-qty">${item.cantidad}</span>
-          <button class="pos-qty-btn" onclick="POS.changeQty(${idx}, 1)">+</button>
+          <button class="pos-qty-btn" onclick="POS.changeQty(${idx}, 1)" aria-label="Uno más">+</button>
         </div>
-        <div class="font-bold">${fmtMoneda(item.precio * item.cantidad)}</div>
-        <button class="pos-qty-btn" onclick="POS.removeItem(${idx})"><i class="fas fa-times"></i></button>
-      </div>
-    `).join('');
+        <div class="pos-cart-item-total">${fmtMoneda(item.precio * item.cantidad)}</div>
+      </div>`;
+    }).join('');
   },
 setCategoria(id) {
     this.busqueda = '';
@@ -187,7 +242,7 @@ setCategoria(id) {
       } else {
         this.cart.push({ producto_id: id, nombre: nombre + sufijo, precio: precio + extra, cantidad: 1, opciones, clave });
       }
-      this.refreshCart();
+      this.refreshCart(id);
       this.sugerir(prod, this.cart.findIndex(i => (i.clave || i.producto_id + ':') === clave));
     });
   },
@@ -243,7 +298,11 @@ setCategoria(id) {
   // Buscador: filtra en todas las categorías mientras se escribe; Enter agrega el primero
   filtrados() {
     const q = this.busqueda.trim().toLowerCase();
-    if (q) return this.productos.filter(p => p.nombre.toLowerCase().includes(q) || String(p.descripcion || '').toLowerCase().includes(q));
+    // Primero los que lo tienen en el nombre ("papas" → Papas fritas antes que la hamburguesa "con papas")
+    if (q) {
+      const enNombre = this.productos.filter(p => p.nombre.toLowerCase().includes(q));
+      return enNombre.concat(this.productos.filter(p => !enNombre.includes(p) && String(p.descripcion || '').toLowerCase().includes(q)));
+    }
     if (this.categoriaActiva === 'para_llevar') return this.productos.filter(p => p.para_llevar);
     return this.categoriaActiva === 'todas' ? this.productos : this.productos.filter(p => p.categoria_id == this.categoriaActiva);
   },
@@ -252,12 +311,7 @@ setCategoria(id) {
     const grid = document.querySelector('#view-pos .pos-product-grid');
     if (!grid) return;
     const lista = this.filtrados();
-    grid.innerHTML = lista.map(p => `
-      <button class="pos-product-btn" onclick="POS.addToCart(${p.id}, ${jsArg(p.nombre)}, ${Number(p.precio_venta) || 0})">
-        <div class="product-icon"><i class="fas ${p.grupos && p.grupos.length ? 'fa-sliders-h' : 'fa-utensils'}"></i></div>
-        <div class="product-name">${esc(p.nombre)}</div>
-        <div class="product-price">${fmtMoneda(p.precio_venta)}</div>
-      </button>`).join('') || '<div class="empty-state"><i class="fas fa-search"></i><p>No hay productos con ese nombre</p></div>';
+    grid.innerHTML = lista.map(p => this.tarjeta(p)).join('') || '<div class="empty-state"><i class="fas fa-search"></i><p>No hay productos con ese nombre</p></div>';
     const c = document.querySelector('#view-pos .pos-products-count');
     if (c) c.textContent = `${lista.length} disponibles`;
   },
@@ -423,13 +477,14 @@ setCategoria(id) {
     return Math.max(0, this.cartTotal() - this.cartDescuento() + this.cartPropina());
   },
 
-  refreshCart() {
+  refreshCart(animarId) {
+    this.marcarEnCarrito(animarId);
     const itemsEl = document.getElementById('posCartItems');
     if (itemsEl) itemsEl.innerHTML = this.htmlCombo() + this.renderCartItems();
     if (!this.cart.length) { const s = document.getElementById('posSugerencias'); if (s) s.innerHTML = ''; }
 
     const countEl = document.querySelector('#view-pos .pos-cart-count');
-    if (countEl) countEl.textContent = `${this.cart.reduce((s,i)=>s+i.cantidad,0)} items`;
+    if (countEl) countEl.textContent = this.textoItems();
 
     const btnCheckout = document.querySelector('#view-pos .pos-checkout-btn');
     if (btnCheckout) btnCheckout.disabled = this.cart.length === 0;
