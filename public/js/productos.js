@@ -115,7 +115,7 @@ const Productos = {
     }[this.clase(p)] || (p.es_plato ? '<span class="badge badge-blue">Plato</span>' : '<span class="badge badge-gray">Producto</span>'));
     const fila = p => `
       <tr>
-        <td><div class="font-bold">${esc(p.nombre)}${p.para_llevar ? ' <span class="badge badge-gray" title="En el menú Take Away">Take Away</span>' : ''}</div>${p.descripcion ? `<small class="text-muted prod-desc">${esc(p.descripcion)}</small>` : ''}</td>
+        <td>${p.foto ? `<img class="prod-foto-mini" src="/api/publico/fotos/${Number(p.id)}?v=${Number(p.foto)}" alt="" loading="lazy">` : ''}<div class="font-bold">${esc(p.nombre)}${p.para_llevar ? ' <span class="badge badge-gray" title="En el menú Take Away">Take Away</span>' : ''}</div>${p.descripcion ? `<small class="text-muted prod-desc">${esc(p.descripcion)}</small>` : ''}</td>
         <td class="font-bold">${this.clase(p) === 'venta' ? fmtMoneda(p.precio_venta) : '<span class="text-muted">No se vende</span>'}</td>
         <td>${fmtMoneda(p.costo)}${this.clase(p) !== 'venta' ? `<br><small class="text-muted">por ${esc(this.unidadDe(p))}</small>` : ''}</td>
         <td>${p.tracking_stock
@@ -209,6 +209,18 @@ const Productos = {
         </div>
         <div id="prodSoloCarta">
         <div class="form-group">
+          <label>Foto para la carta</label>
+          <div class="prod-foto-campo">
+            <div class="prod-foto-vista" id="prodFotoVista">${p && p.foto ? `<img src="/api/publico/fotos/${Number(p.id)}?v=${Number(p.foto)}" alt="">` : '<i class="fas fa-camera"></i>'}</div>
+            <div>
+              <label class="btn btn-secondary btn-sm"><i class="fas fa-upload"></i> ${p && p.foto ? 'Cambiar foto' : 'Elegir foto'}
+                <input type="file" id="prodFoto" accept="image/jpeg,image/png,image/webp,image/heic" hidden onchange="Productos.elegirFoto(this)"></label>
+              <button type="button" class="btn btn-outline btn-sm" id="prodFotoQuitar" onclick="Productos.quitarFoto()" ${p && p.foto ? '' : 'hidden'}>Quitar</button>
+              <small class="form-hint">Se ve en la carta del QR. Mejor horizontal y con buena luz; se achica sola antes de subirla.</small>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
           <label>Orden en la carta</label>
           <input type="number" id="prodOrden" min="0" step="1" value="${p && p.orden ? p.orden : ''}" placeholder="Ej: 1 = primero de su categoría">
           <small class="form-hint">Posición dentro de su categoría, como en la carta impresa. Vacío: va después, por nombre.</small>
@@ -263,6 +275,8 @@ const Productos = {
         </div>
       </form>
     `, { title: p ? `Editar ${p.nombre}` : 'Nuevo producto' });
+    // La foto se sube al guardar (un producto nuevo todavía no tiene id): null = sin cambios, 'quitar' o la foto nueva
+    this._foto = null;
     this.ajustarFormulario();
 
     document.getElementById('prodTracking').addEventListener('change', (e) => {
@@ -308,19 +322,61 @@ const Productos = {
     if (data.tracking_stock && !id) {
       data.stock_actual = parseInt(document.getElementById('prodStockInicial').value || 0);
     }
+    const nuevo = !id;
     try {
       if (id) {
         await API.updateProducto(id, data);
-        App.showToast('Producto actualizado', 'success');
       } else {
-        await API.createProducto(data);
-        App.showToast('Producto creado', 'success');
+        id = (await API.createProducto(data)).id;
       }
+      // El producto ya quedó guardado: si la foto falla se avisa, pero no se pierde lo demás
+      let errorFoto = '';
+      if (this._foto && seVende) {
+        try {
+          if (this._foto === 'quitar') await API.borrarFotoProducto(id);
+          else await API.subirFotoProducto(id, this._foto);
+        } catch (err) { errorFoto = err.message; }
+      }
+      if (errorFoto) App.showToast(`Producto guardado, pero la foto no: ${errorFoto}`, 'error');
+      else App.showToast(nuevo ? 'Producto creado' : 'Producto actualizado', 'success');
       App.closeModal();
       this.render();
     } catch (err) {
       App.showToast(err.message, 'error');
     }
+  },
+
+  // Foto del plato: se achica en el navegador (lado mayor 1200 px, JPG) y se muestra antes de guardar
+  async elegirFoto(input) {
+    const original = input.files && input.files[0];
+    input.value = '';
+    if (!original) return;
+    const url = URL.createObjectURL(original);
+    try {
+      const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = url; });
+      const escala = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+      const lienzo = document.createElement('canvas');
+      lienzo.width = Math.round(img.naturalWidth * escala);
+      lienzo.height = Math.round(img.naturalHeight * escala);
+      const ctx = lienzo.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+      ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+      const jpg = await new Promise(ok => lienzo.toBlob(ok, 'image/jpeg', 0.82));
+      if (!jpg) throw new Error();
+      this._foto = jpg;
+      document.getElementById('prodFotoVista').innerHTML = `<img src="${lienzo.toDataURL('image/jpeg', 0.6)}" alt="">`;
+      document.getElementById('prodFotoQuitar').hidden = false;
+    } catch (e) {
+      App.showToast('No se pudo abrir la foto. Probá con una JPG o PNG.', 'error');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  },
+  quitarFoto() {
+    this._foto = 'quitar';
+    document.getElementById('prodFotoVista').innerHTML = '<i class="fas fa-camera"></i>';
+    document.getElementById('prodFotoQuitar').hidden = true;
   },
 
   // Carta QR en ingl\u00e9s y portugu\u00e9s (src/traducciones.js). Lo que se deja vac\u00edo se muestra en espa\u00f1ol.

@@ -116,6 +116,11 @@ const API = {
   getProductos() { return this.request('GET', '/productos'); },
   createProducto(data) { return this.request('POST', '/productos', data); },
   updateProducto(id, data) { return this.request('PUT', `/productos/${id}`, data); },
+  // Foto del plato para la carta: la imagen va tal cual en el cuerpo (no JSON)
+  async subirFotoProducto(id, foto) {
+    return (await this.archivo('PUT', `/productos/${id}/foto`, foto, { 'Content-Type': foto.type || 'application/octet-stream' })).json();
+  },
+  borrarFotoProducto(id) { return this.request('DELETE', `/productos/${id}/foto`); },
   deleteProducto(id) { return this.request('DELETE', `/productos/${id}`); },
 
   // ===== Mesas =====

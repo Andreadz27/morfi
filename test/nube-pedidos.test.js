@@ -11,7 +11,7 @@ const sqlite3 = require('sqlite3');
 const { iniciarServidor, esperar } = require('./helpers');
 
 const RAIZ = path.join(__dirname, '..');
-let nube, nubeBase, datosNube, s, prod, dbNube;
+let nube, nubeBase, datosNube, s, prod, dbNube, token;
 
 const puertoLibre = () => new Promise(ok => { const x = net.createServer(); x.listen(0, () => { const { port } = x.address(); x.close(() => ok(port)); }); });
 const alta = (...args) => execFileSync(process.execPath, [path.join(RAIZ, 'nube', 'alta.js'), ...args],
@@ -29,7 +29,7 @@ const estadoDe = async codigo => (await aNube('GET', `/l/centro/api/publico/pedi
 
 before(async () => {
   datosNube = fs.mkdtempSync(path.join(os.tmpdir(), 'fadido-nube-'));
-  const token = alta('local', '--cuenta', 'La Buena Mesa', '--nombre', 'Centro', '--cliente', 'centro').match(/NUBE_TOKEN=(\S+)/)[1];
+  token = alta('local', '--cuenta', 'La Buena Mesa', '--nombre', 'Centro', '--cliente', 'centro').match(/NUBE_TOKEN=(\S+)/)[1];
   alta('local', '--cuenta', 'La Buena Mesa', '--nombre', 'Palermo', '--cliente', 'palermo');
   const port = await puertoLibre();
   nubeBase = `http://127.0.0.1:${port}`;
@@ -70,6 +70,42 @@ test('la carta del local se publica en la nube con link fijo y la página es la 
   assert.equal((await aNube('GET', '/l/centro/js/app.js'))[0], 404);
   assert.equal((await aNube('GET', '/l/centro/..%2f..%2fpackage.json'))[0], 404);
   assert.equal((await aNube('GET', '/l/no-existe/api/publico/menu'))[0], 404);
+});
+
+// Una "foto" JPG mínima (la nube y el local deciden el tipo por los primeros bytes)
+const jpg = n => Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(60, n)]);
+const fotoEnNube = async () => (await aNube('GET', '/l/centro/api/publico/menu'))[1].productos.find(p => p.id === prod.id).foto;
+
+test('las fotos de los platos llegan a la carta de la nube; una foto nueva cambia la versión y quitarla la saca', async () => {
+  await s.q(`INSERT INTO producto_fotos (producto_id, tipo, tamano, datos, version) VALUES (?, 'image/jpeg', 64, ?, 5)`, [prod.id, jpg(1)]);
+  assert.ok(await esperarQue(async () => (await fotoEnNube()) === 5), 'la foto no llegó a la nube');
+  const r = await fetch(`${nubeBase}/l/centro/api/publico/fotos/${prod.id}?v=5`);
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('content-type'), 'image/jpeg');
+  assert.match(r.headers.get('cache-control'), /immutable/);
+  assert.deepEqual(Buffer.from(await r.arrayBuffer()), jpg(1));
+  // Otro local de la misma cuenta no ve esa foto
+  assert.equal((await fetch(`${nubeBase}/l/palermo/api/publico/fotos/${prod.id}`)).status, 404);
+
+  await s.q('UPDATE producto_fotos SET datos = ?, version = 6 WHERE producto_id = ?', [jpg(2), prod.id]);
+  assert.ok(await esperarQue(async () => (await fotoEnNube()) === 6), 'la foto nueva no llegó');
+  assert.deepEqual(Buffer.from(await (await fetch(`${nubeBase}/l/centro/api/publico/fotos/${prod.id}?v=6`)).arrayBuffer()), jpg(2));
+
+  await s.q('DELETE FROM producto_fotos WHERE producto_id = ?', [prod.id]);
+  assert.ok(await esperarQue(async () => (await fotoEnNube()) === null), 'la foto quitada sigue en la carta');
+  assert.ok(await esperarQue(async () => !(await qNube('SELECT 1 FROM fotos')).length), 'la nube no borró la foto');
+  assert.equal((await fetch(`${nubeBase}/l/centro/api/publico/fotos/${prod.id}`)).status, 404);
+});
+
+test('a la nube solo le sube fotos el local, de un plato de su carta y en un formato de imagen', async () => {
+  const subir = (cuerpo, { v = 1, tok = token, id = prod.id } = {}) => fetch(`${nubeBase}/api/sync/fotos/${id}?v=${v}`,
+    { method: 'PUT', body: cuerpo, headers: { 'Content-Type': 'image/jpeg', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) } });
+  assert.equal((await subir(jpg(3), { tok: null })).status, 401);
+  assert.equal((await subir(jpg(3), { tok: 'otro' })).status, 401);
+  assert.equal((await subir(jpg(3), { v: 99 })).status, 409, 'el plato no tiene esa foto en la carta');
+  assert.equal((await subir(jpg(3), { id: 999999 })).status, 409, 'plato que no está en la carta');
+  assert.equal((await subir(Buffer.alloc(3 * 1024 * 1024))).status, 413);
+  assert.equal((await qNube('SELECT COUNT(*) AS n FROM fotos'))[0].n, 0);
 });
 
 test('un pedido por la nube llega al local con sus precios y el cliente ve el número; la nube borra sus datos', async () => {
