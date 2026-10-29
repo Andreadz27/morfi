@@ -77,7 +77,7 @@ const POS = {
         <div class="pos-products">
           <div class="pos-products-head">
             <h3><i class="fas fa-utensils"></i> Productos</h3>
-            ${App.puede('pedidos.ver') ? `<button class="btn btn-outline btn-sm" onclick="POS.verRetiro()" title="Pedidos de mostrador y barra: en preparación, listos y cobro"><i class="fas fa-bell-concierge"></i> Para retirar <span class="pos-action-badge" id="posRetiroBadge"></span></button>` : ''}
+            ${App.puede('pedidos.ver') ? `<button class="btn btn-outline btn-sm" onclick="App.callarPedidos();POS.verRetiro()" title="Pedidos de mostrador y barra: en preparación, listos y cobro"><i class="fas fa-bell-concierge"></i> Para retirar <span class="pos-action-badge" id="posRetiroBadge"></span></button>` : ''}
             <span class="pos-products-count">${filtered.length} disponibles</span>
           </div>
           <div class="pos-buscador">
@@ -781,6 +781,10 @@ checkout() {
           cliente en su celular; <strong>Entregado</strong> lo saca de la lista (los listos salen solos a los 45 minutos).</p>`
         : '<div class="empty-state"><i class="fas fa-bell-concierge"></i><p>No hay pedidos de mostrador ni de barra pendientes</p><p class="text-muted">Dejá esta ventana abierta: suena cuando entra un pedido.</p></div>'}</div>`,
         { title: 'Para retirar', large: true });
+      const panel = document.getElementById('panelRetiro');
+      // Tocar el panel = alguien ya lo está viendo: deja de sonar
+      panel.addEventListener('pointerdown', () => App.callarPedidos());
+      panel.insertAdjacentHTML('beforeend', '<button class="btn btn-outline btn-sm mt-10" onclick="App.probarSonido()" title="Subí el volumen de la PC hasta que se escuche bien desde la caja"><i class="fas fa-volume-high"></i> Probar sonido</button>');
     } catch (err) { App.showToast(err.message, 'error'); }
   },
 

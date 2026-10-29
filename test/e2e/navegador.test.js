@@ -519,6 +519,11 @@ test('autoservicio desde la mesa: pide con su nombre, sigue el pedido, suena al 
     // Una sola computadora: la caja está en otra pantalla cuando entra el pedido
     const caja = await nuevaPagina();
     await ingresarOk(caja, 'vendedor@test.com', 'vendedor123');
+    // La PC se reinició y Fadido quedó abierto sin que nadie lo toque: el navegador no deja sonar, se avisa
+    await caja.reload();
+    await caja.waitForSelector('#app', { state: 'visible' });
+    await caja.click('#franjaSonido:has-text("tocá acá para activarlo")');
+    await caja.waitForSelector('#franjaSonido', { state: 'detached' });
     const cliente = await nuevaPagina();
     await cliente.goto(`${s.base}/pedido.html?mesa=${token}`);
     await cliente.waitForSelector('#negocioSub:has-text("retirar en el mostrador")');
@@ -536,7 +541,10 @@ test('autoservicio desde la mesa: pide con su nombre, sigue el pedido, suena al 
     const [p] = await s.q("SELECT id, lugar FROM pedidos WHERE cliente = 'Lola'");
     assert.equal(p.lugar, 'Mesa Auto');
     // A la caja le llega el aviso; tocándolo abre "Para retirar" con lo que lleva el pedido y lo marca Listo
-    await caja.click('#toastContainer .toast.warning:has-text("Nuevo pedido por QR")', { timeout: 10000 });
+    await caja.waitForSelector('#toastContainer .toast.warning:has-text("Nuevo pedido por QR")', { timeout: 10000 });
+    assert.equal(await caja.evaluate(() => !!App._alarmaPedidos), true, 'suena y repite hasta que alguien lo vea');
+    await caja.click('#toastContainer .toast.warning:has-text("Nuevo pedido por QR")');
+    assert.equal(await caja.evaluate(() => !!App._alarmaPedidos), false, 'al tocar el aviso deja de sonar');
     await caja.waitForSelector('#panelRetiro tr:has-text("Lola"):has-text("Mesa Auto") :text("1 ×")');
     await caja.click('#panelRetiro tr:has-text("Lola") button:has-text("Listo")');
     await toast(caja, 'success', 'le avisamos al cliente');
