@@ -38,6 +38,14 @@
     <div id="mesaEstado"></div>
   </section>
 
+  <!-- Ficha del plato: foto grande, descripción, precio y agregar (se abre tocando un plato) -->
+  <div id="platoModal" class="pedido-form-overlay plato-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="platoNombre">
+    <div class="pedido-form-modal plato-modal">
+      <button type="button" class="btn-cerrar plato-cerrar" onclick="PedidoOnline.cerrarPlato()" aria-label="Cerrar">&times;</button>
+      <div id="platoContenido"></div>
+    </div>
+  </div>
+
   <!-- Pagar desde la mesa: Mercado Pago (toda la cuenta o mi parte, con propina) o avisar al mozo cómo se paga -->
   <!-- Opciones y adicionales al agregar un producto ("¿Qué leche?", "Adicionales") -->
   <div id="opcionesModal" class="pedido-form-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="opcionesTitulo">

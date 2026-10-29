@@ -34,7 +34,9 @@ const BLOQUEADAS = [
   // El asistente IA gasta saldo de la cuenta de Claude: en la demo no se prueba
   [/^\/api\/asistente\//, ['POST']],
   // Facturas adjuntas: cualquier visitante podría llenar el disco de la demo con archivos (y leerlas gasta saldo de Claude)
-  [/^\/api\/contabilidad\/adjuntos(\/|$)/, ['POST']]
+  [/^\/api\/contabilidad\/adjuntos(\/|$)/, ['POST']],
+  // Fotos de los platos: se ven en la carta pública de la demo (cualquiera podría subir cualquier imagen)
+  [/^\/api\/productos\/[^/]+\/foto$/, ['PUT']]
 ];
 
 function bloqueoDemo(req, res, next) {

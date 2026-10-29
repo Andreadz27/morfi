@@ -22,6 +22,8 @@ test('todas las rutas de la API exigen sesión, salvo las públicas y los webhoo
     'POST /api/publico/mesa/:token/pagar', 'POST /api/publico/mesa/:token/pago/:id/verificar', 'POST /api/publico/mesa/:token/pago/:id/comprobante',
     // Imagen QR para <img src> (sin token): solo dibuja el texto que recibe (test/sin-conexion.test.js)
     'GET /api/publico/qr.svg',
+    // Fotos de los platos para <img src> de la carta: solo de productos que están en la carta (test/fotos-productos.test.js)
+    'GET /api/publico/fotos/:id',
     // Pedido desde la barra y su seguimiento: el token de la barra o el código de cada pedido van en la ruta (test/barra.test.js)
     'GET /api/publico/barra/:token', 'POST /api/publico/barra/:token/pedido', 'GET /api/publico/retiro/:token',
     'GET /api/publico/pedido-barra/:codigo', 'POST /api/publico/pedido-barra/:codigo/pagar', 'POST /api/publico/pedido-barra/:codigo/verificar',

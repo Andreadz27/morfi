@@ -6,6 +6,7 @@ const {
   verificarPagoCliente, avisarTransferencia, tableroPublico, tiene
 } = require('../contexto');
 const QRCode = require('qrcode');
+const { fotoPublica } = require('../servicios/fotos-productos');
 
 module.exports = function registrarRutas(app) {
 
@@ -22,6 +23,19 @@ app.get('/api/publico/qr.svg', async (req, res) => {
 
 // ============ MENÚ PÚBLICO (carta QR - sin autenticación) ============
 
+// Foto de un plato (servicios/fotos-productos.js). La carta la pide con ?v=<versión>: una foto nueva cambia la
+// dirección, por eso se puede guardar en el celular por mucho tiempo.
+app.get('/api/publico/fotos/:id', async (req, res) => {
+  try {
+    const f = await fotoPublica(Number(req.params.id));
+    res.set({
+      'Content-Type': f.tipo, 'Content-Length': f.datos.length, 'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': req.query.v ? 'public, max-age=2592000, immutable' : 'public, max-age=300'
+    });
+    res.end(f.datos);
+  } catch (err) { errorInterno(res, err); }
+});
+
 app.get('/api/publico/menu', async (req, res) => {
   try {
     const categorias = await all(`
@@ -32,7 +46,8 @@ app.get('/api/publico/menu', async (req, res) => {
     const productos = await all(`
       SELECT p.id, p.nombre, p.descripcion, p.precio_venta, p.categoria_id,
              p.tracking_stock, p.stock_actual, p.es_plato, p.traducciones, p.nuevo, p.recomendado,
-             p.version_grande_id, p.horario, p.combo, p.para_llevar
+             p.version_grande_id, p.horario, p.combo, p.para_llevar,
+             (SELECT f.version FROM producto_fotos f WHERE f.producto_id = p.id) AS foto
       FROM productos p
       WHERE p.activo = 1 AND p.clase = 'venta'
       ORDER BY ${ORDEN_CARTA}

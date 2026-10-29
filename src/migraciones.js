@@ -524,6 +524,17 @@ async function migrarEsquema() {
     FOREIGN KEY (conteo_id) REFERENCES conteos_stock(id),
     FOREIGN KEY (producto_id) REFERENCES productos(id)
   )`);
+  // Fotos de los platos para la carta (servicios/fotos-productos.js): una por producto, en la base para que
+  // entre en las copias. version cambia con cada foto nueva (la carta la pide con ?v=, sin quedarse con la vieja).
+  await run(`CREATE TABLE IF NOT EXISTS producto_fotos (
+    producto_id INTEGER PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    tamano INTEGER NOT NULL DEFAULT 0,
+    datos BLOB NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1,
+    actualizado_en TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (producto_id) REFERENCES productos(id)
+  )`);
 }
 
 // ============ Migración segura (lo que usa server.js) ============

@@ -5,6 +5,8 @@ const {
   normalizarTraducciones, ORDEN_CARTA, listarMomentos, guardarMomento, borrarMomento, listarGrupos, guardarGrupo, borrarGrupo, gruposPorProducto,
   validarHorario, validarCombo, validarVersionGrande, validarSugerir
 } = require('../contexto');
+const express = require('express');
+const { MAX_BYTES: MAX_FOTO, guardarFoto, borrarFoto } = require('../servicios/fotos-productos');
 
 module.exports = function registrarRutas(app) {
 
@@ -100,7 +102,8 @@ app.get('/api/productos', autenticar, async (req, res) => {
   try {
     const productos = await all(`
       SELECT p.*, c.nombre as categoria_nombre, c.color as categoria_color,
-        (SELECT COUNT(*) FROM recetas r WHERE r.plato_id = p.id) AS ingredientes_receta
+        (SELECT COUNT(*) FROM recetas r WHERE r.plato_id = p.id) AS ingredientes_receta,
+        (SELECT f.version FROM producto_fotos f WHERE f.producto_id = p.id) AS foto
       FROM productos p
       LEFT JOIN categorias c ON p.categoria_id = c.id
       WHERE p.activo = 1
@@ -212,6 +215,31 @@ app.put('/api/productos/:id', autenticar, requiere('catalogo'), async (req, res)
       if (Number(p.costo) !== Number(actual.costo)) await recalcularCostosConIngrediente(actual.id);
     });
     res.json({ message: 'Producto actualizado' });
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// ----- Foto del plato para la carta (servicios/fotos-productos.js) -----
+// La foto llega tal cual en el cuerpo (no JSON), ya achicada por el navegador. Una por producto: la nueva reemplaza a la anterior.
+const cuerpoFoto = express.raw({ type: () => true, limit: MAX_FOTO });
+const recibirFoto = (req, res, next) => cuerpoFoto(req, res, err => {
+  if (!err) return next();
+  res.status(err.type === 'entity.too.large' ? 413 : 400).json({ error: err.type === 'entity.too.large' ? 'La foto es muy grande (hasta 2 MB)' : 'No llegó la foto' });
+});
+
+app.put('/api/productos/:id/foto', autenticar, requiere('catalogo'), recibirFoto, async (req, res) => {
+  try {
+    res.json(await guardarFoto(Number(req.params.id), Buffer.isBuffer(req.body) ? req.body : null, req.usuario.id));
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+app.delete('/api/productos/:id/foto', autenticar, requiere('catalogo'), async (req, res) => {
+  try {
+    await borrarFoto(Number(req.params.id), req.usuario.id);
+    res.json({ message: 'Foto quitada' });
   } catch (err) {
     errorInterno(res, err);
   }
