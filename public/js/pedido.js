@@ -26,7 +26,7 @@ const PD_TEXTOS={
     completa_datos:"Completá nombre y teléfono.",completa_dir:"Completá la dirección de entrega.",agrega_algo:"Agregá al menos un producto.",
     listo_cocina:"¡Listo{n}! Tu pedido ya está en preparación.",espera_mozo:"¡Gracias{n}! El mozo lo confirma en un momento: abajo ves cuándo pasa a cocina.",
     pago_ok:"¡Pago aprobado! Gracias.",cuenta_paga:" La cuenta quedó paga.",falta_resto:" Falta pagar el resto de la mesa.",
-    destacados:"Destacados de la casa",ver_plato:"Ver {p}",anterior:"Anterior",siguiente:"Siguiente",cerrar:"Cerrar",con_opciones:"Elegís las opciones al agregarlo",
+    destacados:"Destacados de la casa",vista_lista:"Lista",vista_fotos:"Fotos",vista_como:"Cómo ver la carta",ver_plato:"Ver {p}",anterior:"Anterior",siguiente:"Siguiente",cerrar:"Cerrar",con_opciones:"Elegís las opciones al agregarlo",
     pago_proceso:"Tu pago está en proceso: cuando Mercado Pago lo apruebe, se acredita solo.",pago_no:"El pago no se completó. Podés intentar de nuevo o pedirle la cuenta al mozo."},
   en:{acompana:"Goes great with",grande_q:"Make it large? +{m}",conviene:"Better deal: {c}. You save {m}",cambiar:"Switch",se_pide:"Available {h}",dias:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],dias_todos:"every day",de_a:"{d} to {h}",de_h:"from {a} to {b}",op_una:"Choose one",op_opcional:"Optional",op_hasta:"Up to {n}",op_varias:"Choose any",op_falta:"Please choose: {g}",op_agregar:"Add {m}",cancelar:"Cancel",letra:"Bigger text",toda_carta:"Full menu",buscar_ph:"Search the menu",sin_resultados:"Nothing matches your search.",b_mas:"Most ordered",b_nuevo:"New",b_reco:"Our pick",online_sub:"Build your order and we'll get it right away",ver_sub:"Our menu",mesa_sub:"Choose, send your order and the waiter confirms it",pagar_directo:"See the bill and pay",como_pagas_directo:"How will you pay?",otra_forma_directo:"Paying another way?",cuenta_directo:"Done: we let the register know. Come pay whenever you like.",atendida_directo:"Seen at the register",tit_cuenta_directo:"You told us how you'll pay",pago_no_directo:"The payment wasn't completed. You can try again or pay at the register.",mesa_sub_directo:"Order and pay from your phone: your order goes straight to the kitchen",enviar_cocina:"Send to the kitchen",barra_sub:"Order and pay from your phone: we'll let you know when it's ready to pick up",barra:"Bar",falta_nombre:"Enter your name: we'll call you with it when it's ready",carta_sub:"Browse the menu and call the waiter when you're ready to order",
     llamar_mozo:"Call the waiter",pedir_cuenta:"Ask for the bill",tu_pedido:"Your order",vacio:"You haven't added anything yet",total_estimado:"Estimated total",confirmar:"Confirm order",
@@ -44,7 +44,7 @@ const PD_TEXTOS={
     completa_datos:"Please enter your name and phone.",completa_dir:"Please enter the delivery address.",agrega_algo:"Add at least one item.",
     listo_cocina:"Done{n}! Your order is being prepared.",espera_mozo:"Thank you{n}! The waiter will confirm it shortly: below you'll see when it goes to the kitchen.",
     pago_ok:"Payment approved! Thank you.",cuenta_paga:" The bill is fully paid.",falta_resto:" The rest of the table still has to pay.",
-    destacados:"House favorites",ver_plato:"See {p}",anterior:"Previous",siguiente:"Next",cerrar:"Close",con_opciones:"You choose the options when adding it",
+    destacados:"House favorites",vista_lista:"List",vista_fotos:"Photos",vista_como:"How to view the menu",ver_plato:"See {p}",anterior:"Previous",siguiente:"Next",cerrar:"Close",con_opciones:"You choose the options when adding it",
     pago_proceso:"Your payment is being processed: once Mercado Pago approves it, it will be credited automatically.",pago_no:"The payment wasn't completed. You can try again or ask the waiter for the bill."},
   pt:{acompana:"Combina com",grande_q:"Quer grande? +{m}",conviene:"Vale mais a pena: {c}. Você economiza {m}",cambiar:"Trocar",se_pide:"Disponível {h}",dias:["dom","seg","ter","qua","qui","sex","sáb"],dias_todos:"todos os dias",de_a:"de {d} a {h}",de_h:"das {a} às {b}",op_una:"Escolha uma",op_opcional:"Opcional",op_hasta:"Até {n}",op_varias:"Escolha as que quiser",op_falta:"Escolha: {g}",op_agregar:"Adicionar {m}",cancelar:"Cancelar",letra:"Letra maior",toda_carta:"Cardápio completo",buscar_ph:"Buscar no cardápio",sin_resultados:"Não encontramos nada com essa busca.",b_mas:"Mais pedido",b_nuevo:"Novo",b_reco:"Recomendado",online_sub:"Monte seu pedido e recebemos na hora",ver_sub:"Nosso cardápio",mesa_sub:"Escolha, envie seu pedido e o garçom confirma",pagar_directo:"Ver a conta e pagar",como_pagas_directo:"Como vai pagar?",otra_forma_directo:"Vai pagar de outro jeito?",cuenta_directo:"Pronto: avisamos o caixa. Venha pagar quando quiser.",atendida_directo:"Visto no caixa",tit_cuenta_directo:"Você avisou como vai pagar",pago_no_directo:"O pagamento não foi concluído. Você pode tentar de novo ou pagar no caixa.",mesa_sub_directo:"Peça e pague pelo celular: seu pedido vai direto para a cozinha",enviar_cocina:"Enviar para a cozinha",barra_sub:"Peça e pague pelo celular: avisamos quando estiver pronto para retirar",barra:"Balcão",falta_nombre:"Coloque seu nome: chamamos você por ele quando estiver pronto",carta_sub:"Veja o cardápio e chame o garçom quando quiser pedir",
     llamar_mozo:"Chamar o garçom",pedir_cuenta:"Pedir a conta",tu_pedido:"Seu pedido",vacio:"Você ainda não adicionou nada",total_estimado:"Total estimado",confirmar:"Confirmar pedido",
@@ -62,7 +62,7 @@ const PD_TEXTOS={
     completa_datos:"Preencha nome e telefone.",completa_dir:"Preencha o endereço de entrega.",agrega_algo:"Adicione pelo menos um produto.",
     listo_cocina:"Pronto{n}! Seu pedido já está em preparo.",espera_mozo:"Obrigado{n}! O garçom confirma em instantes: abaixo você vê quando vai para a cozinha.",
     pago_ok:"Pagamento aprovado! Obrigado.",cuenta_paga:" A conta foi paga.",falta_resto:" Falta pagar o resto da mesa.",
-    destacados:"Destaques da casa",ver_plato:"Ver {p}",anterior:"Anterior",siguiente:"Próximo",cerrar:"Fechar",con_opciones:"Você escolhe as opções ao adicionar",
+    destacados:"Destaques da casa",vista_lista:"Lista",vista_fotos:"Fotos",vista_como:"Como ver o cardápio",ver_plato:"Ver {p}",anterior:"Anterior",siguiente:"Próximo",cerrar:"Fechar",con_opciones:"Você escolhe as opções ao adicionar",
     pago_proceso:"Seu pagamento está em processamento: quando o Mercado Pago aprovar, ele é creditado automaticamente.",pago_no:"O pagamento não foi concluído. Você pode tentar de novo ou pedir a conta ao garçom."}
 };
 const PD_IDIOMAS={es:"ES",en:"EN",pt:"PT"};
@@ -87,6 +87,8 @@ const PedidoOnline={
   mesaToken:"",mesa:null,
   // ?ver=1: solo la carta, sin pedir (el QR general de la vidriera y la carta de antes, menu.html)
   soloVer:false,
+  // Cómo se ve la carta: "lista" (como la impresa) o "fotos" (cuadrícula). Se recuerda en este celular.
+  vista:"lista",
 
   async init(){
     const p=new URLSearchParams(location.search);
@@ -125,6 +127,7 @@ const PedidoOnline={
         if(wa){wa.href="https://wa.me/"+info.telefono.replace(/\D/g,"");wa.style.display="";}
       }
       this._avisoDatos(info);
+      this._vistaCarta();
       this.paintMomentos();this.paintCats();this.paintItems();this._initEvents();
     }catch(err){
       document.getElementById("menuItems").innerHTML='<div class="menu-empty"><i class="fas fa-exclamation-triangle"></i><p>'+pdE(pdT("sin_menu"))+'</p></div>';
@@ -152,7 +155,7 @@ const PedidoOnline={
   setIdioma(k){
     if(!PD_TEXTOS[k])return;
     PD_IDIOMA=k;try{localStorage.setItem("morfi_carta_idioma",k);}catch(e){}
-    this._selectorIdioma();this._textos();
+    this._selectorIdioma();this._textos();this._vistaCarta();
     this.paintMomentos();this.paintCats();this.paintItems();this.paintCarrito();
     if(this.mesa)this._pintarMesa(this.mesa);
     if(document.getElementById("pagoModal").style.display!=="none")this._pintarPago();
@@ -482,9 +485,44 @@ const PedidoOnline={
       :`<button class="btn-qty btn-qty-minus" onclick="PedidoOnline.quitar(${p.id})" aria-label="Quitar">&#8722;</button><span class="qty-num">${q}</span><button class="btn-qty btn-qty-plus" onclick="PedidoOnline.agregar(${p.id})" aria-label="Sumar">+</button>`;
     return this._card(p,qc,"");
   },
+
+  // ── Vista en cuadrícula ("Fotos"): cada plato es una tarjeta con la foto arriba, nombre, precio y agregar.
+  // El selector aparece solo si algún plato tiene foto (si no, la cuadrícula serían todos íconos). ──
+  _hayFotos(){return this.productos.some(p=>p.foto);},
+  _vistaCarta(){
+    const el=document.getElementById("vistaCarta");if(!el)return;
+    if(!this._hayFotos()){this.vista="lista";el.hidden=true;return;}
+    if(!this._vistaLeida){this._vistaLeida=true;try{if(localStorage.getItem("morfi_carta_vista")==="fotos")this.vista="fotos";}catch(e){}}
+    const b=(v,icono)=>`<button type="button" class="${this.vista===v?"activo":""}" aria-pressed="${this.vista===v}" onclick="PedidoOnline.setVista('${v}')"><i class="fas ${icono}" aria-hidden="true"></i> ${pdE(pdT("vista_"+v))}</button>`;
+    el.setAttribute("aria-label",pdT("vista_como"));
+    el.innerHTML=b("lista","fa-list")+b("fotos","fa-th-large");
+    el.hidden=false;
+  },
+  setVista(v){
+    this.vista=v==="fotos"?"fotos":"lista";
+    try{localStorage.setItem("morfi_carta_vista",this.vista);}catch(e){}
+    this._vistaCarta();this.paintItems();
+  },
+  _tarjeta(p,ctrl,clase){
+    const foto=this._foto(p);
+    const marca=p.recomendado?["reco","b_reco"]:p.mas_pedido?["mas","b_mas"]:p.nuevo?["nuevo","b_nuevo"]:null;
+    const icono=this.catIcon((this.categorias.find(c=>c.id===p.categoria_id)||{}).nombre||"");
+    return`<div class="plato-tarjeta ${clase}" data-id="${p.id}">
+  <button type="button" class="tarjeta-foto${foto?"":" sin-foto"}" onclick="PedidoOnline.verPlato(${p.id})" aria-label="${pdE(pdT("ver_plato",{p:pdTr(p,"nombre")}))}">
+    ${foto?`<img src="${foto}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('sin-foto');this.remove()">`:""}<i class="fas ${icono}" aria-hidden="true"></i>
+    ${marca?`<span class="carta-marca ${marca[0]}">${pdE(pdT(marca[1]))}</span>`:""}
+  </button>
+  <div class="tarjeta-cuerpo" onclick="PedidoOnline.verPlato(${p.id})">
+    <span class="tarjeta-nombre">${pdE(pdTr(p,"nombre"))}</span>
+    <span class="tarjeta-precio">${pdM(p.precio_venta)}</span>
+  </div>
+  ${ctrl?`<div class="item-qty-ctrl">${ctrl}</div>`:""}
+</div>`;
+  },
   // Como en una carta impresa: nombre, puntos guía y precio en una línea; la descripción debajo y la foto (si tiene)
   // a la derecha. Tocar el plato o la foto abre su ficha (foto grande, descripción y agregar).
   _card(p,ctrl,clase){
+    if(this.vista==="fotos")return this._tarjeta(p,ctrl,clase);
     const foto=this._foto(p);
     return `<div class="menu-item-card pedido-item-card ${clase}${foto?" con-foto":""}" data-id="${p.id}">
   <div class="menu-item-info" role="button" tabindex="0" aria-label="${pdE(pdT("ver_plato",{p:pdTr(p,"nombre")}))}" onclick="PedidoOnline.verPlato(${p.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();PedidoOnline.verPlato(${p.id})}">
@@ -564,7 +602,8 @@ const PedidoOnline={
       this._orden.push(...prods.map(p=>p.id));
       // La descripción de la categoría es una nota de la carta (opciones de leche, horarios de las promos...)
       const nota=pdTr(cat,"descripcion");
-      return`<div class="menu-section"><div class="menu-section-title"><i class="fas ${this.catIcon(cat.nombre)}"></i> ${pdE(this.nombreCat(cat))}</div>${nota?`<div class="carta-nota">${pdE(nota)}</div>`:""}${prods.map(p=>this.itemCard(p)).join("")}</div>`;
+      const platos=prods.map(p=>this.itemCard(p)).join("");
+      return`<div class="menu-section"><div class="menu-section-title"><i class="fas ${this.catIcon(cat.nombre)}"></i> ${pdE(this.nombreCat(cat))}</div>${nota?`<div class="carta-nota">${pdE(nota)}</div>`:""}${this.vista==="fotos"?`<div class="carta-grilla">${platos}</div>`:platos}</div>`;
     };
     const vacio=k=>'<div class="menu-empty">'+pdE(pdT(k))+'</div>';
     // Buscando se mira toda la carta (en el idioma elegido y en español), no solo el momento
@@ -578,7 +617,9 @@ const PedidoOnline={
       const cats=this.catsMomento();
       const secciones=cats.map(c=>sec(c,vis.filter(p=>p.categoria_id==c.id))).join("");
       const delMomento=this._orden.map(id=>this.productos.find(p=>p.id===id));
-      el.innerHTML=secciones?this._destacados(delMomento.filter(p=>this.soloVer||p.disponible!==false))+secciones:vacio("sin_productos");
+      // En la cuadrícula ya se ven todas las fotos: la fila de destacados repetiría lo mismo
+      const destacados=this.vista==="fotos"?"":this._destacados(delMomento.filter(p=>this.soloVer||p.disponible!==false));
+      el.innerHTML=secciones?destacados+secciones:vacio("sin_productos");
     }else{
       const cat=this.categorias.find(c=>c.id==this.catActiva);
       const items=vis.filter(p=>p.categoria_id==this.catActiva);

@@ -532,3 +532,43 @@ body.carta-elegante.letra-grande .plato-desc { font-size: 17px; }
   .carta-elegante .plato-overlay { align-items: flex-end; padding: 0; }
   .carta-elegante .plato-modal { max-height: 92vh; border-radius: 18px 18px 0 0; animation: slideUp .25s ease-out; }
 }
+
+/* ---- Lista o cuadrícula de fotos: selector debajo del buscador ---- */
+.carta-elegante .vista-carta { display: inline-flex; gap: 4px; margin: 0 0 14px; padding: 4px; border: 1.5px solid var(--linea);
+  border-radius: 999px; background: rgba(255, 250, 243, .6); }
+.carta-elegante .vista-carta[hidden] { display: none; }
+.carta-elegante .vista-carta button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 16px; border: 0; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--tinta); font-family: var(--fuente); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+}
+.carta-elegante .vista-carta button.activo { background: var(--tinta); color: var(--blanco); }
+.carta-elegante .vista-carta button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+/* ---- Cuadrícula: tarjeta con la foto arriba, nombre, precio y agregar ---- */
+.carta-elegante .carta-grilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+@media (min-width: 769px) { .carta-elegante .carta-grilla { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } }
+.carta-elegante .plato-tarjeta {
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  background: var(--blanco); border: 1px solid var(--linea); border-radius: 14px; box-shadow: 0 3px 10px rgba(74, 51, 38, .10);
+}
+.carta-elegante .tarjeta-foto {
+  position: relative; display: block; width: 100%; aspect-ratio: 1 / 1; padding: 0; border: 0; cursor: pointer; overflow: hidden;
+  background: linear-gradient(170deg, #f4e6d2 0%, #ead3b4 100%); color: var(--tinta-suave);
+}
+.carta-elegante .tarjeta-foto img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s; }
+.carta-elegante .tarjeta-foto:hover img { transform: scale(1.04); }
+.carta-elegante .tarjeta-foto > i { display: none; }
+.carta-elegante .tarjeta-foto.sin-foto > i { display: flex; position: absolute; inset: 0; align-items: center; justify-content: center; font-size: 30px; }
+.carta-elegante .tarjeta-foto .carta-marca { position: absolute; left: 8px; top: 8px; box-shadow: 0 1px 4px rgba(0, 0, 0, .18); }
+.carta-elegante .tarjeta-foto .carta-marca.nuevo { background: var(--blanco); }
+.carta-elegante .tarjeta-foto:focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; }
+.carta-elegante .tarjeta-cuerpo { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 4px; cursor: pointer; }
+.carta-elegante .tarjeta-nombre {
+  font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; line-height: 1.3; color: var(--tinta);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.carta-elegante .tarjeta-precio { font-size: 15px; font-weight: 800; color: var(--acento); }
+.carta-elegante .plato-tarjeta .item-qty-ctrl { justify-content: flex-start; margin: 0; padding: 4px 12px 12px; }
+.carta-elegante .plato-tarjeta .carta-horario { text-align: left; font-size: 11.5px; }
+body.carta-elegante.letra-grande .tarjeta-nombre { font-size: 15px; }
+body.carta-elegante.letra-grande .tarjeta-precio { font-size: 17px; }
