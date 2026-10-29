@@ -143,6 +143,12 @@ Siempre con el motivo.
 **Caja → Cerrar caja** y contar el efectivo. Si el local usa **Arqueo ciego**, el cajero escribe lo que contó sin
 ver cuánto debería haber, y la diferencia la ve el encargado. Los cierres anteriores están en **Historial de cajas**.
 
+### Resumen de cada noche por WhatsApp
+Con WhatsApp conectado (Integraciones → WhatsApp), cargá el **WhatsApp del dueño**: al cerrar el día le llega un
+mensaje con las ventas (y la comparación con el mismo día de la semana pasada), los tickets, la ganancia, lo más
+vendido y lo que hay que mirar (stock bajo, efectivo sin contar, facturas en espera, pedidos sin cerrar). Hay que
+crear en WhatsApp Manager la plantilla **resumen_diario** (categoría Utilidad) con el texto que muestra Fadido.
+
 ### Cierre del día (encargado y administrador)
 En **Caja → Cierre del día** está todo lo que pasó en el día: ventas (por medio de pago, por tipo de pedido y por
 persona, ticket promedio y comparación con el mismo día de la semana anterior), la caja (inicial, ventas en efectivo,

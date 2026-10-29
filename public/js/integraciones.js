@@ -210,7 +210,8 @@ const Integraciones = {
   PLANTILLAS_WA: [
     ['comprobante', 'Comprobante después de cobrar', 'Hola {{1}}, gracias por tu visita a {{2}}. Total: {{3}}. Comprobante: {{4}}.'],
     ['pedido_estado', 'Pedido listo / en camino', 'Hola {{1}}, tu pedido {{2}} de {{3}} está {{4}}.'],
-    ['recordatorio_reserva', 'Recordatorio de reserva', 'Hola {{1}}, te esperamos en {{2}} el {{3}} a las {{4}} ({{5}} personas). Si no podés venir, respondé este mensaje.']
+    ['recordatorio_reserva', 'Recordatorio de reserva', 'Hola {{1}}, te esperamos en {{2}} el {{3}} a las {{4}} ({{5}} personas). Si no podés venir, respondé este mensaje.'],
+    ['resumen_diario', 'Resumen del día para el dueño', 'Resumen de {{1}} del {{2}}: ventas {{3}} en {{4}} tickets. Ganancia: {{5}}. Lo más vendido: {{6}}. Para mirar: {{7}}.']
   ],
 
   _paintWA(wa, est) {
@@ -260,6 +261,10 @@ const Integraciones = {
               <div class="form-group"><label>Número de WhatsApp del local</label>
                 <input type="tel" id="waNumero" value="${esc(wa.numero || '')}" placeholder="11 2345-6789">
                 <small class="form-hint">El de esta cuenta de WhatsApp Business. Con él el cliente toca "Avisame por WhatsApp" y le avisamos gratis cuando su pedido está listo. Vacío = el teléfono del negocio.</small>
+              </div>
+              <div class="form-group"><label>WhatsApp del dueño (resumen de cada noche)</label>
+                <input type="tel" id="waDueno" value="${esc(wa.telefono_dueno || '')}" placeholder="11 2345-6789">
+                <small class="form-hint">Al cerrar el día le llega: ventas, ganancia, lo más vendido y lo que hay que mirar. Vacío = no se manda.</small>
               </div>
               <div class="form-group"><label>Recordatorio de reservas</label>
                 <select id="waRecordatorio">${[0, 1, 2, 3, 6, 24].map(h => opt(h, wa.recordatorio_horas || 0, h ? `${h} h antes` : 'No enviar')).join('')}</select>
@@ -461,6 +466,7 @@ const Integraciones = {
         verify_token:    val('waVerify'),
         avisar_pedidos:  val('waAvisos') === '1',
         numero:          val('waNumero'),
+        telefono_dueno:  val('waDueno'),
         recordatorio_horas: Number(val('waRecordatorio')) || 0,
         activa:          val('waActiva') === '1',
         idioma:          (this.cfg.whatsapp && this.cfg.whatsapp.idioma) || 'es_AR',

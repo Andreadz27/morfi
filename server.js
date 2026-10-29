@@ -17,6 +17,7 @@ const { iniciarModoSinConexion } = require('./src/servicios/sin-conexion');
 const { iniciarSyncNube } = require('./src/servicios/sync-nube');
 const { iniciarCierreAutomatico } = require('./src/servicios/cierre-dia');
 const { iniciarFacturaAutomatica } = require('./src/servicios/facturacion-auto');
+const { iniciarResumenDueno } = require('./src/servicios/resumen-dueno');
 
 iniciarRealtime(server);
 
@@ -46,6 +47,8 @@ migrarConRespaldo({ respaldar: crearBackup }).then(() => server.listen(PORT, () 
   iniciarCierreAutomatico();
   // Factura sola de cada venta pagada (si está activado en Integraciones → AFIP)
   iniciarFacturaAutomatica();
+  // Resumen del día por WhatsApp al dueño al cerrar el día (si cargó su número en Integraciones → WhatsApp)
+  iniciarResumenDueno();
 })).catch(err => {
   console.error('Error al migrar la base de datos:', err);
   process.exit(1);
