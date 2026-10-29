@@ -10,6 +10,7 @@ const rateLimit = require('express-rate-limit');
 const { run, get, all } = require('./db');
 const { tieneModulo } = require('./licencias');
 const { validarPedidoOnline } = require('../src/validar-pedido-online');
+const { tipoImagen } = require('../src/tipo-imagen');
 
 const PUBLICO = path.join(__dirname, '..', 'public');
 const FONT_AWESOME = path.join(__dirname, '..', 'node_modules', '@fortawesome', 'fontawesome-free');
@@ -18,6 +19,7 @@ const ARCHIVOS = ['pedido.html', 'favicon.svg', 'css/styles.css', 'css/menu.css'
 const SEG_LOCAL_ACTIVO = 60;       // el local busca cada 10 s: un minuto sin venir = no está
 const MIN_VENCE = 30;              // un pedido que el local no recibió en 30 min ya no sirve
 const MAX_PENDIENTES = 100;
+const MAX_FOTO = 2 * 1024 * 1024;   // como en el local (servicios/fotos-productos.js)
 const segundosDesde = t => t ? (Date.now() - new Date(t.replace(' ', 'T') + 'Z').getTime()) / 1000 : Infinity;
 const texto = (v, n) => String(v || '').slice(0, n);
 
@@ -30,19 +32,48 @@ module.exports = function registrarTienda(app, { ruta, errorHttp, autenticarLoca
     const { info = {}, categorias, productos } = req.body || {};
     if (!Array.isArray(categorias) || !Array.isArray(productos) || productos.length > 3000) throw errorHttp(400, 'Carta inválida');
     const carta = {
-      info: { nombre: texto(info.nombre, 100), eslogan: texto(info.eslogan, 80), direccion: texto(info.direccion, 200), telefono: texto(info.telefono, 40), email: texto(info.email, 120) },
+      info: { nombre: texto(info.nombre, 100), eslogan: texto(info.eslogan, 80), direccion: texto(info.direccion, 200), telefono: texto(info.telefono, 40),
+        email: texto(info.email, 120), cuit: texto(info.cuit, 20) },
       categorias: categorias.slice(0, 300).map(c => ({ id: Number(c.id), nombre: texto(c.nombre, 80) })),
       productos: productos.map(p => ({
         id: Number(p.id), nombre: texto(p.nombre, 120), descripcion: texto(p.descripcion, 500), precio_venta: r2(p.precio_venta),
         categoria_id: Number(p.categoria_id) || null, tracking_stock: p.tracking_stock ? 1 : 0, stock_actual: Number(p.stock_actual) || 0,
-        es_plato: p.es_plato ? 1 : 0
+        es_plato: p.es_plato ? 1 : 0, nuevo: p.nuevo ? 1 : 0, recomendado: p.recomendado ? 1 : 0,
+        foto: Number.isSafeInteger(Number(p.foto)) && Number(p.foto) > 0 ? Number(p.foto) : null
       }))
     };
     await run(`INSERT INTO cartas (local_id, datos) VALUES (?, ?)
       ON CONFLICT(local_id) DO UPDATE SET datos = excluded.datos, actualizado_en = CURRENT_TIMESTAMP`, [req.local.id, JSON.stringify(carta)]);
+    // Fotos: se borran las de platos que ya no están o no tienen foto; se le pide al local las que faltan o cambiaron
+    const conFoto = new Map(carta.productos.filter(p => p.foto).map(p => [p.id, p.foto]));
+    const guardadas = await all('SELECT producto_id, version FROM fotos WHERE local_id = ?', [req.local.id]);
+    for (const f of guardadas) {
+      if (!conFoto.has(f.producto_id)) await run('DELETE FROM fotos WHERE local_id = ? AND producto_id = ?', [req.local.id, f.producto_id]);
+    }
+    const tiene = new Map(guardadas.map(f => [f.producto_id, f.version]));
+    const fotosFaltan = [...conFoto].filter(([id, v]) => tiene.get(id) !== v).map(([id]) => id);
     const { cliente } = await get('SELECT cliente FROM locales WHERE id = ?', [req.local.id]);
     // El link fijo de la carta: el local lo usa en sus QR y links de WhatsApp e Instagram
-    res.json({ ok: true, url: `${req.protocol}://${req.get('host')}/l/${encodeURIComponent(cliente)}` });
+    res.json({ ok: true, url: `${req.protocol}://${req.get('host')}/l/${encodeURIComponent(cliente)}`, fotos_faltan: fotosFaltan });
+  }));
+
+  // La foto de un plato (llega tal cual, no JSON). Solo de un plato que está en la carta con esa versión de foto.
+  const recibirFoto = express.raw({ type: () => true, limit: MAX_FOTO });
+  app.put('/api/sync/fotos/:id', autenticarLocal, (req, res, next) => recibirFoto(req, res, err => {
+    if (err) return res.status(err.type === 'entity.too.large' ? 413 : 400).json({ error: 'Foto inválida' });
+    next();
+  }), ruta(async (req, res) => {
+    const id = Number(req.params.id);
+    const version = Number(req.query.v);
+    const fila = await get('SELECT datos FROM cartas WHERE local_id = ?', [req.local.id]);
+    const p = fila && JSON.parse(fila.datos).productos.find(x => x.id === id);
+    if (!p || !p.foto || p.foto !== version) throw errorHttp(409, 'Ese plato no está en la carta con esa foto: mandá la carta primero');
+    const tipo = tipoImagen(req.body);
+    if (!tipo) throw errorHttp(400, 'Formato no admitido: JPG, PNG o WEBP');
+    await run(`INSERT INTO fotos (local_id, producto_id, version, tipo, datos) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(local_id, producto_id) DO UPDATE SET version = excluded.version, tipo = excluded.tipo, datos = excluded.datos,
+        actualizado_en = CURRENT_TIMESTAMP`, [req.local.id, id, version, tipo, req.body]);
+    res.json({ ok: true });
   }));
 
   // El local viene a buscar los pedidos nuevos (esto también dice que está conectado)
@@ -87,7 +118,21 @@ module.exports = function registrarTienda(app, { ruta, errorHttp, autenticarLoca
     (carta.info.telefono ? ` Podés llamar al ${carta.info.telefono}.` : '');
 
   app.get('/l/:cliente/api/publico/menu', conLocal(async (req, res, l, carta) => {
-    res.json({ categorias: carta.categorias, productos: carta.productos });
+    // La foto se muestra cuando ya llegó a la nube en esa versión (si no, el plato se ve sin foto hasta la próxima vuelta)
+    const llegaron = new Map((await all('SELECT producto_id, version FROM fotos WHERE local_id = ?', [l.id])).map(f => [f.producto_id, f.version]));
+    const productos = carta.productos.map(p => ({ ...p, foto: p.foto && llegaron.get(p.id) === p.foto ? p.foto : null }));
+    res.json({ categorias: carta.categorias, productos });
+  }));
+
+  // Foto de un plato. Con ?v= (así la pide la carta) se guarda en el celular: una foto nueva cambia la versión.
+  app.get('/l/:cliente/api/publico/fotos/:id', conLocal(async (req, res, l) => {
+    const f = await get('SELECT tipo, datos FROM fotos WHERE local_id = ? AND producto_id = ?', [l.id, Number(req.params.id)]);
+    if (!f) throw errorHttp(404, 'Sin foto');
+    res.set({
+      'Content-Type': f.tipo, 'Content-Length': f.datos.length, 'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': req.query.v ? 'public, max-age=2592000, immutable' : 'public, max-age=300'
+    });
+    res.end(f.datos);
   }));
 
   app.get('/l/:cliente/api/publico/info', conLocal(async (req, res, l, carta) => {

@@ -1,6 +1,6 @@
 'use strict';
 // Fadido Nube: base de datos (SQLite). Cuentas (un dueño o empresa), sus locales, los usuarios del panel
-// y las ventas que manda cada local (solo productos e importes), la carta pública de cada local y los pedidos online
+// y las ventas que manda cada local (solo productos e importes), la carta pública de cada local (con las fotos) y los pedidos online
 // en camino al local. Los datos del cliente de un pedido online se borran apenas el local lo recibe.
 const fs = require('fs');
 const path = require('path');
@@ -61,6 +61,10 @@ const listo = (async () => {
   if (!cols.includes('modalidad')) await run("ALTER TABLE locales ADD COLUMN modalidad TEXT NOT NULL DEFAULT 'mensual'");
   await run(`CREATE TABLE IF NOT EXISTS cartas (
     local_id INTEGER PRIMARY KEY, datos TEXT NOT NULL, actualizado_en TEXT DEFAULT CURRENT_TIMESTAMP)`);
+  // Fotos de los platos de la carta online: las manda el local (las que esta tabla no tiene en esa versión)
+  await run(`CREATE TABLE IF NOT EXISTS fotos (
+    local_id INTEGER NOT NULL, producto_id INTEGER NOT NULL, version INTEGER NOT NULL, tipo TEXT NOT NULL, datos BLOB NOT NULL,
+    actualizado_en TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (local_id, producto_id))`);
   // datos (nombre, teléfono, dirección del cliente) se borra apenas el local recibe el pedido
   await run(`CREATE TABLE IF NOT EXISTS pedidos_online (
     id INTEGER PRIMARY KEY AUTOINCREMENT, local_id INTEGER NOT NULL, codigo TEXT NOT NULL UNIQUE, datos TEXT,

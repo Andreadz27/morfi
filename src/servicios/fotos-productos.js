@@ -6,16 +6,9 @@
 // - La carta pública las pide con ?v=<versión>: cambiar la foto cambia la dirección, así el celular no muestra la vieja.
 const { run, get } = require('../db');
 const { errorHttp } = require('../util');
+const { tipoImagen } = require('../tipo-imagen');
 
 const MAX_BYTES = 2 * 1024 * 1024;
-
-function tipoImagen(buf) {
-  if (buf.length < 12) return null;
-  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
-  if (buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
-  if (buf.toString('latin1', 0, 4) === 'RIFF' && buf.toString('latin1', 8, 12) === 'WEBP') return 'image/webp';
-  return null;
-}
 
 async function guardarFoto(productoId, datos, usuarioId) {
   if (!Buffer.isBuffer(datos) || !datos.length) throw errorHttp(400, 'No llegó la foto');
@@ -24,9 +17,10 @@ async function guardarFoto(productoId, datos, usuarioId) {
   if (!tipo) throw errorHttp(400, 'Formato no admitido: subí una foto JPG, PNG o WEBP');
   const p = await get('SELECT id, nombre FROM productos WHERE id = ? AND activo = 1', [productoId]);
   if (!p) throw errorHttp(404, 'Producto no encontrado');
-  await run(`INSERT INTO producto_fotos (producto_id, tipo, tamano, datos, version) VALUES (?, ?, ?, ?, 1)
+  // La versión es la hora (ms) y nunca baja: quitar la foto y subir otra no repite un ?v= que el celular ya guardó
+  await run(`INSERT INTO producto_fotos (producto_id, tipo, tamano, datos, version) VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(producto_id) DO UPDATE SET tipo = excluded.tipo, tamano = excluded.tamano, datos = excluded.datos,
-      version = producto_fotos.version + 1, actualizado_en = CURRENT_TIMESTAMP`, [p.id, tipo, datos.length, datos]);
+      version = MAX(producto_fotos.version + 1, excluded.version), actualizado_en = CURRENT_TIMESTAMP`, [p.id, tipo, datos.length, datos, Date.now()]);
   await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)', [usuarioId, 'foto_producto', `Foto de ${p.nombre}`]);
   return { producto_id: p.id, tipo, tamano: datos.length, foto: (await get('SELECT version FROM producto_fotos WHERE producto_id = ?', [p.id])).version };
 }
