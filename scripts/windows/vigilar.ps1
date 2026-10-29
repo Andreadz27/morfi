@@ -27,7 +27,51 @@ function Actualizando {
   [bool](Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'actualizar' })
 }
 
-if (Responde) { exit 0 }
+
+# ----- Actualizaciones sin tocar la PC (src/servicios/actualizaciones.js) -----
+# Corre como SYSTEM: arranca la tarea "Fadido - actualizar" (scripts/actualizar.js: copia, actualiza y si algo
+# falla vuelve a la versión anterior). Si la instalación no la tenía (sin -ActualizacionAutomatica), la crea sin
+# horario: solo corre cuando se la pide.
+function Lanzar-Actualizacion($motivo) {
+  if (Actualizando) { return }
+  $nombre = @('Fadido - actualizar', 'Morfi - actualizar') | Where-Object { Get-ScheduledTask -TaskName $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
+  if (-not $nombre) {
+    $npm = (Get-Command npm.cmd -ErrorAction SilentlyContinue).Source
+    if (-not $npm) { Anotar 'No encuentro npm: no se puede actualizar'; return }
+    $pm2Dir = if ($Pm2) { Split-Path $Pm2 } else { '' }
+    $accion = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/c cd /d `"$raiz`" && set `"PATH=$pm2Dir;%PATH%`" && `"$npm`" run actualizar" -WorkingDirectory $raiz
+    $ajustes = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+    $sistema = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+    $nombre = 'Fadido - actualizar'
+    Register-ScheduledTask -TaskName $nombre -Action $accion -Principal $sistema -Settings $ajustes -Force | Out-Null
+  }
+  Start-ScheduledTask -TaskName $nombre
+  Anotar "Actualización iniciada ($motivo)"
+}
+
+function Revisar-Actualizacion {
+  # 1) El administrador tocó "Actualizar ahora" en Fadido
+  $pedido = Join-Path $raiz 'data\actualizar-ahora.json'
+  if (Test-Path $pedido) { Remove-Item $pedido -Force; Lanzar-Actualizacion 'pedida desde Fadido'; return }
+  # 2) Automática: cada 30 minutos se mira si hay versión nueva; se instala solo con el local tranquilo
+  #    (Fadido lo dice: sin pedidos abiertos, caja cerrada y 30 minutos sin movimiento; apagable en Configuración)
+  $marca = Join-Path $raiz 'logs\revision-version.txt'
+  if ((Test-Path $marca) -and ((Get-Date) - (Get-Item $marca).LastWriteTime).TotalMinutes -lt 30) { return }
+  $intentada = if (Test-Path $marca) { (Get-Content $marca -ErrorAction SilentlyContinue | Select-Object -First 1) } else { '' }
+  New-Item -ItemType Directory -Force (Split-Path $marca) | Out-Null
+  Set-Content $marca $intentada
+  try { $t = Invoke-RestMethod -TimeoutSec 10 "http://127.0.0.1:$Puerto/api/sistema/tranquilo" } catch { return }
+  if (-not $t.tranquilo) { return }
+  git -C $raiz fetch -q origin main 2>&1 | Out-Null
+  $local = (git -C $raiz rev-parse HEAD 2>$null); $nueva = (git -C $raiz rev-parse origin/main 2>$null)
+  if (-not $local -or -not $nueva -or $local -eq $nueva) { return }
+  # Si esa misma versión ya se intentó y volvió atrás, no se reintenta sola (queda "Actualizar ahora")
+  if ($intentada -eq $nueva) { return }
+  Set-Content $marca $nueva
+  Lanzar-Actualizacion "versión nueva $($nueva.Substring(0, 7)) con el local tranquilo"
+}
+
+if (Responde) { Revisar-Actualizacion; exit 0 }
 # Una falla suelta (la PC recién prendida, un reinicio de pm2) no alcanza: se vuelve a probar antes de tocar nada
 Start-Sleep -Seconds 30
 if ((Responde) -or (Actualizando)) { exit 0 }

@@ -16,6 +16,8 @@ test('todas las rutas de la API exigen sesión, salvo las públicas y los webhoo
   const PUBLICAS = ['POST /api/auth/login', 'GET /api/publico/menu', 'GET /api/publico/info', 'POST /api/publico/pedido',
     'POST /api/webhooks/:plataforma', 'POST /api/mp/notificacion', 'POST /api/tiendanube/webhook', 'GET /api/salud',
     'GET /api/whatsapp/webhook', 'POST /api/whatsapp/webhook',
+    // Para el vigilante de Windows: solo responde a la misma PC y sin datos del negocio (test/actualizacion-sistema.test.js)
+    'GET /api/sistema/tranquilo',
     // QR de la mesa: el cliente pide sin login; la clave de la mesa va en la ruta (test/mesa-qr.test.js)
     'GET /api/publico/mesa/:token', 'POST /api/publico/mesa/:token/pedido', 'POST /api/publico/mesa/:token/llamar',
     // Pago desde la mesa (test/pago-mesa.test.js)

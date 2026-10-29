@@ -397,6 +397,9 @@ async function migrarEsquema() {
   await agregarColumna('pedidos', 'lugar', "TEXT DEFAULT ''");
   await agregarColumna('pedidos', 'llamado_en', 'TEXT');
   await agregarColumna('pedidos', 'telefono_aviso', "TEXT DEFAULT ''");
+  // Actualización automática (servicios/actualizaciones.js): el vigilante instala solo las versiones nuevas cuando el
+  // local está tranquilo. 0 = solo cuando el administrador toca "Actualizar ahora" (o a las 05:00 si se programó).
+  await agregarColumna('configuracion', 'auto_actualizar', 'INTEGER NOT NULL DEFAULT 1');
   await agregarColumna('caja', 'pendiente_arqueo', 'INTEGER NOT NULL DEFAULT 0');
   await agregarColumna('caja', 'arqueo_por', 'INTEGER');
   await agregarColumna('caja', 'arqueo_en', 'TEXT');

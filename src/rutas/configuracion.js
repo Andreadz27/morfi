@@ -85,10 +85,11 @@ app.put('/api/config', autenticar, esAdmin, async (req, res) => {
     if (b.puntos_minimo !== undefined && !(Number(b.puntos_minimo) >= 0)) throw errorHttp(400, 'Mínimo de puntos inválido');
     // Cierre del día: hora HH:MM, días que abre (0 = domingo) y quiénes reparten las propinas
     validarConfigCierre(b);
+    if (b.auto_actualizar !== undefined) b.auto_actualizar = b.auto_actualizar ? 1 : 0;
     await actualizarParcial('configuracion', 1, b, ['nombre_negocio', 'eslogan', 'direccion', 'telefono', 'email', 'cuit', 'alias_transferencia', 'titular_transferencia', 'tasa_iva',
       'moneda', 'activar_impresion', 'tipo_negocio', 'modulos_activos', 'terminologia', 'setup_completado', 'mozo_cobra_mesa', 'pin_autorizacion', 'arqueo_ciego',
       'qr_mesa_modo', 'puntos_activo', 'puntos_cada', 'puntos_valor', 'puntos_minimo',
-      'cierre_auto_activo', 'cierre_hora', 'cierre_dias', 'cierre_propinas_usuarios']);
+      'cierre_auto_activo', 'cierre_hora', 'cierre_dias', 'cierre_propinas_usuarios', 'auto_actualizar']);
     const config = await get('SELECT * FROM configuracion WHERE id = 1');
     if (config) {
       try { config.modulos_activos = JSON.parse(config.modulos_activos || '[]'); } catch(e) { config.modulos_activos = []; }

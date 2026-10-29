@@ -320,6 +320,22 @@ const ConfigView = {
         </form>
       </div>
 
+      ${App.puede('admin') ? `<div class="card mt-20" id="cardActualizacion">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-rotate"></i> Actualizaciones</span>
+          <button class="btn btn-primary btn-sm" id="btnActualizarAhora" onclick="ConfigView.actualizarAhora()"><i class="fas fa-download"></i> Actualizar ahora</button>
+        </div>
+        <div id="estadoActualizacion"><i class="fas fa-spinner fa-spin"></i></div>
+        <div class="form-group mt-10">
+          <label>Actualización automática</label>
+          <select id="cfgAutoActualizar" onchange="ConfigView.guardarAutoActualizar(this.value)">
+            <option value="1" ${c.auto_actualizar !== 0 ? 'selected' : ''}>Sí: instalar las versiones nuevas cuando el local está tranquilo (sin pedidos abiertos, caja cerrada y 30 minutos sin movimiento)</option>
+            <option value="0" ${c.auto_actualizar === 0 ? 'selected' : ''}>No: solo cuando toco "Actualizar ahora"</option>
+          </select>
+          <small class="form-hint">Fadido hace una copia antes de actualizar y, si algo sale mal, vuelve solo a la versión anterior.</small>
+        </div>
+      </div>` : ''}
+
       <div class="card mt-20">
         <div class="card-header">
           <span class="card-title"><i class="fas fa-database"></i> Copias de seguridad</span>
@@ -332,6 +348,36 @@ const ConfigView = {
     `;
     this._cargarBackups();
     this._cargarImpresoras();
+    this._cargarActualizacion();
+  },
+
+  // ===== Actualizaciones (servicios/actualizaciones.js) =====
+  async _cargarActualizacion(refrescar) {
+    const el = document.getElementById('estadoActualizacion');
+    if (!el) return;
+    try {
+      const a = await API.getActualizacion(refrescar);
+      const fecha = a.local && a.local.fecha ? new Date(a.local.fecha).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+      el.innerHTML = `<p>Versión instalada: <strong>${esc(a.local ? a.local.corto : '?')}</strong> ${fecha ? `(${esc(fecha)})` : ''}
+          ${a.local && a.local.titulo ? `<br><small class="text-muted">${esc(a.local.titulo)}</small>` : ''}</p>
+        <p>${a.pedida ? '<span class="badge badge-orange"><i class="fas fa-clock"></i> Actualización pedida: empieza en menos de 5 minutos</span>'
+          : a.hay_nueva ? `<span class="badge badge-orange">Hay una versión nueva (${esc(a.remota)})</span>`
+          : a.remota ? '<span class="badge badge-green">Está al día</span>' : '<span class="text-muted">No se pudo consultar si hay versión nueva (¿sin internet?)</span>'}</p>
+        ${a.registro && a.registro.length ? `<details><summary class="text-muted">Últimas actualizaciones</summary><pre style="white-space:pre-wrap;font-size:12px">${esc(a.registro.join('\n'))}</pre></details>` : ''}`;
+    } catch (err) { el.innerHTML = `<p class="text-muted">${esc(err.message)}</p>`; }
+  },
+
+  async actualizarAhora() {
+    if (!confirm('Fadido se va a detener entre 2 y 5 minutos mientras se actualiza (antes hace una copia). ¿Actualizar ahora?')) return;
+    try {
+      await API.actualizarAhora();
+      App.showToast('Listo: la actualización empieza en menos de 5 minutos. Fadido se reinicia solo.', 'success', 8000);
+      this._cargarActualizacion();
+    } catch (err) { App.showToast(err.message, 'error'); }
+  },
+
+  async guardarAutoActualizar(v) {
+    try { await API.updateConfig({ auto_actualizar: v === '1' ? 1 : 0 }); App.showToast('Guardado', 'success'); } catch (err) { App.showToast(err.message, 'error'); }
   },
 
   // ===== Impresoras térmicas =====
