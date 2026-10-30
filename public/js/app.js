@@ -79,6 +79,8 @@ const App = {
         if (App.currentView === 'pos') POS.actualizarBadgeRetiro();
         this._refrescarRetiro();
         if (data && data.aviso === 'transferencia' && App.puede('pedidos.cobrar')) this.showToast('Un cliente de la barra avisó que transfirió: confirmalo en Venta → Para retirar', 'warning', 8000);
+        // La transferencia entró a Mercado Pago y se cobró sola (servicios/transferencias-mp.js)
+        if (data && data.transferencia_detectada && App.puede('pedidos.cobrar')) this.showToast(`${data.transferencia_detectada.numero_pedido}: llegó la transferencia de ${fmtMoneda(data.transferencia_detectada.monto)} a Mercado Pago y se cobró sola`, 'success', 8000);
       });
 
       // Cocina: nueva comanda o cambio de estado
