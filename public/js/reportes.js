@@ -129,7 +129,20 @@ const Reportes = {
 
   // Productos y cobros de una venta, en texto corto
   _textoItems(p) {
-    return (p.items || []).map(i => `${Number(i.cantidad)}× ${i.nombre_producto}${i.opciones ? ` (${i.opciones})` : ''}`);
+    return (p.items || []).map(i => {
+      const extra = this._textoOpciones(i.opciones).filter(o => !i.nombre_producto.includes(o));
+      return `${Number(i.cantidad)}× ${i.nombre_producto}${extra.length ? ` (${extra.join(', ')})` : ''}${i.notas ? ` - ${i.notas}` : ''}`;
+    });
+  },
+  // Las opciones se guardan como JSON ([{grupo, nombre, precio}]); el nombre del producto ya suele traerlas ("Flat white · Entera")
+  _textoOpciones(opciones) {
+    if (!opciones) return [];
+    try {
+      const lista = JSON.parse(opciones);
+      return Array.isArray(lista) ? lista.map(o => (o && o.nombre) || '').filter(Boolean) : [];
+    } catch (e) {
+      return [String(opciones)];
+    }
   },
   _textoPagos(p) {
     return (p.pagos || []).map(pg => `${this.nombreMetodo(pg.metodo)} ${fmtMoneda(pg.monto)}`);
