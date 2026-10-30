@@ -201,7 +201,8 @@ app.get('/api/reportes/ventas', autenticar, requiere('reportes'), async (req, re
 });
 
 // Transferencias que entraron a la cuenta de Mercado Pago del local en el período, y en qué venta quedó registrada
-// cada una (las detectadas solas o cobradas con el botón llevan la referencia MP-<id>). Sin MP activo: disponible = false.
+// cada una (las detectadas solas o cobradas con el botón llevan la referencia MP-<id>), y los cobros con tarjeta del Point.
+// Sin MP activo: disponible = false.
 app.get('/api/reportes/transferencias-mp', autenticar, requiere('reportes'), async (req, res) => {
   try {
     const fecha = /^\d{4}-\d{2}-\d{2}$/;

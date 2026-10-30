@@ -8,7 +8,8 @@ const http = require('http');
 const { iniciarServidor, esperar } = require('./helpers');
 
 const YO = 3284717330;
-// Mercado Pago simulado: /users/me y /v1/payments/search (filtra por fecha como el real)
+// Mercado Pago simulado: /users/me y /v1/payments/search (filtra por fecha y por cuenta como el real). Como el real,
+// sin collector.id no siempre devuelve los cobros del Point: acá no los devuelve nunca.
 const externo = { pagos: [], busquedas: [] };
 const servidorExterno = http.createServer((req, res) => {
   const responder = (obj, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
@@ -19,8 +20,11 @@ const servidorExterno = http.createServer((req, res) => {
     const desde = Date.parse(url.searchParams.get('begin_date'));
     const hasta = Date.parse(url.searchParams.get('end_date'));
     const offset = Number(url.searchParams.get('offset') || 0);
-    const todos = externo.pagos.filter(p => Date.parse(p.date_created) >= desde && Date.parse(p.date_created) <= hasta)
-      .sort((a, b) => Date.parse(b.date_created) - Date.parse(a.date_created));
+    const campo = url.searchParams.get('range') || 'date_created';
+    const cuenta = url.searchParams.get('collector.id');
+    const todos = externo.pagos.filter(p => Date.parse(p[campo]) >= desde && Date.parse(p[campo]) <= hasta)
+      .filter(p => cuenta ? String(p.collector_id) === cuenta : p.operation_type !== 'pos_payment')
+      .sort((a, b) => Date.parse(b[campo]) - Date.parse(a[campo]));
     return responder({ paging: { total: todos.length }, results: todos.slice(offset, offset + 100) });
   }
   responder({ message: 'no encontrado' }, 404);
@@ -28,12 +32,12 @@ const servidorExterno = http.createServer((req, res) => {
 
 let ultimoId = 9000;
 // Una transferencia que entra a la cuenta (o que sale, o una venta con el botón), hace `segundos` segundos
-function transferencia(monto, { segundos = 5, entra = true, operacion = 'money_transfer', estado = 'approved' } = {}) {
+function transferencia(monto, { segundos = 5, entra = true, operacion = 'money_transfer', estado = 'approved', pagador, extra = {} } = {}) {
   const fecha = new Date(Date.now() - segundos * 1000).toISOString();
   const p = {
     id: ++ultimoId, status: estado, operation_type: operacion, transaction_amount: monto,
     date_created: fecha, date_approved: fecha, payment_method_id: 'account_money',
-    collector_id: entra ? YO : 111, payer: { id: String(entra ? 222 : YO) }
+    collector_id: entra ? YO : 111, payer: { id: String(pagador || (entra ? 222 : YO)) }, ...extra
   };
   externo.pagos.push(p);
   return p;
@@ -81,7 +85,7 @@ test('sin Mercado Pago no se consulta nada: el aviso queda para la caja', async 
   const ped = await estado(r.codigo);
   assert.equal((await s.llamar('POST', `/api/pedidos/${ped.id}/cobrar-transferencia`, {}, s.tokenAdmin))[0], 200);
   const [, rep] = await s.llamar('GET', '/api/reportes/transferencias-mp', undefined, s.tokenAdmin);
-  assert.deepEqual(rep, { disponible: false, transferencias: [] });
+  assert.deepEqual(rep, { disponible: false, transferencias: [], point: [] });
 });
 
 test('el cliente de la barra avisa que transfirió y la transferencia por el saldo exacto lo cobra solo', async () => {
@@ -102,7 +106,7 @@ test('el cliente de la barra avisa que transfirió y la transferencia por el sal
   assert.deepEqual(pagos, [{ metodo: 'transferencia', monto: 2000, referencia: `MP-${buena.id}` }]);
   const [aud] = await s.q("SELECT detalle FROM auditoria WHERE accion = 'cobro_transferencia' ORDER BY id DESC LIMIT 1");
   assert.match(aud.detalle, /detectada sola en Mercado Pago/);
-  assert.ok(externo.busquedas.every(b => b.begin_date && b.end_date && b.range === 'date_created'));
+  assert.ok(externo.busquedas.every(b => b.begin_date && b.end_date && b.range === 'date_approved' && b['collector.id'] === String(YO)));
 });
 
 test('ante la duda no se cobra nada: dos pedidos por el mismo monto, o dos transferencias iguales', async () => {
@@ -230,4 +234,39 @@ test('reporte de transferencias: las ventas cobradas a mano como "Transferencia"
   assert.equal(de(de4).pedido.numero_pedido, r4.numero_pedido);
   assert.equal(de(otra).pedido, null, 'ninguna venta cobrada por ese monto');
   assert.equal(de(antes).pedido, null, 'entró antes de hacer el pedido');
+});
+
+test('reporte: la transferencia de un banco al CVU cuenta aunque figure con la propia cuenta como pagador', async () => {
+  externo.pagos = [];
+  const r = await pedirBarra(9);
+  const { id } = await estado(r.codigo);
+  const delBanco = transferencia(9000, { segundos: 0, operacion: 'account_fund', pagador: YO, extra: { payment_method_id: 'cvu' } });
+  const aSiMismo = transferencia(9100, { segundos: 0, pagador: YO });
+  assert.equal((await s.llamar('POST', `/api/pedidos/${id}/cobrar-transferencia`, undefined, s.tokenAdmin))[0], 200);
+  const [, rep] = await s.llamar('GET', '/api/reportes/transferencias-mp', undefined, s.tokenAdmin);
+  const t = rep.transferencias.find(x => x.id === String(delBanco.id));
+  assert.ok(t, 'entró desde un banco al CVU');
+  assert.equal(t.pedido.numero_pedido, r.numero_pedido);
+  assert.ok(!rep.transferencias.some(x => x.id === String(aSiMismo.id)), 'una que el local se mandó a sí mismo no es un ingreso');
+});
+
+test('reporte: cobros con tarjeta en el Point con comisión, retenciones, neto y la venta en que quedaron', async () => {
+  externo.pagos = [];
+  const [, p] = await s.llamar('POST', '/api/pedidos', { tipo: 'takeaway', items: [{ producto_id: prod.id, cantidad: 11 }] }, s.tokenAdmin);
+  const point = (monto, extra) => transferencia(monto, { segundos: 0, operacion: 'pos_payment', extra: {
+    payment_method_id: 'debvisa', payment_type_id: 'debit_card', installments: 1, card: { last_four_digits: '0235' },
+    fee_details: [{ type: 'mercadopago_fee', amount: monto * 0.0362 }],
+    transaction_details: { net_received_amount: monto - monto * 0.0362 - monto * 0.025 }, ...extra
+  } });
+  const deLaVenta = point(11000);
+  const suelto = point(51300);
+  const [st, c] = await s.llamar('POST', `/api/pedidos/${p.id}/cobro`, { pagos: [{ metodo: 'tarjeta', monto: 11000 }] }, s.tokenAdmin);
+  assert.equal(st, 200, JSON.stringify(c));
+  const [, rep] = await s.llamar('GET', '/api/reportes/transferencias-mp', undefined, s.tokenAdmin);
+  assert.equal(rep.transferencias.length, 0, 'un cobro del Point no es una transferencia');
+  const v = rep.point.find(x => x.id === String(deLaVenta.id));
+  assert.equal(v.pedido.pedido_id, p.id);
+  assert.equal(v.pedido.a_mano, true);
+  assert.deepEqual([v.monto, v.comision, v.retenciones, v.neto, v.ultimos, v.medio], [11000, 398.2, 275, 10326.8, '0235', 'debvisa']);
+  assert.equal(rep.point.find(x => x.id === String(suelto.id)).pedido, null, 'cobrado en el Point sin venta');
 });
