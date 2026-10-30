@@ -208,3 +208,26 @@ test('reporte de transferencias recibidas: cada una con la venta en que quedó r
   // El vendedor con permiso de reportes lo ve; sin sesión no
   assert.equal((await s.llamar('GET', '/api/reportes/transferencias-mp'))[0], 401);
 });
+
+test('reporte de transferencias: las ventas cobradas a mano como "Transferencia" se asocian por monto y hora', async () => {
+  externo.pagos = [];
+  const r3 = await pedirBarra(13);
+  const r4 = await pedirBarra(17);
+  const antes = transferencia(13000, { segundos: 600 }); // anterior al pedido: no es de esa venta
+  const de3 = transferencia(13000, { segundos: 0 });
+  const de4 = transferencia(17000, { segundos: 0 });
+  const otra = transferencia(5555, { segundos: 0 });
+  // La caja vio las transferencias y cobró a mano (sin número de operación)
+  for (const r of [r3, r4]) {
+    const { id } = await estado(r.codigo);
+    const [st, c] = await s.llamar('POST', `/api/pedidos/${id}/cobrar-transferencia`, undefined, s.tokenAdmin);
+    assert.equal(st, 200, JSON.stringify(c));
+  }
+  const [, rep] = await s.llamar('GET', '/api/reportes/transferencias-mp', undefined, s.tokenAdmin);
+  const de = t => rep.transferencias.find(x => x.id === String(t.id));
+  assert.equal(de(de3).pedido.numero_pedido, r3.numero_pedido);
+  assert.equal(de(de3).pedido.a_mano, true);
+  assert.equal(de(de4).pedido.numero_pedido, r4.numero_pedido);
+  assert.equal(de(otra).pedido, null, 'ninguna venta cobrada por ese monto');
+  assert.equal(de(antes).pedido, null, 'entró antes de hacer el pedido');
+});

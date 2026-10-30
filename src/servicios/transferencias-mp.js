@@ -27,6 +27,7 @@ const NOTA_MESA = 'Paga por transferencia';
 
 const mpListo = cfg => !!(cfg && cfg.activa && cfg.access_token);
 const fechaSql = s => Date.parse(String(s).replace(' ', 'T') + 'Z');
+const sqlFecha = ms => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
 
 // Id de la cuenta de Mercado Pago del local (para quedarse con lo que ENTRA, no con lo que el local pagó)
 const cuentas = new Map();
@@ -131,6 +132,34 @@ async function conciliar() {
   }
 }
 
+// Cobros "Transferencia" cargados a mano (sin número de operación): se asocian a la transferencia del mismo monto
+// más cercana en el tiempo, que haya entrado después de hacer el pedido y antes del cobro (con tolerancia por relojes)
+async function asociarCobrosAMano(sueltas, inicio, fin) {
+  if (!sueltas.length) return new Map();
+  const cobros = await all(`SELECT pg.monto, pg.fecha, p.id AS pedido_id, p.creado_en, p.numero_pedido FROM pagos pg JOIN pedidos p ON p.id = pg.pedido_id
+    WHERE pg.metodo = 'transferencia' AND COALESCE(pg.referencia, '') = '' AND p.estado = 'pagado' AND pg.fecha BETWEEN ? AND ?`,
+  [sqlFecha(inicio.getTime() - TOLERANCIA_MS), sqlFecha(fin.getTime() + HORAS_ATRAS * 3600e3)]);
+  const posibles = [];
+  for (const c of cobros) {
+    const cobrado = fechaSql(c.fecha);
+    for (const t of sueltas) {
+      const dif = cobrado - Date.parse(t.fecha);
+      const despuesDelPedido = Date.parse(t.fecha) >= fechaSql(c.creado_en) - TOLERANCIA_MS;
+      if (centavos(c.monto) === t.monto && despuesDelPedido && dif >= -TOLERANCIA_MS && dif <= HORAS_ATRAS * 3600e3) posibles.push({ c, t, dif: Math.abs(dif) });
+    }
+  }
+  // Las parejas más cercanas primero; cada cobro y cada transferencia se usan una sola vez
+  posibles.sort((a, b) => a.dif - b.dif);
+  const asociadas = new Map();
+  const cobrosUsados = new Set();
+  for (const { c, t } of posibles) {
+    if (asociadas.has(t.id) || cobrosUsados.has(c)) continue;
+    cobrosUsados.add(c);
+    asociadas.set(t.id, { pedido_id: c.pedido_id, numero_pedido: c.numero_pedido, a_mano: true });
+  }
+  return asociadas;
+}
+
 // Para el reporte: transferencias de un período (fechas locales AAAA-MM-DD) con el pedido en que se registraron
 async function transferenciasDelPeriodo(desde, hasta, offsetMin) {
   const cfg = await getIntCfg('mercadopago');
@@ -139,9 +168,10 @@ async function transferenciasDelPeriodo(desde, hasta, offsetMin) {
   const fin = new Date(Math.min(Date.now(), Date.parse(`${hasta}T23:59:59Z`) - offsetMin * 60000));
   const recibidas = await transferenciasRecibidas(cfg, inicio, fin);
   const usadas = await referenciasUsadas(recibidas.map(t => t.id));
+  const aMano = await asociarCobrosAMano(recibidas.filter(t => !usadas.has(t.id)), inicio, fin);
   return {
     disponible: true,
-    transferencias: recibidas.map(t => ({ ...t, pedido: usadas.get(t.id) || null }))
+    transferencias: recibidas.map(t => ({ ...t, pedido: usadas.get(t.id) || aMano.get(t.id) || null }))
   };
 }
 

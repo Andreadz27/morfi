@@ -115,12 +115,12 @@ const Reportes = {
       <tr>
         <td>${fmtFechaHora(x.fecha)}</td>
         <td class="text-right font-bold">${fmtMoneda(x.monto)}</td>
-        <td>${x.pedido ? `<span class="badge badge-green">Venta ${esc(x.pedido.numero_pedido)}</span>` : '<span class="badge badge-red">Sin asociar</span>'}</td>
+        <td>${x.pedido ? `<span class="badge badge-green">Venta ${esc(x.pedido.numero_pedido)}</span>${x.pedido.a_mano ? ' <span class="text-muted" title="Cobrada a mano como Transferencia; asociada por monto y hora">(cobrada a mano)</span>' : ''}` : '<span class="badge badge-red">Sin asociar</span>'}</td>
         <td class="text-muted">MP-${esc(x.id)}</td>
       </tr>`).join('');
     return tarjeta(`
       <p class="text-muted">Todo lo que entró a la cuenta por transferencia (al alias o al CVU). <strong>Sin asociar</strong> = la plata entró pero
-        no se registró con su número en una venta: puede ser una venta cobrada a mano como "Transferencia" o algo que no es del local.</p>
+        no hay ninguna venta cobrada como "Transferencia" por ese monto: puede ser una venta cobrada con otro medio o algo que no es del local.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Fecha</th><th class="text-right">Monto</th><th>Registrada en</th><th>Operación</th></tr></thead>
         <tbody>${filas}</tbody>
@@ -129,7 +129,20 @@ const Reportes = {
 
   // Productos y cobros de una venta, en texto corto
   _textoItems(p) {
-    return (p.items || []).map(i => `${Number(i.cantidad)}× ${i.nombre_producto}${i.opciones ? ` (${i.opciones})` : ''}`);
+    return (p.items || []).map(i => {
+      const extra = this._textoOpciones(i.opciones).filter(o => !i.nombre_producto.includes(o));
+      return `${Number(i.cantidad)}× ${i.nombre_producto}${extra.length ? ` (${extra.join(', ')})` : ''}${i.notas ? ` - ${i.notas}` : ''}`;
+    });
+  },
+  // Las opciones se guardan como JSON ([{grupo, nombre, precio}]); el nombre del producto ya suele traerlas ("Flat white · Entera")
+  _textoOpciones(opciones) {
+    if (!opciones) return [];
+    try {
+      const lista = JSON.parse(opciones);
+      return Array.isArray(lista) ? lista.map(o => (o && o.nombre) || '').filter(Boolean) : [];
+    } catch (e) {
+      return [String(opciones)];
+    }
   },
   _textoPagos(p) {
     return (p.pagos || []).map(pg => `${this.nombreMetodo(pg.metodo)} ${fmtMoneda(pg.monto)}`);
