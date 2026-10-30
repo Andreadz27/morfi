@@ -1,7 +1,8 @@
 'use strict';
 const {
-  get, all, LOCAL, fechaLocal, errorInterno, autenticar, esAdmin, requiere, tienePermiso
+  get, all, LOCAL, fechaLocal, offsetZonaMin, errorInterno, autenticar, esAdmin, requiere, tienePermiso, centavos, METODOS_PAGO
 } = require('../contexto');
+const { transferenciasDelPeriodo } = require('../servicios/transferencias-mp');
 const { estadoSalud } = require('../servicios/monitoreo');
 
 module.exports = function registrarRutas(app) {
@@ -103,32 +104,114 @@ app.get('/api/reportes/dashboard', autenticar, requiere('reportes'), async (req,
   }
 });
 
+// Ventas de un período con el detalle completo: cada venta con sus productos y cobros, y los resúmenes por medio
+// de pago, tipo de pedido, persona y producto. ?metodo= deja solo las ventas cobradas (en todo o en parte) con ese medio.
 app.get('/api/reportes/ventas', autenticar, requiere('reportes'), async (req, res) => {
   try {
     const { desde, hasta } = req.query;
-    let sql = `SELECT p.*, m.nombre as mesa_nombre, u.nombre as usuario_nombre
-               FROM pedidos p
-               LEFT JOIN mesas m ON p.mesa_id = m.id
-               LEFT JOIN usuarios u ON p.usuario_id = u.id
-               WHERE p.estado = 'pagado'`;
+    const metodo = METODOS_PAGO.includes(req.query.metodo) ? req.query.metodo : '';
+    let filtro = '';
     const params = [];
-    
     if (desde) {
-      sql += ` AND date(p.cerrado_en, ${LOCAL()}) >= ?`;
+      filtro += ` AND date(p.cerrado_en, ${LOCAL()}) >= ?`;
       params.push(desde);
     }
     if (hasta) {
-      sql += ` AND date(p.cerrado_en, ${LOCAL()}) <= ?`;
+      filtro += ` AND date(p.cerrado_en, ${LOCAL()}) <= ?`;
       params.push(hasta);
     }
-    sql += ' ORDER BY p.cerrado_en DESC';
-    
-    const pedidos = await all(sql, params);
-    const total = pedidos.reduce((sum, p) => sum + p.total, 0);
-    
-    res.json({ pedidos, total, cantidad: pedidos.length });
+
+    const todos = await all(`SELECT p.*, m.nombre as mesa_nombre, u.nombre as usuario_nombre
+               FROM pedidos p
+               LEFT JOIN mesas m ON p.mesa_id = m.id
+               LEFT JOIN usuarios u ON p.usuario_id = u.id
+               WHERE p.estado = 'pagado'${filtro}
+               ORDER BY p.cerrado_en DESC`, params);
+    const pagosDe = {};
+    const itemsDe = {};
+    const ids = todos.map(p => p.id);
+    // De a tandas: SQLite tiene un tope de parámetros por consulta
+    for (let i = 0; i < ids.length; i += 500) {
+      const tanda = ids.slice(i, i + 500);
+      const marcas = tanda.map(() => '?').join(',');
+      for (const pg of await all(`SELECT pedido_id, metodo, monto, fecha, referencia FROM pagos WHERE pedido_id IN (${marcas}) ORDER BY id`, tanda))
+        (pagosDe[pg.pedido_id] = pagosDe[pg.pedido_id] || []).push({ metodo: pg.metodo, monto: pg.monto, fecha: pg.fecha, referencia: pg.referencia || '' });
+      for (const it of await all(`SELECT pedido_id, nombre_producto, cantidad, precio_unitario, subtotal, opciones, notas FROM pedido_items
+          WHERE pedido_id IN (${marcas}) ORDER BY id`, tanda))
+        (itemsDe[it.pedido_id] = itemsDe[it.pedido_id] || []).push({
+          nombre_producto: it.nombre_producto, cantidad: it.cantidad, precio_unitario: it.precio_unitario,
+          subtotal: it.subtotal, opciones: it.opciones || '', notas: it.notas || ''
+        });
+    }
+    for (const p of todos) {
+      p.pagos = pagosDe[p.id] || [];
+      p.items = itemsDe[p.id] || [];
+    }
+    const pedidos = metodo ? todos.filter(p => p.pagos.some(pg => pg.metodo === metodo)) : todos;
+    const total = centavos(pedidos.reduce((sum, p) => sum + p.total, 0));
+
+    // Resúmenes (sobre las ventas que quedan después del filtro por medio de pago)
+    const sumar = (mapa, clave, monto, extra = {}) => {
+      const x = mapa.get(clave) || { ...extra, cantidad: 0, total: 0 };
+      x.cantidad += 1;
+      x.total = centavos(x.total + monto);
+      mapa.set(clave, x);
+    };
+    const porMetodo = new Map();
+    const porTipo = new Map();
+    const porUsuario = new Map();
+    const productos = new Map();
+    for (const p of pedidos) {
+      for (const pg of p.pagos) sumar(porMetodo, pg.metodo, pg.monto, { metodo: pg.metodo });
+      sumar(porTipo, p.tipo || 'salon', p.total, { tipo: p.tipo || 'salon' });
+      sumar(porUsuario, p.usuario_nombre || (p.origen ? 'Online / QR' : 'Sin asignar'), p.total, { nombre: p.usuario_nombre || (p.origen ? 'Online / QR' : 'Sin asignar') });
+      for (const it of p.items) {
+        const x = productos.get(it.nombre_producto) || { nombre_producto: it.nombre_producto, cantidad: 0, total: 0 };
+        x.cantidad += it.cantidad;
+        x.total = centavos(x.total + it.subtotal);
+        productos.set(it.nombre_producto, x);
+      }
+    }
+    const ordenar = mapa => [...mapa.values()].sort((a, b) => b.total - a.total);
+    const cobrado = centavos([...porMetodo.values()].reduce((s, m) => s + m.total, 0));
+    const suma = campo => centavos(pedidos.reduce((s, p) => s + (Number(p[campo]) || 0), 0));
+    const descuentos = centavos(pedidos.reduce((s, p) => s + (Number(p.descuento) || 0) + (Number(p.descuento_puntos) || 0) + (Number(p.descuento_cupon) || 0), 0));
+    const cancelados = await get(`SELECT COUNT(*) AS cantidad, COALESCE(SUM(p.total), 0) AS total FROM pedidos p
+      WHERE p.estado = 'cancelado'${filtro.replace(/p\.cerrado_en/g, 'COALESCE(p.cerrado_en, p.creado_en)')}`, params);
+
+    res.json({
+      pedidos, total, cantidad: pedidos.length, metodo,
+      resumen: {
+        subtotal: suma('subtotal'),
+        descuentos,
+        propinas: suma('propina'),
+        total,
+        ticket_promedio: pedidos.length ? centavos(total / pedidos.length) : 0,
+        cobrado,
+        por_metodo: ordenar(porMetodo).map(m => ({ ...m, porcentaje: cobrado > 0 ? Math.round(m.total / cobrado * 1000) / 10 : 0 })),
+        por_tipo: ordenar(porTipo),
+        por_usuario: ordenar(porUsuario),
+        productos: ordenar(productos),
+        cancelados: { cantidad: cancelados.cantidad, total: centavos(cancelados.total) }
+      }
+    });
   } catch (err) {
     errorInterno(res, err);
+  }
+});
+
+// Transferencias que entraron a la cuenta de Mercado Pago del local en el período, y en qué venta quedó registrada
+// cada una (las detectadas solas o cobradas con el botón llevan la referencia MP-<id>). Sin MP activo: disponible = false.
+app.get('/api/reportes/transferencias-mp', autenticar, requiere('reportes'), async (req, res) => {
+  try {
+    const fecha = /^\d{4}-\d{2}-\d{2}$/;
+    const hoy = fechaLocal();
+    const desde = fecha.test(req.query.desde || '') ? req.query.desde : hoy;
+    const hasta = fecha.test(req.query.hasta || '') ? req.query.hasta : hoy;
+    if (Date.parse(hasta) - Date.parse(desde) > 92 * 86400000) return res.status(400).json({ error: 'Elegí un período de hasta 3 meses' });
+    res.json(await transferenciasDelPeriodo(desde, hasta, offsetZonaMin()));
+  } catch (err) {
+    res.status(502).json({ error: `No se pudo consultar Mercado Pago: ${err.message}` });
   }
 });
 

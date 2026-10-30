@@ -18,6 +18,7 @@ const { iniciarSyncNube } = require('./src/servicios/sync-nube');
 const { iniciarCierreAutomatico } = require('./src/servicios/cierre-dia');
 const { iniciarFacturaAutomatica } = require('./src/servicios/facturacion-auto');
 const { iniciarResumenDueno } = require('./src/servicios/resumen-dueno');
+const { iniciarConciliacionTransferencias } = require('./src/servicios/transferencias-mp');
 
 iniciarRealtime(server);
 
@@ -49,6 +50,8 @@ migrarConRespaldo({ respaldar: crearBackup }).then(() => server.listen(PORT, () 
   iniciarFacturaAutomatica();
   // Resumen del día por WhatsApp al dueño al cerrar el día (si cargó su número en Integraciones → WhatsApp)
   iniciarResumenDueno();
+  // Transferencias al alias que entran a Mercado Pago: cobra solo el pedido que avisó que transfirió (si MP está activo)
+  iniciarConciliacionTransferencias();
 })).catch(err => {
   console.error('Error al migrar la base de datos:', err);
   process.exit(1);

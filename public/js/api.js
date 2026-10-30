@@ -272,14 +272,16 @@ const API = {
 
   // ===== Reportes =====
   getDashboard() { return this.request('GET', '/reportes/dashboard'); },
-  getReporteVentas(desde = null, hasta = null) {
+  getReporteVentas(desde = null, hasta = null, metodo = '') {
     const params = new URLSearchParams();
     if (desde) params.append('desde', desde);
     if (hasta) params.append('hasta', hasta);
+    if (metodo) params.append('metodo', metodo);
     const qs = params.toString();
     return this.request('GET', `/reportes/ventas${qs ? '?' + qs : ''}`);
   },
   getRentabilidad() { return this.request('GET', '/reportes/rentabilidad'); },
+  getTransferenciasMp(desde, hasta) { return this.request('GET', `/reportes/transferencias-mp?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`); },
 
   // ===== Auditor\u00eda =====
   getAuditoria() { return this.request('GET', '/auditoria'); },

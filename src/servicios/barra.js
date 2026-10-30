@@ -218,17 +218,22 @@ async function llamarDeNuevo(id) {
   avisarRetiroWhatsApp(p.id, { otraVez: true });
 }
 
-// La caja vio la transferencia: se cobra lo que falta por transferencia y el pedido se cierra
-async function cobrarTransferencia(pedidoId, usuarioId) {
+// La caja vio la transferencia: se cobra lo que falta por transferencia y el pedido se cierra.
+// referencia = MP-<id> cuando la detectó sola la conciliación con Mercado Pago (servicios/transferencias-mp.js)
+async function cobrarTransferencia(pedidoId, usuarioId, { referencia = '' } = {}) {
   const r = await transaccion(async () => {
     const p = await get("SELECT id, numero_pedido FROM pedidos WHERE id = ? AND estado = 'abierto'", [pedidoId]);
     if (!p) throw errorHttp(400, 'El pedido ya está pago o cerrado');
     const { saldo } = await saldoPedido(p.id);
     if (!(saldo > 0)) throw errorHttp(400, 'El pedido no tiene saldo');
-    const cobro = await registrarCobroTx(p.id, { pagos: [{ metodo: 'transferencia', monto: saldo }], usuarioId });
+    if (referencia && await get('SELECT 1 AS x FROM pagos WHERE referencia = ?', [referencia]))
+      throw errorHttp(400, 'Esa transferencia ya se usó en otro cobro');
+    const cobro = await registrarCobroTx(p.id, { pagos: [{ metodo: 'transferencia', monto: saldo, referencia }], usuarioId });
     await run("UPDATE pedidos SET aviso_pago = '' WHERE id = ?", [p.id]);
     await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)',
-      [usuarioId, 'cobro_transferencia', `Pedido ${p.numero_pedido}: transferencia recibida $${saldo}`]);
+      [usuarioId, 'cobro_transferencia', referencia
+        ? `Pedido ${p.numero_pedido}: transferencia de $${saldo} detectada sola en Mercado Pago (${referencia})`
+        : `Pedido ${p.numero_pedido}: transferencia recibida $${saldo}`]);
     return { ...cobro, pedido_id: p.id, numero_pedido: p.numero_pedido, monto: saldo };
   });
   emitEvento('retiro:actualizar', { pedido_id: pedidoId });
