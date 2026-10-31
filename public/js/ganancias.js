@@ -53,6 +53,18 @@ const Ganancias = {
 
   setTab(t) { this.tab = t; this.render(); },
 
+  async cargarTicket() {
+    const caja = document.getElementById('ganTicket');
+    if (!caja || !App.puede('reportes')) return;
+    try {
+      const t = await API.getTicketPromedio(this.desde, this.hasta);
+      if (!t.total.tickets || !document.getElementById('ganTicket')) return;
+      document.getElementById('ganTicket').innerHTML = `<p class="gan-ticket"><i class="fas fa-user-friends"></i> Ticket promedio: <strong>${fmtContable(t.total.por_ticket)}</strong> por ticket ·
+        <strong>${fmtContable(t.total.por_persona)}</strong> por persona (${t.total.personas} personas).
+        <a href="#" onclick="Reportes.desde='${this.desde}';Reportes.hasta='${this.hasta}';App.navigateTo('reportes');return false;">Ver detalle</a></p>`;
+    } catch (e) { /* sin permiso o sin datos: no se muestra */ }
+  },
+
   paint(view) {
     const tabs = this.TABS.map(([id, icono, texto]) => `
       <button class="btn ${this.tab === id ? 'btn-primary' : 'btn-outline'}" onclick="Ganancias.setTab('${id}')"><i class="fas ${icono}"></i> ${texto}</button>`).join('');
@@ -68,6 +80,7 @@ const Ganancias = {
       <div class="filter-bar mb-20 cont-tabs">${tabs}</div>
       ${conPeriodo ? this.barraPeriodo() : ''}
       ${this['html_' + this.tab]()}`;
+    if (this.tab === 'resumen') this.cargarTicket();
   },
 
   // ===== Período =====
@@ -142,8 +155,11 @@ const Ganancias = {
         <span class="gan-cascada-barra"><span style="width:${Math.abs(monto) / maxC * 100}%" class="${monto < 0 ? 'neg' : 'pos'}"></span></span>
         <span class="gan-cascada-monto">${fmtContable(monto)}</span>
       </div>`).join('');
-    const max = Math.max(1, ...r.periodos.map(p => Math.max(p.ventas, Math.abs(p.ganancia))));
-    const barras = r.periodos.length <= 62 ? r.periodos.map(p => `
+    // Sin los días (o semanas) de antes de la primera venta: Fadido recién empieza y serían todo ceros
+    const desdeVentas = r.primer_dia_con_ventas && r.agrupar === 'dia' ? r.primer_dia_con_ventas : null;
+    const periodos = desdeVentas ? r.periodos.filter(p => p.periodo >= desdeVentas) : r.periodos;
+    const max = Math.max(1, ...periodos.map(p => Math.max(p.ventas, Math.abs(p.ganancia))));
+    const barras = periodos.length <= 62 ? periodos.map(p => `
       <div class="cont-barra" title="${esc(this.nombrePeriodo(p.periodo))} · Ventas ${fmtContable(p.ventas)} · Ganancia ${fmtContable(p.ganancia)}">
         <div class="cont-barra-par">
           <span class="v" style="height:${p.ventas / max * 100}%"></span>
@@ -151,7 +167,10 @@ const Ganancias = {
         </div>
         <small>${esc(r.agrupar === 'dia' ? p.periodo.slice(8) : r.agrupar === 'mes' ? p.periodo.slice(5) : r.agrupar === 'semana' ? p.periodo.slice(8) + '/' + p.periodo.slice(5, 7) : p.periodo)}</small>
       </div>`).join('') : '';
-    const filas = [...r.periodos].reverse().map(p => `
+    // En el detalle, solo los períodos con ventas o gastos
+    const conMovimiento = periodos.filter(p => p.tickets || p.gastos);
+    const ocultos = periodos.length - conMovimiento.length;
+    const filas = [...conMovimiento].reverse().map(p => `
       <tr><td>${esc(this.nombrePeriodo(p.periodo))}</td><td class="text-right">${fmtContable(p.ventas)}</td>
         <td class="text-right">${fmtContable(p.costo)}</td><td class="text-right">${fmtContable(p.comisiones)}</td>
         <td class="text-right">${fmtContable(p.ganancia_bruta)}</td><td class="text-right">${fmtContable(p.gastos)}</td>
@@ -161,8 +180,14 @@ const Ganancias = {
       <div class="aviso-plan mb-20"><i class="fas fa-triangle-exclamation"></i> <strong>${r.sin_costo.length} producto(s) vendidos sin costo cargado</strong>:
         ${r.sin_costo.slice(0, 6).map(x => esc(x.producto)).join(', ')}${r.sin_costo.length > 6 ? '…' : ''}. Con ellos la ganancia sale más alta de lo real.
         ${App.puede('catalogo') ? '<button class="btn btn-outline btn-sm" onclick="Ganancias.setTab(\'costos\')">Cargar costos</button>' : ''}</div>` : '';
+    const sinAnterior = !c.anterior.ventas && !c.anio_pasado.ventas;
+    const sinFijos = !r.gastos_fijos_mes ? `
+      <div class="aviso-plan mb-20"><i class="fas fa-circle-info"></i> <strong>No hay gastos fijos cargados</strong> (alquiler, luz, gas, internet, sueldos fijos):
+        la ganancia sale más alta de lo real. Cargalos una vez y Fadido los reparte por día.
+        ${App.puede('admin') ? '<button class="btn btn-outline btn-sm" onclick="Ganancias.setTab(\'config\')">Cargar gastos fijos</button>' : ''}</div>` : '';
     return `
       ${sinCosto}
+      ${sinFijos}
       <div class="grid grid-4 mb-20">
         ${this.stat('fa-cash-register', 'blue', fmtContable(t.ventas), 'Ventas', this.variacion(c.anterior.variacion_ventas, 'vs. período anterior'))}
         ${this.stat('fa-coins', 'orange', fmtContable(t.ganancia_bruta), 'Ganancia bruta', `<small class="text-muted">Te quedan $${Math.round(t.ganancia_bruta / (t.ventas || 1) * 100)} de cada $100 vendidos</small>`)}
@@ -175,10 +200,15 @@ const Ganancias = {
           <div class="gan-cascada">${filasCascada}</div>
           ${t.propinas > 0 ? `<p class="gan-propinas mt-10"><i class="fas fa-hand-holding-usd"></i> Además entraron <strong>${fmtContable(t.propinas)}</strong> de propinas:
             son del personal, por eso no suman a las ventas ni a la ganancia.</p>` : ''}
+          ${r.compras_mercaderia > 0 ? `<p class="text-muted mt-10"><i class="fas fa-basket-shopping"></i> Compras de mercadería del período: <strong>${fmtContable(r.compras_mercaderia)}</strong>.
+            No se restan acá porque ya están en el "Costo de lo vendido" (el costo de cada plato).</p>` : ''}
+          <div id="ganTicket" class="mt-10"></div>
           <p class="text-muted mt-10">Margen bruto ${t.margen_bruto_pct} % · Margen neto ${t.margen_neto_pct} % · Costo de mercadería ${t.costo_pct} % de las ventas netas.</p>
         </div>
         <div class="card">
           <div class="card-header"><span class="card-title"><i class="fas fa-code-compare"></i> Comparado con</span></div>
+          ${sinAnterior ? `<p class="text-muted"><i class="fas fa-seedling"></i> Todavía no hay un período anterior para comparar: Fadido empezó a vender el
+            ${fmtFecha(r.primer_dia_con_ventas || r.desde)}. La comparación aparece sola cuando haya ventas del período anterior.</p>` : `
           <table><thead><tr><th></th><th class="text-right">Ventas</th><th class="text-right">Ganancia</th></tr></thead><tbody>
             <tr><td><strong>Este período</strong><br><small class="text-muted">${fmtFecha(r.desde)} al ${fmtFecha(r.hasta)}</small></td>
               <td class="text-right">${fmtContable(t.ventas)}</td><td class="text-right">${fmtContable(t.ganancia)}</td></tr>
@@ -188,7 +218,7 @@ const Ganancias = {
             <tr><td>Mismo período del año pasado<br><small class="text-muted">${fmtFecha(c.anio_pasado.desde)} al ${fmtFecha(c.anio_pasado.hasta)}</small></td>
               <td class="text-right">${fmtContable(c.anio_pasado.ventas)}<br>${this.variacion(c.anio_pasado.variacion_ventas, '')}</td>
               <td class="text-right">${fmtContable(c.anio_pasado.ganancia)}<br>${this.variacion(c.anio_pasado.variacion_ganancia, '')}</td></tr>
-          </tbody></table>
+          </tbody></table>`}
         </div>
       </div>
       <div class="card mb-20">
@@ -200,8 +230,8 @@ const Ganancias = {
         <div class="card-header"><span class="card-title"><i class="fas fa-table"></i> Detalle</span></div>
         <div class="table-wrap"><table><thead><tr><th>Período</th><th class="text-right">Ventas</th><th class="text-right">Costo</th><th class="text-right">Comisiones</th>
           <th class="text-right">Ganancia bruta</th><th class="text-right">Gastos</th><th class="text-right">Ganancia</th><th class="text-right">Tickets</th><th class="text-right">Ticket prom.</th></tr></thead>
-          <tbody>${filas}</tbody></table></div>
-        <p class="text-muted mt-10">Ventas sin propinas (son del personal). El costo sale del costo cargado en cada producto o receta. Los gastos son los cargados en
+          <tbody>${filas || '<tr><td colspan="9" class="text-muted">Sin ventas en el período</td></tr>'}</tbody></table></div>
+        <p class="text-muted mt-10">${ocultos ? `No se muestran ${ocultos} ${r.agrupar === 'dia' ? 'días' : 'períodos'} sin ventas ni gastos. ` : ''}Ventas sin propinas (son del personal). El costo sale del costo cargado en cada producto o receta. Los gastos son los cargados en
           Contabilidad, sin mercadería (ya está en el costo) ni comisiones (ya están estimadas).</p>
       </div>`;
   },
