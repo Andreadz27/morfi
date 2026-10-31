@@ -14,12 +14,15 @@ const Dashboard = {
     this._bindSocket();
     try {
       // Cargar en paralelo: métricas del dashboard + inteligencia de negocio
-      const [data, insights, ganancia] = await Promise.all([
+      const hoy = hoyLocal();
+      const [data, insights, ganancia, ticket] = await Promise.all([
         API.getDashboard().catch(e => null),
         API.getInsights().catch(e => null),
-        API.getGananciaHoy().catch(e => null)
+        API.getGananciaHoy().catch(e => null),
+        API.getTicketPromedio(hoy, hoy).catch(e => null)
       ]);
       this.data = data;
+      this.ticket = ticket && ticket.total && ticket.total.tickets ? ticket.total : null;
       this.ganancia = ganancia;
       this.insights = insights;
       this.paint(view);
@@ -114,7 +117,9 @@ const Dashboard = {
 
     const ventasHoy = d ? d.ventas_hoy : (ins && ins.metricas ? ins.metricas.ventas_hoy : 0);
     const pedidosHoy = d ? d.pedidos_hoy : (ins && ins.metricas ? ins.metricas.pedidos_hoy : 0);
-    const ticketPromedio = d ? Math.round(d.ticket_promedio) : 0; // un promedio no necesita centavos
+    // Mismo cálculo que Reportes (sin propinas); por persona: las personas salen solas de lo pedido
+    const t = this.ticket;
+    const ticketPromedio = t ? Math.round(t.por_ticket) : d ? Math.round(d.ticket_promedio) : 0; // un promedio no necesita centavos
 
     const difPct = ins && ins.metricas ? ins.metricas.diferencia_pct : 0;
     const difClass = difPct >= 0 ? 'text-success' : 'text-danger';
@@ -216,6 +221,7 @@ const Dashboard = {
           <div class="stat-info">
             <h3>${fmtMoneda(ticketPromedio)}</h3>
             <span>Ticket promedio</span>
+            ${t ? `<div class="dash-por-persona"><strong>${fmtMoneda(Math.round(t.por_persona))}</strong> por persona <small class="text-muted">(${t.personas} personas)</small></div>` : ''}
           </div>
         </div>
         <div class="stat-card">

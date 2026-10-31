@@ -2564,3 +2564,6 @@ tr:hover td {
 
 /* Ganancias: ticket promedio por persona */
 .gan-ticket { padding: 10px 12px; border-radius: 8px; background: rgba(14, 165, 233, .1); }
+
+/* Dashboard: ticket promedio por persona */
+.dash-por-persona { margin-top: 4px; font-size: .9rem; }
