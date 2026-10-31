@@ -440,7 +440,7 @@ const Contabilidad = {
       <form onsubmit="event.preventDefault(); Contabilidad.guardarDiaExtra()">
         ${lista.length > 1 ? `<div class="form-group"><label>Quién</label>
           <select id="extraQuien" onchange="Contabilidad.cambiarQuienExtra()">${lista.map(r => `<option value="${r.id}" ${r.id === elegido.id ? 'selected' : ''}>${esc(r.descripcion)}</option>`).join('')}</select></div>`
-          : `<input type="hidden" id="extraQuien" value="${elegido.id}"><p><strong>${esc(elegido.descripcion)}</strong> · fijo los ${elegido.dias.map(d => (this.DIAS_SEMANA.find(x => x[0] === d) || [, ''])[1]).join(', ') || '—'}</p>`}
+          : `<input type="hidden" id="extraQuien" value="${elegido.id}"><p><strong>${esc(elegido.descripcion)}</strong> · fijo los ${elegido.dias.map(d => (this.DIAS_SEMANA.find(x => x[0] === d) || [0, ''])[1]).join(', ') || '—'}</p>`}
         <div class="grid grid-2">
           <div class="form-group"><label for="extraFecha">Qué día vino</label>
             <input type="date" id="extraFecha" value="${hoy}" required></div>
