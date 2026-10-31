@@ -483,6 +483,8 @@ const Cobro = {
         ${f && !f.ok && !f.pendiente ? `<button class="btn btn-primary" onclick="Integraciones.abrirModalFacturar(${id}, ${Number(p.total) || 0})"><i class="fas fa-redo"></i> Reintentar factura</button>` : ''}
         ${r.cerrado ? `<button class="btn btn-outline" onclick="Cobro.whatsapp()"><i class="fab fa-whatsapp"></i> Enviar por WhatsApp</button>
           <button class="btn btn-outline" onclick="Pedidos.imprimirTicket(${id})"><i class="fas fa-print"></i> Ticket</button>` : ''}
+        ${App.puede('admin') && (p.pagos || []).length && p.pagos[p.pagos.length - 1].metodo !== 'giftcard'
+          ? `<button class="btn btn-outline" onclick="Pedidos.cambiarMedio(${id}, ${p.pagos[p.pagos.length - 1].id})"><i class="fas fa-pen"></i> Cambiar medio de pago</button>` : ''}
         <button class="btn btn-outline" onclick="App.closeModal()">Listo</button>
       </div>
     `, { title: r.cerrado ? 'Cobro completo' : 'Pago parcial registrado' });

@@ -22,6 +22,7 @@ class PaginaPos {
   async confirmarParaLlevar(cliente, notas = '') {
     await this.page.locator('#view-pos .pos-checkout-btn').click();
     await this.page.locator('#checkoutTipo').selectOption('takeaway');
+    await this.page.locator('#checkoutPagaDespues').click();
     await this.page.locator('#checkoutCliente').fill(cliente);
     if (notas) await this.page.locator('#checkoutNotas').fill(notas);
     await this.page.locator('button[onclick="POS.confirmCheckout()"]').click();

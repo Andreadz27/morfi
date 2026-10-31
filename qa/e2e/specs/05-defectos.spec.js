@@ -49,6 +49,7 @@ test.describe('Defectos cerrados (regresión)', () => {
     await mesa.selectOption(valor);
     // Se arrepiente: es para llevar. El selector de mesa se oculta, pero conservaba la mesa elegida
     await page.locator('#checkoutTipo').selectOption('takeaway');
+    await page.locator('#checkoutPagaDespues').click();
     await expect(mesa).toBeHidden();
     await page.locator('#checkoutCliente').fill(cliente);
     await page.locator('button[onclick="POS.confirmCheckout()"]').click();

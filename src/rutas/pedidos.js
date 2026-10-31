@@ -5,7 +5,7 @@ const {
   autorizar, requiereAutorizacion, facturaVigente, datosTicketFiscalConQR, getIntCfg, revertirFidelizacionTx, avisarRetiroWhatsApp
 } = require('../contexto');
 const { idempotente } = require('../idempotencia');
-const { corregirMedioDePago, eliminarPedido } = require('../servicios/correcciones');
+const { corregirMedioDePago, eliminarPedido, quitarItem } = require('../servicios/correcciones');
 
 module.exports = function registrarRutas(app) {
 
@@ -381,6 +381,15 @@ app.put('/api/pedidos/:id/cancelar', autenticar, requiereAutorizacion('pedidos.c
 app.put('/api/pedidos/:id/pagos/:pagoId', autenticar, requiere('admin'), async (req, res) => {
   try {
     res.json(await corregirMedioDePago(Number(req.params.id), Number(req.params.pagoId), String((req.body || {}).metodo || ''), req.usuario.id));
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// Quitar un producto de un pedido abierto (todo el renglón o algunas unidades). body: { cantidad? }
+app.delete('/api/pedidos/:id/items/:itemId', autenticar, requiere('admin'), async (req, res) => {
+  try {
+    res.json(await quitarItem(Number(req.params.id), Number(req.params.itemId), (req.body || {}).cantidad, req.usuario.id));
   } catch (err) {
     errorInterno(res, err);
   }

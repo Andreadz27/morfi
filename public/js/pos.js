@@ -536,19 +536,19 @@ checkout() {
       <div class="form-group">
         <label>Tipo de pedido</label>
         <select id="checkoutTipo">
-          <option value="salon">Sal\u00f3n</option>
           <option value="mostrador">Mostrador</option>
-          <option value="delivery">Delivery</option>
+          <option value="salon">Sal\u00f3n (mesa)</option>
           <option value="takeaway">Take Away</option>
+          <option value="delivery">Delivery</option>
         </select>
       </div>
-      <div class="form-group" id="checkoutMesaGroup">
+      <div class="form-group" id="checkoutMesaGroup" style="display:none">
         <label>Mesa</label>
         <select id="checkoutMesa"></select>
       </div>
-      <div class="form-group" id="checkoutClienteGroup" style="display:none">
-        <label>Cliente</label>
-        <input type="text" id="checkoutCliente" placeholder="Nombre del cliente">
+      <div class="form-group" id="checkoutClienteGroup">
+        <label>Nombre <small class="text-muted">(con \u00e9l lo llaman cuando est\u00e1 listo; opcional)</small></label>
+        <input type="text" id="checkoutCliente" placeholder="Ej.: Ana">
         <div id="checkoutTelLlevarGroup" style="display:none" class="mt-10">
           <label>Tel&eacute;fono (para avisarle por WhatsApp cuando est&eacute; listo)</label>
           <input type="text" id="checkoutTelefonoLlevar" placeholder="11-1234-5678">
@@ -576,21 +576,24 @@ checkout() {
           </div>
           <div class="form-group">
             <label>Costo de env&iacute;o ($)</label>
-            <input type="number" id="checkoutCostoEnvio" min="0" step="0.01" value="0">
+            <input type="number" id="checkoutCostoEnvio" min="0" step="0.01" value="0" oninput="POS.actualizarBotonCheckout()">
           </div>
         </div>
       </div>
+      ${this.htmlPago()}
       <div class="form-group">
         <label>Notas para cocina</label>
         <textarea id="checkoutNotas" placeholder="Ej: sin cebolla, bien cocida..."></textarea>
       </div>
       <div class="modal-footer">
         <button class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
-        <button class="btn btn-success" onclick="POS.confirmCheckout()">
+        <button class="btn btn-success" id="checkoutBtn" onclick="POS.confirmCheckout()">
           <i class="fas fa-check"></i> Confirmar pedido
         </button>
       </div>
     `, { title: 'Confirmar pedido', large: true });
+    const conMesa = !!this.mesaPreseleccionada;
+    this._propinaRapida = false;
 
     API.getMesas().then(mesas => {
       const select = document.getElementById('checkoutMesa');
@@ -616,54 +619,44 @@ checkout() {
     document.getElementById('checkoutTipo').addEventListener('change', (e) => {
       const tipo = e.target.value;
       document.getElementById('checkoutMesaGroup').style.display = tipo === 'salon' ? 'block' : 'none';
-      document.getElementById('checkoutClienteGroup').style.display =
-        (tipo === 'delivery' || tipo === 'takeaway') ? 'block' : 'none';
+      document.getElementById('checkoutClienteGroup').style.display = tipo === 'salon' ? 'none' : 'block';
       const esDelivery = tipo === 'delivery';
       document.getElementById('checkoutTelLlevarGroup').style.display = tipo === 'takeaway' ? 'block' : 'none';
       document.getElementById('checkoutDeliveryGroup').style.display = esDelivery ? 'grid' : 'none';
       document.getElementById('checkoutDeliveryExtra').style.display = esDelivery ? 'block' : 'none';
+      // Mostrador y para llevar pagan al pedir; la mesa y el delivery, al final (se puede cambiar)
+      this.setPagaAhora(tipo === 'mostrador' || tipo === 'takeaway');
     });
 
-    // Desde el área Take Away el pedido sale como Take Away
-    if (this.categoriaActiva === 'para_llevar') {
-      const sel = document.getElementById('checkoutTipo');
-      sel.value = 'takeaway';
-      sel.dispatchEvent(new Event('change'));
-    }
-
-    // Forzar selección de tipo si hay mesa preseleccionada (salón)
-    const tipoInit = document.getElementById('checkoutTipo').value;
-    if (tipoInit === 'delivery') {
-      document.getElementById('checkoutDeliveryGroup').style.display = 'grid';
-      document.getElementById('checkoutDeliveryExtra').style.display = 'block';
-    }
+    // Desde Mesas el pedido es de esa mesa; desde el área Take Away, para llevar; si no, mostrador
+    const sel = document.getElementById('checkoutTipo');
+    sel.value = conMesa ? 'salon' : this.categoriaActiva === 'para_llevar' ? 'takeaway' : 'mostrador';
+    sel.dispatchEvent(new Event('change'));
+    this.cambiarMetodoRapido();
   },
 
-  // ===== Cobrar y enviar en un toque (mostrador / barra) =====
-  // Un solo paso: se crea el pedido de mostrador, va a la cocina y se cobra. Para mesas, delivery o take away con
-  // teléfono sigue "Procesar pedido".
+  // ===== Un solo botón: se elige el tipo de pedido y si paga ahora (mostrador, para llevar) o al final (mesa) =====
   htmlBotonesCobro() {
     const vacio = this.cart.length === 0 ? 'disabled' : '';
-    return `${App.puede('pedidos.cobrar') ? `<button class="pos-rapido-btn" onclick="POS.cobroRapido()" ${vacio}>
-        <i class="fas fa-bolt"></i> Cobrar y enviar (mostrador)
-      </button>` : ''}
-      <button class="pos-checkout-btn" onclick="POS.checkout()" ${vacio} ${App.puede('pedidos.cobrar') ? 'style="background:#475569"' : ''}>
-        <i class="fas fa-check-circle"></i> Procesar pedido
+    return `<button class="pos-checkout-btn" onclick="POS.checkout()" ${vacio}>
+        <i class="fas fa-check-circle"></i> ${App.puede('pedidos.cobrar') ? 'Cobrar / enviar pedido' : 'Enviar pedido'}
       </button>`;
   },
 
-  cobroRapido() {
-    if (this.cart.length === 0) return;
+  // Cómo paga (solo quien puede cobrar): medio, lo recibido (vuelto) y la propina en un toque
+  htmlPago() {
+    if (!App.puede('pedidos.cobrar')) return '';
     const metodos = Object.entries(Cobro.METODOS).filter(([v]) => v !== 'giftcard');
-    const total = this.cartFinal();
     const alias = App.config && App.config.alias_transferencia;
-    App.showModal(`
-      <form onsubmit="POS.confirmarCobroRapido(event)">
-        <p class="cont-total-form mb-10">Total: <strong>${fmtMoneda(total)}</strong></p>
-        <div class="form-group">
-          <label>Nombre <small class="text-muted">(con él lo llaman cuando está listo; opcional)</small></label>
-          <input type="text" id="rapidoNombre" maxlength="40" placeholder="Ej.: Ana">
+    return `
+      <div class="form-group">
+        <label>¿Cuándo paga?</label>
+        <div class="cobro-chips pos-cuando-paga">
+          <button type="button" class="btn" id="checkoutPagaAhora" onclick="POS.setPagaAhora(true)"><i class="fas fa-cash-register"></i> Paga ahora</button>
+          <button type="button" class="btn" id="checkoutPagaDespues" onclick="POS.setPagaAhora(false)"><i class="fas fa-clock"></i> Paga al final</button>
         </div>
+      </div>
+      <div id="checkoutPago">
         <div class="form-group">
           <label>Cómo paga</label>
           <div style="display:flex;flex-wrap:wrap;gap:6px" id="rapidoMetodos">
@@ -672,22 +665,39 @@ checkout() {
         </div>
         <div class="form-group">
           <label id="rapidoRecibidoTxt">Recibido</label>
-          <input type="number" id="rapidoRecibido" min="0" step="0.01" placeholder="${total}" oninput="POS.vueltoRapido()">
+          <input type="number" id="rapidoRecibido" min="0" step="0.01" oninput="POS.vueltoRapido()">
           <div id="rapidoVuelto" class="mt-10"></div>
         </div>
         ${alias ? `<p class="text-muted" id="rapidoAlias" style="display:none"><i class="fas fa-university"></i> Alias: <strong>${esc(alias)}</strong></p>` : ''}
-        <div class="form-group">
-          <label>Notas para cocina</label>
-          <input type="text" id="rapidoNotas" maxlength="300" placeholder="Ej.: sin hielo">
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
-          <button type="submit" class="btn btn-success"><i class="fas fa-bolt"></i> Cobrar y enviar a cocina</button>
-        </div>
-      </form>`, { title: 'Cobrar y enviar' });
-    this._propinaRapida = false;
-    this.cambiarMetodoRapido();
-    setTimeout(() => { const i = document.getElementById('rapidoNombre'); if (i) i.focus(); }, 50);
+      </div>`;
+  },
+
+  // Total a cobrar: el carrito más el envío del delivery
+  totalCheckout() {
+    const tipo = (document.getElementById('checkoutTipo') || {}).value;
+    const envio = tipo === 'delivery' ? parseFloat((document.getElementById('checkoutCostoEnvio') || {}).value) || 0 : 0;
+    return Math.round((this.cartFinal() + envio) * 100) / 100;
+  },
+
+  setPagaAhora(si) {
+    this._pagaAhora = !!si && App.puede('pedidos.cobrar');
+    const a = document.getElementById('checkoutPagaAhora'), d = document.getElementById('checkoutPagaDespues');
+    if (a) a.className = `btn ${this._pagaAhora ? 'btn-success' : 'btn-outline'}`;
+    if (d) d.className = `btn ${this._pagaAhora ? 'btn-outline' : 'btn-primary'}`;
+    const pago = document.getElementById('checkoutPago');
+    if (pago) pago.style.display = this._pagaAhora ? '' : 'none';
+    this.actualizarBotonCheckout();
+  },
+
+  actualizarBotonCheckout() {
+    const total = this.totalCheckout();
+    const r = document.getElementById('rapidoRecibido');
+    if (r) r.placeholder = total;
+    const b = document.getElementById('checkoutBtn');
+    if (b) b.innerHTML = this._pagaAhora
+      ? `<i class="fas fa-check"></i> Cobrar ${fmtMoneda(total)} y enviar a cocina`
+      : '<i class="fas fa-check"></i> Enviar a cocina (cobrar después)';
+    this.vueltoRapido();
   },
 
   metodoRapido() {
@@ -709,7 +719,7 @@ checkout() {
   // Lo que entregó/pagó por encima del total
   excedenteRapido() {
     const recibido = Number((document.getElementById('rapidoRecibido') || {}).value) || 0;
-    return recibido ? Math.round((recibido - this.cartFinal()) * 100) / 100 : 0;
+    return recibido ? Math.round((recibido - this.totalCheckout()) * 100) / 100 : 0;
   },
 
   // Vuelto (efectivo) o lo que pagó de más (tarjeta, transferencia): un toque y queda de propina
@@ -735,34 +745,22 @@ checkout() {
     this.vueltoRapido();
   },
 
-  confirmarCobroRapido(e) {
-    e.preventDefault();
-    return App.sinDobleEnvio('pos.cobroRapido', () => this._cobroRapido());
-  },
-
-  async _cobroRapido() {
+  // "Paga ahora": lo que se cobra, validado antes de crear el pedido. null = no se puede (ya avisó por qué)
+  datosCobroAhora() {
     const metodo = this.metodoRapido();
-    const cliente = document.getElementById('rapidoNombre').value.trim();
-    const notas = document.getElementById('rapidoNotas').value.trim();
     const excedente = this.excedenteRapido();
-    if (excedente < -0.009) return App.showToast(metodo === 'efectivo' ? 'El efectivo recibido no cubre el total' : 'Lo cobrado no cubre el total', 'warning');
-    if (excedente > 0 && metodo !== 'efectivo' && !this._propinaRapida) return App.showToast('Pagó de más: tocá «Es propina» o corregí el monto', 'warning');
+    if (excedente < -0.009) { App.showToast(metodo === 'efectivo' ? 'El efectivo recibido no cubre el total' : 'Lo cobrado no cubre el total', 'warning'); return null; }
+    if (excedente > 0 && metodo !== 'efectivo' && !this._propinaRapida) { App.showToast('Pagó de más: tocá «Es propina» o corregí el monto', 'warning'); return null; }
     // Si deja el vuelto (o lo que pagó de más) de propina, se suma a la propina del pedido
     const extra = this._propinaRapida && excedente > 0 ? excedente : 0;
-    const recibidoTxt = metodo === 'efectivo' && !extra ? document.getElementById('rapidoRecibido').value : '';
-    const items = this.cart.map(item => ({ producto_id: item.producto_id, nombre: item.nombre, cantidad: item.cantidad, precio: item.precio, opciones: item.opciones || [] }));
-    let pedido;
+    const recibido = metodo === 'efectivo' && !extra ? document.getElementById('rapidoRecibido').value : '';
+    return { metodo, extra, recibido };
+  },
+
+  async cobrarAlEnviar(pedido, cobro) {
     try {
-      pedido = await API.createPedido({ tipo: 'mostrador', cliente, items, notas, descuento: this.descuento, propina: Math.round(((this.propina || 0) + extra) * 100) / 100 },
-        `Pedido ${cliente}`.trim());
-    } catch (err) { return App.showToast(err.message, 'error'); }
-    this.cart = []; this.descuento = 0; this.propina = 0;
-    App.closeModal();
-    this.paint(document.getElementById('view-pos'));
-    if (pedido.encolado) return App.showToast('Sin WiFi: el pedido quedó guardado y se envía solo al volver la conexión. Cobralo desde Pedidos.', 'warning', 9000);
-    try {
-      const r = await API.cobrarEnMesa(pedido.id, { pagos: [{ metodo, monto: pedido.total, ...(recibidoTxt ? { recibido: Number(recibidoTxt) } : {}) }] });
-      App.showToast(`Pedido ${pedido.numero_pedido} cobrado y en la cocina${r && r.vuelto > 0 ? ` · vuelto ${fmtMoneda(r.vuelto)}` : ''}${extra ? ` · propina ${fmtMoneda(extra)}` : ''}`, 'success', 7000);
+      const r = await API.cobrarEnMesa(pedido.id, { pagos: [{ metodo: cobro.metodo, monto: pedido.total, ...(cobro.recibido ? { recibido: Number(cobro.recibido) } : {}) }] });
+      App.showToast(`Pedido ${pedido.numero_pedido} cobrado y en la cocina${r && r.vuelto > 0 ? ` · vuelto ${fmtMoneda(r.vuelto)}` : ''}${cobro.extra ? ` · propina ${fmtMoneda(cobro.extra)}` : ''}`, 'success', 7000);
     } catch (err) {
       // El pedido ya está en la cocina: el cobro se hace desde Pedidos (no se crea de nuevo)
       App.showToast(`Pedido ${pedido.numero_pedido} enviado a la cocina, pero no se pudo cobrar: ${err.message}. Cobralo desde Pedidos.`, 'error', 10000);
@@ -880,6 +878,10 @@ checkout() {
       opciones: item.opciones || []
     }));
 
+    // "Paga ahora": se valida el cobro antes de mandar el pedido a la cocina
+    const cobro = this._pagaAhora ? this.datosCobroAhora() : null;
+    if (this._pagaAhora && !cobro) return;
+
     try {
       const pedido = await API.createPedido({
         tipo,
@@ -889,7 +891,7 @@ checkout() {
         items,
         notas,
         descuento: this.descuento,
-        propina: this.propina,
+        propina: Math.round(((this.propina || 0) + (cobro ? cobro.extra : 0)) * 100) / 100,
         plataforma,
         codigo_externo,
         direccion,
@@ -898,14 +900,15 @@ checkout() {
       }, this.descripcionPedido(tipo, mesaId, cliente));
       App.closeModal();
       if (pedido.encolado) {
-        App.showToast('Sin WiFi: el pedido quedó guardado en este celular y se envía solo al volver la conexión', 'warning', 8000);
+        App.showToast(`Sin WiFi: el pedido quedó guardado en este celular y se envía solo al volver la conexión${cobro ? '. Cobralo desde Pedidos' : ''}`, 'warning', 8000);
         this.cart = [];
         this.descuento = 0;
         this.propina = 0;
         this.paint(document.getElementById('view-pos'));
         return;
       }
-      App.showToast(`Pedido ${pedido.numero_pedido} creado`, 'success');
+      if (cobro) await this.cobrarAlEnviar(pedido, cobro);
+      else App.showToast(`Pedido ${pedido.numero_pedido} creado`, 'success');
 
       // Si el servidor mandó la comanda a una impresora térmica no hace falta nada más.
       // Sin impresoras configuradas, se usa la impresión del navegador (si está activada).

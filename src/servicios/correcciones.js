@@ -12,7 +12,7 @@ const { redondear, resumenCaja } = require('./caja');
 const { resumenDelDia } = require('./cierre-dia');
 const { facturaVigente } = require('./facturacion');
 const { revertirFidelizacionTx } = require('./fidelizacion');
-const { METODOS_PAGO } = require('./pedidos');
+const { METODOS_PAGO, recalcularTotales, saldoPedido } = require('./pedidos');
 
 const MOTIVOS_ELIMINAR = ['Cargado por error', 'Pedido duplicado', 'Era una prueba', 'El cliente se fue', 'Otro'];
 
@@ -134,4 +134,37 @@ async function eliminarPedido(pedidoId, { motivo, detalle = '' }, usuarioId) {
   return { ok: true, estado_anterior: r.pedido.estado, cobrado: redondear(r.devolver), cajas_actualizadas: r.cajas };
 }
 
-module.exports = { corregirMedioDePago, eliminarPedido, MOTIVOS_ELIMINAR };
+// Quitar un producto (o algunas unidades) de un pedido abierto. Lo ya cobrado de ese plato (cuenta dividida por
+// plato) no se puede quitar, y el total no puede quedar por debajo de lo ya cobrado.
+async function quitarItem(pedidoId, itemId, cantidad, usuarioId) {
+  const r = await transaccion(async () => {
+    const pedido = await get('SELECT * FROM pedidos WHERE id = ?', [pedidoId]);
+    if (!pedido) throw errorHttp(404, 'Pedido no encontrado');
+    if (pedido.estado !== 'abierto') throw errorHttp(400, 'Solo se quitan productos de un pedido abierto');
+    const item = await get('SELECT * FROM pedido_items WHERE id = ? AND pedido_id = ?', [itemId, pedidoId]);
+    if (!item) throw errorHttp(404, 'Ese producto no es de este pedido');
+    const actual = Number(item.cantidad) || 0;
+    const quitar = cantidad === undefined || cantidad === null || cantidad === '' ? actual : Number(cantidad);
+    if (!(quitar > 0) || quitar > actual + 1e-9) throw errorHttp(400, 'Cantidad inválida');
+    if (actual - quitar < (Number(item.cantidad_pagada) || 0) - 1e-9) throw errorHttp(400, 'Esa parte ya está cobrada: no se puede quitar');
+    const quedan = Math.round((actual - quitar) * 10000) / 10000;
+    if (quedan <= 0) {
+      const { n } = await get('SELECT COUNT(*) AS n FROM pedido_items WHERE pedido_id = ?', [pedidoId]);
+      if (n <= 1) throw errorHttp(400, 'Es el único producto del pedido: usá "Eliminar pedido"');
+      await run('DELETE FROM pedido_items WHERE id = ?', [item.id]);
+    } else {
+      await run('UPDATE pedido_items SET cantidad = ?, subtotal = ? WHERE id = ?', [quedan, redondear(item.subtotal * quedan / actual), item.id]);
+    }
+    const { total } = await recalcularTotales(pedidoId);
+    const { pagado } = await saldoPedido(pedidoId);
+    if (total < pagado - 0.009) throw errorHttp(400, 'Quitarlo deja el total por debajo de lo ya cobrado');
+    await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)', [usuarioId, 'quitar_item',
+      `Pedido ${pedido.numero_pedido}: quitado ${quitar} x ${item.nombre_producto} (${redondear(item.subtotal * quitar / actual)}) por ${await nombreUsuario(usuarioId)}. Total nuevo ${total}`]);
+    return { pedido, total, nombre: item.nombre_producto, quitar };
+  });
+  emitEvento('cocina:actualizar', { pedido_id: Number(pedidoId), accion: 'item_quitado' });
+  emitEvento('dashboard:actualizar', { motivo: 'pedido_actualizado' });
+  return { ok: true, total: r.total, quitado: `${r.quitar} x ${r.nombre}` };
+}
+
+module.exports = { corregirMedioDePago, eliminarPedido, quitarItem, MOTIVOS_ELIMINAR };

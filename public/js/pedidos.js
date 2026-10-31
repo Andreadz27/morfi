@@ -100,12 +100,14 @@ const Pedidos = {
 
   mostrarDetalle(p) {
     this.ultimoPedido = p;
+    const puedeQuitar = p.estado === 'abierto' && App.puede('admin');
     const items = p.items.map(i => `
       <tr>
         <td>${i.cantidad} x</td>
         <td>${esc(i.nombre_producto)}</td>
         <td class="text-right">${fmtMoneda(i.precio_unitario)}</td>
         <td class="font-bold">${fmtMoneda(i.subtotal)}</td>
+        ${puedeQuitar ? `<td><button class="btn btn-sm btn-outline btn-quitar-item" onclick="Pedidos.quitarItem(${p.id}, ${i.id})" title="Quitar del pedido" aria-label="Quitar ${esc(i.nombre_producto)}"><i class="fas fa-trash-alt"></i></button></td>` : ''}
       </tr>
     `).join('');
 
@@ -139,7 +141,7 @@ const Pedidos = {
           <div class="card sub-card">
             <div class="card-header"><span class="card-title"><i class="fas fa-list"></i> Items</span></div>
             <table>
-              <thead><tr><th>Cant</th><th>Producto</th><th>Precio</th><th>Subtotal</th></tr></thead>
+              <thead><tr><th>Cant</th><th>Producto</th><th>Precio</th><th>Subtotal</th>${puedeQuitar ? '<th></th>' : ''}</tr></thead>
               <tbody>${items || '<tr><td colspan="4">Sin items</td></tr>'}</tbody>
             </table>
             <div class="text-right mt-10">
@@ -261,116 +263,123 @@ async abrirPedidoDeMesa(mesaId) {
     }
   },
 
+  // "+ Item": se busca, se toca el producto y queda agregado al instante. La ventana sigue abierta para agregar
+  // más (con la lista de lo agregado) hasta tocar "Listo".
   agregarItem(pedidoId) {
-    const self = this;
     Promise.all([API.getProductos(), Opciones.cargar()]).then(([todos]) => {
-      const productos = todos.filter(p => (p.clase || 'venta') === 'venta'); // insumos y sub-recetas no se venden
-      self._productosItem = productos;
-      App.showModal(`
-        <form onsubmit="Pedidos.guardarItem(event, ${pedidoId})">
-          <div class="form-group">
-            <label for="itemBuscar">Producto</label>
-            <input type="search" id="itemBuscar" placeholder="Buscar: nombre o categoría" autocomplete="off"
-              oninput="Pedidos.filtrarItem(this.value)" onkeydown="Pedidos.teclaBuscarItem(event)" aria-label="Buscar producto">
-            <select id="itemProducto" size="8" required aria-label="Producto" style="margin-top:8px"></select>
-            <small class="text-muted" id="itemCuantos"></small>
-          </div>
-          <div class="form-group">
-            <label>Cantidad</label>
-            <input type="number" id="itemCantidad" min="1" value="1" required>
-          </div>
-          <div class="form-group">
-            <label>Notas</label>
-            <textarea id="itemNotas" placeholder="Notas para cocina"></textarea>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-danger" onclick="App.closeModal()">Cancelar</button>
-            <button type="submit" class="btn btn-success">Agregar</button>
-          </div>
-        </form>
-      `, { title: 'Agregar item al pedido' });
-      self.filtrarItem('');
-      const buscar = document.getElementById('itemBuscar');
-      if (buscar) buscar.focus();
+      this._productosItem = todos.filter(p => (p.clase || 'venta') === 'venta'); // insumos y sub-recetas no se venden
+      this._itemPedido = { id: pedidoId, agregados: [] };
+      this.abrirAgregarItem();
     }).catch(err => App.showToast(err.message, 'error'));
   },
 
+  abrirAgregarItem() {
+    const { id, agregados } = this._itemPedido;
+    const listaAgregados = agregados.length
+      ? `<strong><i class="fas fa-check-circle text-success"></i> Agregado:</strong> ${agregados.map(a => esc(a)).join(' · ')}` : '';
+    // Si la ventana sigue abierta (producto sin opciones) se limpia en el lugar, sin volver a abrirla
+    const yaAbierta = document.getElementById('itemAgregados');
+    if (yaAbierta) {
+      yaAbierta.innerHTML = listaAgregados;
+      document.getElementById('itemBuscar').value = '';
+      document.getElementById('itemCantidad').value = '1';
+      document.getElementById('itemNotas').value = '';
+      this.filtrarItem('');
+      document.getElementById('itemBuscar').focus();
+      return;
+    }
+    App.showModal(`
+      <div class="form-group">
+        <label for="itemBuscar">Buscá y tocá el producto para agregarlo</label>
+        <input type="search" id="itemBuscar" placeholder="Buscar: nombre o categoría" autocomplete="off"
+          oninput="Pedidos.filtrarItem(this.value)" onkeydown="Pedidos.teclaBuscarItem(event)" aria-label="Buscar producto">
+        <div id="itemProducto" class="item-lista" role="listbox" aria-label="Productos"></div>
+        <small class="text-muted" id="itemCuantos"></small>
+      </div>
+      <div class="grid grid-2">
+        <div class="form-group">
+          <label for="itemCantidad">Cantidad</label>
+          <input type="number" id="itemCantidad" min="1" value="1">
+        </div>
+        <div class="form-group">
+          <label for="itemNotas">Notas para cocina</label>
+          <input type="text" id="itemNotas" maxlength="200" placeholder="Ej.: sin azúcar">
+        </div>
+      </div>
+      <div id="itemAgregados" class="item-agregados">${listaAgregados}</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" onclick="Pedidos.verDetalle(${id})"><i class="fas fa-check"></i> Listo</button>
+      </div>
+    `, { title: 'Agregar al pedido' });
+    this.filtrarItem('');
+    const buscar = document.getElementById('itemBuscar');
+    if (buscar) buscar.focus();
+  },
+
   // Buscador del "+ Item": sin acentos ni mayúsculas; primero los que lo tienen en el nombre, después por
-  // categoría o descripción. Queda elegido el primero, así Enter pasa directo a la cantidad.
+  // categoría o descripción. El primero queda marcado: Enter lo agrega.
   _sinAcentos(t) {
     return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   },
   filtrarItem(texto) {
-    const select = document.getElementById('itemProducto');
-    if (!select) return;
+    const lista = document.getElementById('itemProducto');
+    if (!lista) return;
     const q = this._sinAcentos(texto).trim();
     const todos = this._productosItem || [];
-    let lista = todos;
+    let encontrados = todos;
     if (q) {
       const enNombre = todos.filter(p => this._sinAcentos(p.nombre).includes(q));
       const resto = todos.filter(p => !enNombre.includes(p) &&
         this._sinAcentos(`${p.categoria_nombre || ''} ${p.descripcion || ''}`).includes(q));
-      lista = enNombre.concat(resto);
+      encontrados = enNombre.concat(resto);
     }
-    select.innerHTML = lista.map(p => `<option value="${p.id}" data-nombre="${esc(p.nombre)}" data-precio="${p.precio_venta}">${esc(p.nombre)} - ${fmtMoneda(p.precio_venta)}</option>`).join('');
-    if (lista.length) select.selectedIndex = 0;
+    this._itemMarcado = 0;
+    lista.innerHTML = encontrados.map((p, i) => `<button type="button" class="item-opcion${i === 0 ? ' marcado' : ''}" role="option" data-id="${p.id}"
+      onclick="Pedidos.elegirItem(${p.id})">${esc(p.nombre)} <span>${fmtMoneda(p.precio_venta)}</span></button>`).join('');
     const cuantos = document.getElementById('itemCuantos');
-    if (cuantos) cuantos.textContent = q ? (lista.length ? `${lista.length} de ${todos.length} productos` : 'No hay productos con ese nombre') : `${todos.length} productos`;
+    if (cuantos) cuantos.textContent = q ? (encontrados.length ? `${encontrados.length} de ${todos.length} productos` : 'No hay productos con ese nombre') : `${todos.length} productos`;
   },
-  // Enter: a la cantidad con el primero elegido (no agrega todavía). Flechas: moverse por la lista. Escape: borrar
+  // Enter: agrega el marcado (el primero). Flechas: moverse por la lista. Escape: borrar la búsqueda
   teclaBuscarItem(e) {
-    const select = document.getElementById('itemProducto');
     if (e.key === 'Escape' && e.target.value) { e.preventDefault(); e.stopPropagation(); e.target.value = ''; this.filtrarItem(''); return; }
-    if (!select || !select.options.length) return;
+    const botones = [...document.querySelectorAll('#itemProducto .item-opcion')];
+    if (!botones.length) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      const i = select.selectedIndex + (e.key === 'ArrowDown' ? 1 : -1);
-      select.selectedIndex = Math.max(0, Math.min(select.options.length - 1, i));
+      this._itemMarcado = Math.max(0, Math.min(botones.length - 1, (this._itemMarcado || 0) + (e.key === 'ArrowDown' ? 1 : -1)));
+      botones.forEach((b, i) => b.classList.toggle('marcado', i === this._itemMarcado));
+      botones[this._itemMarcado].scrollIntoView({ block: 'nearest' });
       return;
     }
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (select.selectedIndex < 0) select.selectedIndex = 0;
-      const cantidad = document.getElementById('itemCantidad');
-      if (cantidad) { cantidad.focus(); cantidad.select(); }
+      this.elegirItem(Number(botones[this._itemMarcado || 0].dataset.id));
     }
   },
 
-  guardarItem(e, pedidoId) {
-    e.preventDefault();
-    return App.sinDobleEnvio('pedidos.item', () => this._guardarItem(e, pedidoId));
+  elegirItem(productoId) {
+    return App.sinDobleEnvio('pedidos.item', () => this._agregarElegido(productoId));
   },
 
-  async _guardarItem(e, pedidoId) {
-    e.preventDefault();
-    const select = document.getElementById('itemProducto');
-    const opt = select.options[select.selectedIndex];
-    const data = {
-      producto_id: parseInt(select.value),
-      nombre: opt.getAttribute('data-nombre'),
-      cantidad: parseInt(document.getElementById('itemCantidad').value),
-      precio: parseFloat(opt.getAttribute('data-precio')),
-      notas: document.getElementById('itemNotas').value
+  async _agregarElegido(productoId) {
+    const prod = (this._productosItem || []).find(p => p.id === productoId);
+    if (!prod) return;
+    const cantidad = Math.max(1, parseInt(document.getElementById('itemCantidad').value, 10) || 1);
+    const data = { producto_id: prod.id, nombre: prod.nombre, cantidad, precio: prod.precio_venta, notas: document.getElementById('itemNotas').value };
+    const agregar = async (opciones = [], sufijo = '') => {
+      try {
+        await API.addItemToPedido(this._itemPedido.id, { ...data, opciones });
+        this._itemPedido.agregados.push(`${cantidad} x ${prod.nombre}${sufijo}`);
+        App.showToast(`Agregado: ${cantidad} x ${prod.nombre}${sufijo}`, 'success');
+      } catch (err) { App.showToast(err.message, 'error'); }
+      // Vuelve a la búsqueda limpia para seguir agregando
+      this.abrirAgregarItem();
     };
     // Con opciones ("¿Qué leche?", adicionales) se eligen antes de agregar
-    const prod = (this._productosItem || []).find(p => p.id === data.producto_id);
-    if (prod && Opciones.gruposDe(prod).length) {
-      return Opciones.elegir(prod, async ({ opciones }) => {
-        try {
-          await API.addItemToPedido(pedidoId, { ...data, opciones });
-          App.showToast('Item agregado', 'success');
-          this.verDetalle(pedidoId);
-        } catch (err) { App.showToast(err.message, 'error'); }
-      });
+    if (Opciones.gruposDe(prod).length) {
+      return Opciones.elegir(prod, ({ opciones, sufijo }) => agregar(opciones, sufijo || ''));
     }
-    try {
-      await API.addItemToPedido(pedidoId, data);
-      App.closeModal();
-      App.showToast('Item agregado', 'success');
-      this.verDetalle(pedidoId);
-    } catch (err) {
-      App.showToast(err.message, 'error');
-    }
+    return agregar();
   },
 
   aplicarDescuentoModal(pedidoId) {
@@ -410,6 +419,33 @@ async abrirPedidoDeMesa(mesaId) {
       this.render();
     } catch (err) {
       App.showToast(err.message, 'error');
+    }
+  },
+
+  // ===== Quitar un producto de un pedido abierto (administrador) =====
+  quitarItem(pedidoId, itemId) {
+    const p = this.ultimoPedido;
+    const i = p && p.items.find(x => x.id === itemId);
+    if (!i) return;
+    const varios = Number.isInteger(Number(i.cantidad)) && Number(i.cantidad) > 1;
+    App.showModal(`
+      <p>¿Quitar <strong>${esc(i.nombre_producto)}</strong> (${i.cantidad} x ${fmtMoneda(i.precio_unitario)}) del pedido ${esc(p.numero_pedido)}?</p>
+      <p class="text-muted">El total del pedido se actualiza solo.</p>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="Pedidos.verDetalle(${pedidoId})">No, volver</button>
+        ${varios ? `<button type="button" class="btn btn-warning" onclick="Pedidos.confirmarQuitarItem(${pedidoId}, ${itemId}, 1)"><i class="fas fa-minus"></i> Quitar uno</button>` : ''}
+        <button type="button" class="btn btn-danger" onclick="Pedidos.confirmarQuitarItem(${pedidoId}, ${itemId})"><i class="fas fa-trash-alt"></i> ${varios ? `Quitar los ${i.cantidad}` : 'Quitar'}</button>
+      </div>`, { title: 'Quitar producto' });
+  },
+
+  async confirmarQuitarItem(pedidoId, itemId, cantidad) {
+    try {
+      const r = await API.quitarItemPedido(pedidoId, itemId, cantidad);
+      App.showToast(`Quitado: ${r.quitado}. Total ${fmtMoneda(r.total)}`, 'success');
+      this.verDetalle(pedidoId);
+      if (App.currentView === 'pedidos') this.render();
+    } catch (err) {
+      App.showToast(err.message, 'error', 8000);
     }
   },
 
