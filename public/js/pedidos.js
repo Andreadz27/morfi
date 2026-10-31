@@ -6,13 +6,14 @@
 const Pedidos = {
   pedidos: [],
   filtro: 'abiertos',
+  fecha: null, // día que se mira (AAAA-MM-DD); null = hoy
 
+  // Los abiertos se ven siempre todos (aunque sean de otro día: hay que cobrarlos); el resto, del día elegido
   async render() {
     const view = document.getElementById('view-pedidos');
     view.innerHTML = '<div class="text-center mt-20"><i class="fas fa-spinner fa-spin fa-3x"></i></div>';
     try {
-      const hoy = hoyLocal();
-      this.pedidos = await API.getPedidos(this.filtro, hoy);
+      this.pedidos = await API.getPedidos(this.filtro, this.filtro === 'abiertos' ? null : this.diaElegido());
       this.paint(view);
     } catch (err) {
       view.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: ${esc(err.message)}</p></div>`;
@@ -22,6 +23,31 @@ const Pedidos = {
   setFiltro(filtro) {
     this.filtro = filtro;
     this.render();
+  },
+
+  diaElegido() { return this.fecha || hoyLocal(); },
+  diaAntes(fecha, n = 1) { return new Date(Date.parse(fecha + 'T12:00:00Z') - n * 86400000).toISOString().slice(0, 10); },
+
+  // Hoy / Ayer / un día del calendario. Si estaba en "Abiertos", pasa a "Todos" para ver lo de ese día
+  setFecha(fecha) {
+    const hoy = hoyLocal();
+    this.fecha = !fecha || fecha >= hoy ? null : fecha;
+    if (this.filtro === 'abiertos' && this.fecha) this.filtro = 'todos';
+    this.render();
+  },
+
+  htmlFechas() {
+    const hoy = hoyLocal(), ayer = this.diaAntes(hoy), dia = this.diaElegido();
+    const abiertos = this.filtro === 'abiertos';
+    const nombre = dia === hoy ? 'hoy' : dia === ayer ? 'ayer' : fmtFecha(dia);
+    return `
+      <div class="filter-bar mb-10 pedidos-fechas">
+        <span class="text-muted"><i class="fas fa-calendar-day"></i> Día:</span>
+        <button class="btn btn-sm ${!abiertos && dia === hoy ? 'btn-primary' : 'btn-outline'}" onclick="Pedidos.setFecha('${hoy}')">Hoy</button>
+        <button class="btn btn-sm ${!abiertos && dia === ayer ? 'btn-primary' : 'btn-outline'}" onclick="Pedidos.setFecha('${ayer}')">Ayer</button>
+        <input type="date" id="pedidosFecha" value="${dia}" max="${hoy}" aria-label="Elegir día" onchange="Pedidos.setFecha(this.value)">
+        <span class="text-muted">${abiertos ? 'Abiertos: se ven todos, de cualquier día' : `Mostrando los pedidos de <strong>${nombre}</strong>`}</span>
+      </div>`;
   },
 
   paint(view) {
@@ -42,13 +68,14 @@ const Pedidos = {
       <div class="page-header">
         <div>
           <h2><i class="fas fa-receipt"></i> Pedidos</h2>
-          <p>Historial y gesti\u00f3n de pedidos del d\u00eda</p>
+          <p>Historial y gesti\u00f3n de pedidos: hoy o cualquier d\u00eda anterior</p>
         </div>
         <button class="btn btn-success" onclick="App.navigateTo('pos')">
           <i class="fas fa-plus"></i> Nuevo pedido
         </button>
       </div>
 
+      ${this.htmlFechas()}
       <div class="filter-bar mb-20">
         <button class="btn ${this.filtro === 'abiertos' ? 'btn-primary' : 'btn-outline'}" onclick="Pedidos.setFiltro('abiertos')">Abiertos</button>
         <button class="btn ${this.filtro === 'todos' ? 'btn-primary' : 'btn-outline'}" onclick="Pedidos.setFiltro('todos')">Todos</button>
@@ -116,7 +143,9 @@ const Pedidos = {
         <td>${fmtFechaHora(pg.fecha)}</td>
         <td>${esc(Cobro.METODOS[pg.metodo] || pg.metodo)}
           ${App.puede('admin') && pg.metodo !== 'giftcard' && p.estado !== 'cancelado'
-            ? `<button class="btn btn-sm btn-outline" onclick="Pedidos.cambiarMedio(${p.id}, ${pg.id})" title="Se cargó mal el medio de pago"><i class="fas fa-pen"></i> Cambiar</button>` : ''}</td>
+            ? `<button class="btn btn-sm btn-outline" onclick="Pedidos.cambiarMedio(${p.id}, ${pg.id})" title="Se cargó mal el medio de pago"><i class="fas fa-pen"></i> Cambiar</button>` : ''}
+          ${App.puede('admin') && pg.metodo !== 'giftcard' && p.estado === 'pagado'
+            ? `<button class="btn btn-sm btn-outline" onclick="Pedidos.propinaDeMas(${p.id}, ${pg.id})" title="Pagó de más y es propina"><i class="fas fa-hand-holding-usd"></i> + Propina</button>` : ''}</td>
         <td class="font-bold">${fmtMoneda(pg.monto)}</td>
       </tr>
     `).join('');
@@ -446,6 +475,48 @@ async abrirPedidoDeMesa(mesaId) {
       if (App.currentView === 'pedidos') this.render();
     } catch (err) {
       App.showToast(err.message, 'error', 8000);
+    }
+  },
+
+  // ===== Pagó de más con tarjeta o transferencia: lo que entró de más es propina =====
+  propinaDeMas(pedidoId, pagoId) {
+    const p = this.ultimoPedido;
+    const pg = p && p.pagos.find(x => x.id === pagoId);
+    if (!pg) return;
+    App.showModal(`
+      <form onsubmit="event.preventDefault(); Pedidos.guardarPropinaDeMas(${pedidoId}, ${pagoId})">
+        <p>Cobro de <strong>${fmtMoneda(pg.monto)}</strong> (${esc(Cobro.METODOS[pg.metodo] || pg.metodo)}). Si en realidad entró más plata, escribí cuánto entró:</p>
+        <div class="form-group">
+          <label for="propinaEntro">Lo que entró en total</label>
+          <input type="number" id="propinaEntro" min="${pg.monto}" step="0.01" placeholder="Ej.: ${pg.monto + 5000}" oninput="Pedidos.textoPropinaDeMas(${pg.monto})" autofocus>
+          <p class="text-success mt-10" id="propinaDeMasTxt"></p>
+        </div>
+        <p class="text-muted">La diferencia queda como propina: es del personal, no suma a las ventas ni a la ganancia.</p>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="Pedidos.verDetalle(${pedidoId})">Volver</button>
+          <button type="submit" class="btn btn-success"><i class="fas fa-hand-holding-usd"></i> Cargar propina</button>
+        </div>
+      </form>`, { title: `Propina · ${p.numero_pedido}` });
+    this._montoCobro = pg.monto;
+  },
+
+  textoPropinaDeMas(cobrado) {
+    const entro = Number(document.getElementById('propinaEntro').value) || 0;
+    const t = document.getElementById('propinaDeMasTxt');
+    t.textContent = entro > cobrado ? `Propina: ${fmtMoneda(Math.round((entro - cobrado) * 100) / 100)}` : '';
+  },
+
+  async guardarPropinaDeMas(pedidoId, pagoId) {
+    const entro = Number(document.getElementById('propinaEntro').value) || 0;
+    const monto = Math.round((entro - this._montoCobro) * 100) / 100;
+    if (!(monto > 0)) return App.showToast('Escribí cuánto entró en total (más que el cobro)', 'warning');
+    try {
+      await API.propinaACobro(pedidoId, pagoId, monto);
+      App.showToast(`Listo: ${fmtMoneda(monto)} de propina`, 'success');
+      this.verDetalle(pedidoId);
+      if (App.currentView === 'pedidos') this.render();
+    } catch (err) {
+      App.showToast(err.message, 'error');
     }
   },
 

@@ -16,6 +16,7 @@ const { iniciarRecordatoriosWhatsApp } = require('./src/servicios/whatsapp');
 const { iniciarModoSinConexion } = require('./src/servicios/sin-conexion');
 const { iniciarSyncNube } = require('./src/servicios/sync-nube');
 const { iniciarCierreAutomatico } = require('./src/servicios/cierre-dia');
+const { iniciarGastosRecurrentes } = require('./src/servicios/gastos-recurrentes');
 const { iniciarFacturaAutomatica } = require('./src/servicios/facturacion-auto');
 const { iniciarResumenDueno } = require('./src/servicios/resumen-dueno');
 const { iniciarConciliacionTransferencias } = require('./src/servicios/transferencias-mp');
@@ -50,6 +51,8 @@ migrarConRespaldo({ respaldar: crearBackup }).then(() => server.listen(PORT, () 
   iniciarFacturaAutomatica();
   // Resumen del día por WhatsApp al dueño al cerrar el día (si cargó su número en Integraciones → WhatsApp)
   iniciarResumenDueno();
+  // Pagos que se repiten (ej.: el ayudante de los sábados): se cargan solos los días elegidos (Contabilidad → Gastos)
+  iniciarGastosRecurrentes();
   // Transferencias al alias que entran a Mercado Pago: cobra solo el pedido que avisó que transfirió (si MP está activo)
   iniciarConciliacionTransferencias();
 })).catch(err => {

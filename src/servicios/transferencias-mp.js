@@ -91,12 +91,20 @@ async function transferenciasRecibidas(cfg, desde, hasta = new Date()) {
   return soloTransferencias(await cobrosAprobados(cfg, desde, hasta));
 }
 
-// Referencias MP-<id> ya usadas en un cobro (una transferencia no se usa dos veces)
+// Referencias MP-<id> ya usadas en un cobro (una transferencia no se usa dos veces). en_fadido = lo cobrado en Fadido
+// con esa operación (si Mercado Pago cobró más, la diferencia puede ser propina); varios = una operación pagó varios pedidos
 async function referenciasUsadas(ids) {
   if (!ids.length) return new Map();
-  const filas = await all(`SELECT pg.referencia, p.id AS pedido_id, p.numero_pedido FROM pagos pg JOIN pedidos p ON p.id = pg.pedido_id
-    WHERE pg.referencia IN (${ids.map(() => '?').join(',')})`, ids.map(id => `MP-${id}`));
-  return new Map(filas.map(f => [f.referencia.slice(3), { pedido_id: f.pedido_id, numero_pedido: f.numero_pedido }]));
+  const filas = await all(`SELECT pg.referencia, pg.id AS pago_id, pg.monto, p.id AS pedido_id, p.numero_pedido FROM pagos pg JOIN pedidos p ON p.id = pg.pedido_id
+    WHERE pg.referencia IN (${ids.map(() => '?').join(',')}) ORDER BY pg.id`, ids.map(id => `MP-${id}`));
+  const usadas = new Map();
+  for (const f of filas) {
+    const id = f.referencia.slice(3);
+    const u = usadas.get(id);
+    if (u) { u.en_fadido = centavos(u.en_fadido + f.monto); u.varios = u.varios || u.pedido_id !== f.pedido_id; continue; }
+    usadas.set(id, { pedido_id: f.pedido_id, numero_pedido: f.numero_pedido, pago_id: f.pago_id, en_fadido: centavos(f.monto), varios: false });
+  }
+  return usadas;
 }
 
 // Pedidos abiertos cuyo cliente avisó que paga (o pagó) por transferencia, con lo que falta pagar

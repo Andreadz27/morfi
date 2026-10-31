@@ -5,7 +5,7 @@ const {
   autorizar, requiereAutorizacion, facturaVigente, datosTicketFiscalConQR, getIntCfg, revertirFidelizacionTx, avisarRetiroWhatsApp
 } = require('../contexto');
 const { idempotente } = require('../idempotencia');
-const { corregirMedioDePago, eliminarPedido, quitarItem } = require('../servicios/correcciones');
+const { corregirMedioDePago, eliminarPedido, quitarItem, sumarPropinaACobro } = require('../servicios/correcciones');
 
 module.exports = function registrarRutas(app) {
 
@@ -381,6 +381,15 @@ app.put('/api/pedidos/:id/cancelar', autenticar, requiereAutorizacion('pedidos.c
 app.put('/api/pedidos/:id/pagos/:pagoId', autenticar, requiere('admin'), async (req, res) => {
   try {
     res.json(await corregirMedioDePago(Number(req.params.id), Number(req.params.pagoId), String((req.body || {}).metodo || ''), req.usuario.id));
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// Pagó de más con tarjeta o transferencia y es propina: se suma al cobro y a la propina del pedido. body: { monto }
+app.post('/api/pedidos/:id/pagos/:pagoId/propina', autenticar, requiere('admin'), async (req, res) => {
+  try {
+    res.json(await sumarPropinaACobro(Number(req.params.id), Number(req.params.pagoId), Number((req.body || {}).monto), req.usuario.id));
   } catch (err) {
     errorInterno(res, err);
   }

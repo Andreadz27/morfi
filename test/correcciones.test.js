@@ -113,3 +113,17 @@ test('quitar un producto de un pedido abierto: una unidad o el renglón; solo ad
   const v = await vender('efectivo');
   assert.equal((await s.llamar('DELETE', `/api/pedidos/${v.id}/items/${v.items[0].id}`, { cantidad: 1 }, s.tokenAdmin))[0], 400);
 });
+
+test('pagó de más con tarjeta: la diferencia se suma como propina (no como venta); solo administrador', async () => {
+  const v = await vender('tarjeta');
+  const pagoId = v.pagos[0].id;
+  assert.equal((await s.llamar('POST', `/api/pedidos/${v.id}/pagos/${pagoId}/propina`, { monto: 500 }, s.tokenVendedor))[0], 403);
+  assert.equal((await s.llamar('POST', `/api/pedidos/${v.id}/pagos/${pagoId}/propina`, { monto: 0 }, s.tokenAdmin))[0], 400);
+  const [st, r] = await s.llamar('POST', `/api/pedidos/${v.id}/pagos/${pagoId}/propina`, { monto: 500 }, s.tokenAdmin);
+  assert.equal(st, 200, JSON.stringify(r));
+  const [ped] = await s.q('SELECT total, propina FROM pedidos WHERE id = ?', [v.id]);
+  assert.deepEqual(ped, { total: 2500, propina: 500 });
+  assert.equal((await s.q('SELECT monto FROM pagos WHERE id = ?', [pagoId]))[0].monto, 2500);
+  const [a] = await s.q("SELECT detalle FROM auditoria WHERE accion = 'propina_excedente' ORDER BY id DESC LIMIT 1");
+  assert.match(a.detalle, /pagó 500 de más/);
+});
