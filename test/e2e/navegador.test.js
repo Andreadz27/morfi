@@ -136,6 +136,7 @@ test('venta completa desde la pantalla: abrir caja, tomar pedido en el POS y cob
   await producto.click();
   await page.click('#view-pos .pos-checkout-btn');
   await page.selectOption('#checkoutTipo', 'takeaway');
+  await page.click('#checkoutPagaDespues');
   await page.fill('#checkoutCliente', 'Cliente de mostrador');
   await page.fill('#checkoutNotas', 'Sin hielo');
   await page.click('button[onclick="POS.confirmCheckout()"]');
@@ -232,6 +233,7 @@ test('un nombre de producto malicioso no ejecuta código (XSS)', async () => {
     await page.click(`.pos-product-btn:has-text(${JSON.stringify(nombre.slice(0, 12))})`);
   }
   await page.click('#view-pos .pos-checkout-btn');
+  await page.click('#checkoutPagaDespues');
   await page.click('button[onclick="POS.confirmCheckout()"]');
   await toast(page, 'success', 'creado');
   await ir(page, 'pedidos');
@@ -440,6 +442,7 @@ test('POS: doble toque en "Confirmar pedido" con la red lenta crea un solo pedid
   await (await page.waitForSelector('.pos-product-btn')).click();
   await page.click('#view-pos .pos-checkout-btn');
   await page.selectOption('#checkoutTipo', 'takeaway');
+  await page.click('#checkoutPagaDespues');
   await page.fill('#checkoutCliente', 'Doble toque');
   await page.$eval('button[onclick="POS.confirmCheckout()"]', b => { b.click(); b.click(); b.click(); });
   await toast(page, 'success', 'creado');

@@ -87,3 +87,29 @@ test('pagar de más con propina: el excedente queda como propina del pedido', as
   const [ped] = await s.q('SELECT total, propina FROM pedidos WHERE id = ?', [p.id]);
   assert.deepEqual(ped, { total: 1500, propina: 500 });
 });
+
+test('quitar un producto de un pedido abierto: una unidad o el renglón; solo administrador', async () => {
+  const [otro] = await s.q('SELECT id FROM productos WHERE activo = 1 AND precio_venta > 0 AND id <> ? ORDER BY id LIMIT 1', [prod.id]);
+  await s.q('UPDATE productos SET precio_venta = 500 WHERE id = ?', [otro.id]);
+  const [, p] = await s.llamar('POST', '/api/pedidos', { tipo: 'mostrador', items: [{ producto_id: prod.id, cantidad: 3 }, { producto_id: otro.id, cantidad: 1 }] }, s.tokenAdmin);
+  const [, d] = await s.llamar('GET', `/api/pedidos/${p.id}`, undefined, s.tokenAdmin);
+  const tres = d.items.find(i => i.producto_id === prod.id), uno = d.items.find(i => i.producto_id === otro.id);
+  assert.equal(d.total, 3500);
+
+  assert.equal((await s.llamar('DELETE', `/api/pedidos/${p.id}/items/${tres.id}`, { cantidad: 1 }, s.tokenVendedor))[0], 403);
+  let [st, r] = await s.llamar('DELETE', `/api/pedidos/${p.id}/items/${tres.id}`, { cantidad: 1 }, s.tokenAdmin);
+  assert.equal(st, 200, JSON.stringify(r));
+  assert.equal(r.total, 2500);
+  [st, r] = await s.llamar('DELETE', `/api/pedidos/${p.id}/items/${uno.id}`, {}, s.tokenAdmin);
+  assert.equal(st, 200, JSON.stringify(r));
+  assert.equal(r.total, 2000);
+  assert.equal((await s.q('SELECT COUNT(*) n FROM pedido_items WHERE pedido_id = ?', [p.id]))[0].n, 1);
+  // El último producto no: para eso está "Eliminar pedido"
+  assert.equal((await s.llamar('DELETE', `/api/pedidos/${p.id}/items/${tres.id}`, {}, s.tokenAdmin))[0], 400);
+  const [a] = await s.q("SELECT detalle FROM auditoria WHERE accion = 'quitar_item' ORDER BY id DESC LIMIT 1");
+  assert.match(a.detalle, /quitado 1 x/);
+
+  // Pedido cobrado: no se toca
+  const v = await vender('efectivo');
+  assert.equal((await s.llamar('DELETE', `/api/pedidos/${v.id}/items/${v.items[0].id}`, { cantidad: 1 }, s.tokenAdmin))[0], 400);
+});

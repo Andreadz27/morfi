@@ -69,8 +69,10 @@ Nube) queda **en espera y se envía solo** cuando vuelve la conexión. No hay qu
 3. **Cobrar** y elegir el medio de pago: efectivo, tarjeta, transferencia, **QR Mercado Pago**, **MODO**, **Cuenta DNI** u **Otro medio de
    pago**. En efectivo, Fadido calcula el vuelto.
 
-**Barra o mostrador en un toque**: con los productos en el carrito, **Cobrar y enviar (mostrador)** pide el nombre
-(opcional, para llamarlo) y cómo paga: el pedido se cobra y va a la cocina en el mismo paso.
+**Un solo botón: Cobrar / enviar pedido**. Con los productos en el carrito se elige el tipo (mostrador, salón con su
+mesa, take away o delivery) y **¿Cuándo paga?**: *Paga ahora* (mostrador y para llevar, ya marcado) pide cómo paga
+y lo recibido, cobra y manda a la cocina en el mismo paso; *Paga al final* (mesa y delivery) lo manda a la cocina y
+se cobra después desde Mesas o Pedidos. Si deja el vuelto o paga de más, **es propina** en un toque.
 
 ### Pedidos desde la barra y para retirar
 - **QR de la barra** (Menú QR → *Imprimir QR de la barra*): el cliente escanea en el mostrador, elige, pone su

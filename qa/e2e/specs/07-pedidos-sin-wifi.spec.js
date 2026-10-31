@@ -13,6 +13,7 @@ test('CP-MOZ-01 · sin WiFi el pedido queda guardado en el celular y se envía s
   await page.route('**/api/pedidos', r => r.abort('internetdisconnected'));
   await page.locator('#view-pos .pos-checkout-btn').click();
   await page.locator('#checkoutTipo').selectOption('takeaway');
+  await page.locator('#checkoutPagaDespues').click();
   await page.locator('#checkoutCliente').fill(cliente);
   await page.locator('button[onclick="POS.confirmCheckout()"]').click();
   await expect(page.locator('#toastContainer .toast', { hasText: 'quedó guardado' })).toBeVisible();

@@ -2538,3 +2538,14 @@ tr:hover td {
 .gan-propinas { padding: 10px 12px; border-radius: 8px; background: rgba(139, 92, 246, .1); }
 /* Corregir el medio de pago: botones grandes, uno por medio */
 .corregir-medios .btn { flex: 1 1 140px; padding: 12px; font-size: 1rem; }
+
+/* "+ Item": lista de productos para tocar y agregar al instante */
+.item-lista { margin-top: 8px; max-height: 300px; overflow-y: auto; border: 1px solid var(--border, #e2e8f0); border-radius: 10px; }
+.item-opcion { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--border, #e2e8f0);
+  background: transparent; color: inherit; font-size: 1rem; text-align: left; cursor: pointer; }
+.item-opcion span { white-space: nowrap; opacity: .75; }
+.item-opcion:hover, .item-opcion.marcado { background: rgba(14, 165, 233, .12); }
+.item-agregados { min-height: 1.2em; margin-top: 4px; }
+/* POS: ¿cuándo paga? */
+.pos-cuando-paga .btn { flex: 1 1 150px; padding: 12px; font-size: 1rem; }
+.btn-quitar-item { color: #dc2626; }
