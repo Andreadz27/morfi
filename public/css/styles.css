@@ -254,16 +254,16 @@ body {
 }
 
 .btn {
-  padding: 10px 20px;
+  padding: 8px 16px;
   border: none;
   border-radius: var(--radius);
   background: var(--primary);
   color: var(--white);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   transition: all 0.2s;
   text-decoration: none;
 }
@@ -274,8 +274,8 @@ body {
 }
 
 .btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 5px 10px;
+  font-size: 11.5px;
 }
 
 .btn-primary {
@@ -1106,12 +1106,12 @@ tr:hover td {
 
 .pos-checkout-btn, .pos-rapido-btn {
   width: 100%;
-  padding: 13px;
+  padding: 11px;
   border: none;
   border-radius: var(--radius-sm);
   background: var(--gradient-brand);
   color: var(--white);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -2534,10 +2534,10 @@ tr:hover td {
 .foto-tile.subiendo { opacity: .5; pointer-events: none; }
 
 /* Propina en un toque: el vuelto o lo que pagó de más */
-.btn-propina { margin: 6px 0 0; padding: 10px 14px; font-size: 1rem; }
+.btn-propina { margin: 6px 0 0; padding: 8px 12px; font-size: .95rem; }
 .gan-propinas { padding: 10px 12px; border-radius: 8px; background: rgba(139, 92, 246, .1); }
 /* Corregir el medio de pago: botones grandes, uno por medio */
-.corregir-medios .btn { flex: 1 1 140px; padding: 12px; font-size: 1rem; }
+.corregir-medios .btn { flex: 1 1 140px; padding: 10px; font-size: .95rem; }
 
 /* "+ Item": lista de productos para tocar y agregar al instante */
 .item-lista { margin-top: 8px; max-height: 300px; overflow-y: auto; border: 1px solid var(--border, #e2e8f0); border-radius: 10px; }
@@ -2547,7 +2547,7 @@ tr:hover td {
 .item-opcion:hover, .item-opcion.marcado { background: rgba(14, 165, 233, .12); }
 .item-agregados { min-height: 1.2em; margin-top: 4px; }
 /* POS: ¿cuándo paga? */
-.pos-cuando-paga .btn { flex: 1 1 150px; padding: 12px; font-size: 1rem; }
+.pos-cuando-paga .btn { flex: 1 1 150px; padding: 10px; font-size: .95rem; }
 .btn-quitar-item { color: #dc2626; }
 
 /* Pedidos: elegir el día */
@@ -2567,3 +2567,9 @@ tr:hover td {
 
 /* Dashboard: ticket promedio por persona */
 .dash-por-persona { margin-top: 4px; font-size: .9rem; }
+
+/* Botón del menú: sonido de los avisos activo (verde) o apagado (rojo) */
+.btn-sonido { color: #86efac; }
+.btn-sonido.apagado { background: #dc2626; color: #fff; }
+.btn-sonido:hover { background: rgba(134, 239, 172, .18); color: #bbf7d0; }
+.btn-sonido.apagado:hover { background: #b91c1c; color: #fff; }

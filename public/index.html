@@ -159,6 +159,8 @@
             <div class="user-role" id="userRole">Rol</div>
           </div>
         </div>
+        <!-- Sonido de pedidos y pagos: se ve si está activo; tocarlo lo activa y suena una prueba -->
+        <button class="btn-logout btn-sonido" id="btnSonido" style="display:none" onclick="App.botonSonido()" title="Tocá para probar el sonido de los avisos"><i class="fas fa-volume-high"></i> <span id="btnSonidoTexto">Sonido activo</span></button>
         <!-- Fichar entrada y salida desde cualquier pantalla -->
         <button class="btn-logout btn-fichar" id="btnFichar" onclick="Personal.fichar()" title="Fichar entrada o salida"><i class="fas fa-fingerprint"></i> <span id="btnFicharTexto">Fichar entrada</span></button>
         <button class="btn-logout" data-view="plan" onclick="App.navigateTo('plan')" title="Planes, precios y pago de contado"><i class="fas fa-crown"></i> Planes y precios</button>
