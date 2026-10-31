@@ -393,6 +393,20 @@ const App = {
     setTimeout(() => this.probarSonido(), 150);
   },
 
+  // Sonidos de la caja (public/sonidos, generados con scripts/generar-sonidos.js): 'pago' = caja registradora,
+  // 'pedido' = campana. Si el navegador no deja reproducirlos, suena la campanada sintetizada.
+  reproducir(nombre) {
+    this.despertarSonido();
+    try {
+      this._sonidos = this._sonidos || {};
+      const a = this._sonidos[nombre] = this._sonidos[nombre] || new Audio(`/sonidos/${nombre}.wav`);
+      a.volume = 1;
+      a.currentTime = 0;
+      const r = a.play();
+      if (r && r.catch) r.catch(() => this.campanada());
+    } catch (e) { this.campanada(); }
+  },
+
   // Campanada fuerte (tres notas) que se oye en la caja aunque haya ruido
   campanada() {
     try {
@@ -430,8 +444,8 @@ const App = {
     const voz = ['Nuevo pedido', data.lugar, data.cliente].filter(Boolean).join('. ');
     let veces = 0;
     const sonar = () => {
-      this.campanada();
-      if (veces % 2 === 0) setTimeout(() => this.decir(voz), 1100);
+      this.reproducir('pedido');
+      if (veces % 2 === 0) setTimeout(() => this.decir(voz), 1700);
       if (++veces >= 15) this.callarPedidos();
     };
     this.callarPedidos();
@@ -447,8 +461,8 @@ const App = {
 
   // Entró un pago (transferencia o Mercado Pago): campanada y la voz lo dice una vez
   avisarPago(texto) {
-    this.campanada();
-    setTimeout(() => this.decir(texto), 1100);
+    this.reproducir('pago');
+    setTimeout(() => this.decir(texto), 1500);
   },
 
   // "P-20261031-00013" -> "13" (así lo dice la voz)
@@ -458,8 +472,10 @@ const App = {
 
   // Botón "Probar sonido" de Para retirar
   probarSonido() {
-    this.campanada();
-    setTimeout(() => this.decir('Así suena un pedido nuevo'), 1100);
+    this.reproducir('pedido');
+    setTimeout(() => this.decir('Así suena un pedido nuevo'), 1700);
+    setTimeout(() => this.reproducir('pago'), 3800);
+    setTimeout(() => this.decir('Y así suena un pago'), 5300);
   },
 
   // Permiso para las notificaciones del escritorio (se pide al abrir "Para retirar": hace falta un toque)

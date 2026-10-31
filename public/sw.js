@@ -4,7 +4,7 @@
 // (Antes era cache-first: después de una actualización los celulares seguían con el JS viejo.)
 // =============================================
 
-const CACHE_NAME = 'fadido-v34';
+const CACHE_NAME = 'fadido-v35';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -40,6 +40,8 @@ const STATIC_ASSETS = [
   '/js/plan.js',
   '/js/ganancias.js',
   '/favicon.svg',
+  '/sonidos/pago.wav',
+  '/sonidos/pedido.wav',
   '/manifest.json',
   // Íconos servidos por el propio sistema
   '/vendor/fontawesome/css/all.min.css',
