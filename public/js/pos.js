@@ -576,7 +576,7 @@ checkout() {
           </div>
           <div class="form-group">
             <label>Costo de env&iacute;o ($)</label>
-            <input type="number" id="checkoutCostoEnvio" min="0" step="0.01" value="0" oninput="POS.actualizarBotonCheckout()">
+            <input type="number" id="checkoutCostoEnvio" min="0" step="0.01" value="0">
           </div>
         </div>
       </div>
@@ -672,11 +672,9 @@ checkout() {
       </div>`;
   },
 
-  // Total a cobrar: el carrito más el envío del delivery
+  // Total a cobrar: el del carrito (el costo de envío de un delivery va aparte en la entrega, no en el total del pedido)
   totalCheckout() {
-    const tipo = (document.getElementById('checkoutTipo') || {}).value;
-    const envio = tipo === 'delivery' ? parseFloat((document.getElementById('checkoutCostoEnvio') || {}).value) || 0 : 0;
-    return Math.round((this.cartFinal() + envio) * 100) / 100;
+    return Math.round(this.cartFinal() * 100) / 100;
   },
 
   setPagaAhora(si) {
@@ -907,6 +905,12 @@ checkout() {
         this.paint(document.getElementById('view-pos'));
         return;
       }
+      // El carrito se vacía apenas se crea el pedido: si el cajero ya empieza el siguiente mientras se cobra o imprime
+      // este, lo nuevo no se borra
+      this.cart = [];
+      this.descuento = 0;
+      this.propina = 0;
+      if (!(tipo === 'salon' && mesaId)) this.paint(document.getElementById('view-pos'));
       if (cobro) await this.cobrarAlEnviar(pedido, cobro);
       else App.showToast(`Pedido ${pedido.numero_pedido} creado`, 'success');
 
@@ -920,14 +924,7 @@ checkout() {
         }
       }
 
-      this.cart = [];
-      this.descuento = 0;
-      this.propina = 0;
-      if (tipo === 'salon' && mesaId) {
-        App.navigateTo('mesas');
-      } else {
-        this.paint(document.getElementById('view-pos'));
-      }
+      if (tipo === 'salon' && mesaId) App.navigateTo('mesas');
     } catch (err) {
       App.showToast(err.message, 'error');
     }
