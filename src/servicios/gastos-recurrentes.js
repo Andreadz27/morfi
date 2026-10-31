@@ -67,9 +67,12 @@ async function guardar(id, body, usuarioId) {
   return transaccion(async () => {
     const hoy = fechaLocal();
     let rid = id;
+    let antes = [], antesActivo = 1;
     if (id) {
       const actual = await get('SELECT * FROM gastos_recurrentes WHERE id = ?', [id]);
       if (!actual) throw errorHttp(404, 'No existe ese pago');
+      antes = diasDe(actual.dias);
+      antesActivo = actual.activo;
       await run('UPDATE gastos_recurrentes SET descripcion = ?, categoria = ?, monto = ?, dias = ?, activo = ? WHERE id = ?',
         [r.descripcion, r.categoria, r.monto, r.dias, r.activo, id]);
     } else {
@@ -80,6 +83,7 @@ async function guardar(id, body, usuarioId) {
     let anulados = 0, actualizados = 0;
     for (const g of await all(`SELECT id, fecha FROM gastos WHERE recurrente_id = ? AND anulado = 0 AND estado = 'pendiente' AND fecha > ?`, [rid, hoy])) {
       const dia = diaSemana(g.fecha);
+      if (!antes.includes(dia)) continue; // un día extra (cargado a mano) queda como está
       if (!r.activo || !dias.includes(dia)) {
         await run('UPDATE gastos SET anulado = 1 WHERE id = ?', [g.id]);
         anulados++;
@@ -89,10 +93,11 @@ async function guardar(id, body, usuarioId) {
         actualizados++;
       }
     }
-    // Un día que se había sacado y vuelve: el pendiente anulado por el cambio de días se recupera
+    // Un día que se había sacado y vuelve: el pendiente anulado por el cambio de días se recupera (solo de los días que
+    // se agregan ahora: un sábado anulado a mano porque no vino sigue anulado)
     for (const g of await all(`SELECT id, fecha FROM gastos WHERE recurrente_id = ? AND anulado = 1 AND estado = 'pendiente' AND fecha > ?
       AND caja_movimiento_id IS NULL`, [rid, hoy])) {
-      if (r.activo && dias.includes(diaSemana(g.fecha))) {
+      if (r.activo && dias.includes(diaSemana(g.fecha)) && (!antes.includes(diaSemana(g.fecha)) || !antesActivo)) {
         await run('UPDATE gastos SET anulado = 0, total = ?, neto = ?, descripcion = ?, categoria = ? WHERE id = ?',
           [r.monto, r.monto, `${r.descripcion} ${NOMBRES[diaSemana(g.fecha)]}`, r.categoria, g.id]);
         actualizados++;
@@ -113,4 +118,33 @@ function iniciarGastosRecurrentes(ms = 60 * 60 * 1000) {
   setInterval(vuelta, ms).unref();
 }
 
-module.exports = { listarConProximos, guardar, generar, iniciarGastosRecurrentes, NOMBRES };
+// Día extra (no fijo): vino otro día y se le paga ese día. Monto por defecto el del pago; se puede cambiar.
+// Suma en la cuenta de ese día (gasto con esa fecha). Si ese día ya estaba cargado, avisa; si estaba anulado, vuelve.
+async function sumarDia(id, body, usuarioId) {
+  const fecha = String((body && body.fecha) || fechaLocal());
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || Number.isNaN(Date.parse(fecha))) throw errorHttp(400, 'Fecha inválida');
+  return transaccion(async () => {
+    const r = await get('SELECT * FROM gastos_recurrentes WHERE id = ?', [id]);
+    if (!r) throw errorHttp(404, 'No existe ese pago');
+    const monto = body && body.monto !== undefined && body.monto !== '' ? r2(body.monto) : r2(r.monto);
+    if (!(monto > 0) || monto > 100000000) throw errorHttp(400, 'Monto inválido');
+    const dia = diaSemana(fecha);
+    const descripcion = `${r.descripcion} ${NOMBRES[dia]}${diasDe(r.dias).includes(dia) ? '' : ' (día extra)'}`;
+    const ya = await get('SELECT * FROM gastos WHERE recurrente_id = ? AND fecha = ?', [id, fecha]);
+    let gastoId;
+    if (ya && !ya.anulado) throw errorHttp(409, `Ese día ya está cargado (${ya.descripcion}, $${ya.total}). Si cambió el monto, editalo en Gastos.`);
+    if (ya) {
+      await run('UPDATE gastos SET anulado = 0, total = ?, neto = ?, descripcion = ?, categoria = ?, vencimiento = ? WHERE id = ?',
+        [monto, monto, descripcion, r.categoria, fecha, ya.id]);
+      gastoId = ya.id;
+    } else {
+      gastoId = (await run(`INSERT INTO gastos (fecha, categoria, descripcion, tipo_comprobante, neto, iva, otros_impuestos, total, vencimiento, recurrente_id, usuario_id)
+        VALUES (?, ?, ?, 'sin_comprobante', ?, 0, 0, ?, ?, ?, ?)`, [fecha, r.categoria, descripcion, monto, monto, fecha, id, usuarioId])).id;
+    }
+    await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)', [usuarioId, 'crear_gasto',
+      `Gasto #${gastoId}: ${descripcion} ${fecha} ${monto}`]);
+    return { id: gastoId, fecha, monto, descripcion };
+  });
+}
+
+module.exports = { listarConProximos, guardar, sumarDia, generar, iniciarGastosRecurrentes, NOMBRES };

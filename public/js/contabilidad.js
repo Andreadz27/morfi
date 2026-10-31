@@ -128,6 +128,7 @@ const Contabilidad = {
         </div>
         <div>
           <button class="btn btn-success" onclick="Contabilidad.nuevoGasto()"><i class="fas fa-plus"></i> Cargar gasto</button>
+          ${App.puede('admin') ? '<button class="btn btn-primary" onclick="Contabilidad.diaExtra()"><i class="fas fa-user-clock"></i> Sumar día del ayudante</button>' : ''}
           <button class="btn btn-outline" onclick="Contabilidad.render()"><i class="fas fa-sync-alt"></i> Refrescar</button>
         </div>
       </div>
@@ -408,6 +409,7 @@ const Contabilidad = {
         </div>
         ${(r.proximos || []).length ? `<p class="text-muted"><i class="fas fa-calendar-check"></i> Próximos: ${r.proximos.map(g => `${fmtFecha(g.fecha)} ${fmtContable(g.total)}${g.estado === 'pagado' ? ' (pagado)' : ''}`).join(' · ')}</p>` : ''}
         <button type="button" class="btn btn-success btn-sm" onclick="Contabilidad.guardarRepetido(${i})"><i class="fas fa-save"></i> Guardar</button>
+        ${r.id ? `<button type="button" class="btn btn-primary btn-sm" onclick="Contabilidad.diaExtra(${r.id})"><i class="fas fa-user-clock"></i> Sumar un día extra</button>` : ''}
       </div>`;
   },
 
@@ -424,6 +426,53 @@ const Contabilidad = {
         <button type="button" class="btn btn-outline" onclick="Contabilidad.agregarRepetido()"><i class="fas fa-plus"></i> Otro pago</button>
         <button type="button" class="btn btn-outline" onclick="App.closeModal(); Contabilidad.render()">Cerrar</button>
       </div>`, { title: 'Pagos que se repiten', large: true });
+  },
+
+  // Día extra (no fijo): elegir el día (hoy por defecto) y el monto (el de siempre, editable). Suma en la cuenta de ese día.
+  async diaExtra(id) {
+    let lista;
+    try { lista = (await API.getGastosRecurrentes()).filter(r => r.activo); } catch (err) { return App.showToast(err.message, 'error'); }
+    if (!lista.length) return this.pagosRepetidos();
+    const elegido = lista.find(r => r.id === id) || lista[0];
+    this._diaExtra = lista;
+    const hoy = hoyLocal();
+    App.showModal(`
+      <form onsubmit="event.preventDefault(); Contabilidad.guardarDiaExtra()">
+        ${lista.length > 1 ? `<div class="form-group"><label>Quién</label>
+          <select id="extraQuien" onchange="Contabilidad.cambiarQuienExtra()">${lista.map(r => `<option value="${r.id}" ${r.id === elegido.id ? 'selected' : ''}>${esc(r.descripcion)}</option>`).join('')}</select></div>`
+          : `<input type="hidden" id="extraQuien" value="${elegido.id}"><p><strong>${esc(elegido.descripcion)}</strong> · fijo los ${elegido.dias.map(d => (this.DIAS_SEMANA.find(x => x[0] === d) || [0, ''])[1]).join(', ') || '—'}</p>`}
+        <div class="grid grid-2">
+          <div class="form-group"><label for="extraFecha">Qué día vino</label>
+            <input type="date" id="extraFecha" value="${hoy}" required></div>
+          <div class="form-group"><label for="extraMonto">Cuánto se le paga ($)</label>
+            <input type="number" id="extraMonto" min="1" step="1" value="${elegido.monto}" required></div>
+        </div>
+        <p class="text-muted">Queda en Gastos como "a pagar" en ese día y suma en la cuenta de ese día.</p>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="App.closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-success" id="extraBtn"><i class="fas fa-check"></i> Sumar el día</button>
+        </div>
+      </form>`, { title: 'Sumar un día' });
+  },
+
+  cambiarQuienExtra() {
+    const r = this._diaExtra.find(x => x.id === Number(document.getElementById('extraQuien').value));
+    if (r) document.getElementById('extraMonto').value = r.monto;
+  },
+
+  async guardarDiaExtra() {
+    const id = Number(document.getElementById('extraQuien').value);
+    const btn = document.getElementById('extraBtn');
+    btn.disabled = true;
+    try {
+      const r = await API.sumarDiaRecurrente(id, { fecha: document.getElementById('extraFecha').value, monto: Number(document.getElementById('extraMonto').value) });
+      App.closeModal();
+      App.showToast(`Listo: ${r.descripcion} ${fmtFecha(r.fecha)} · ${fmtContable(r.monto)}`, 'success', 6000);
+      this.render();
+    } catch (err) {
+      btn.disabled = false;
+      App.showToast(err.message, 'error', 8000);
+    }
   },
 
   agregarRepetido() {
