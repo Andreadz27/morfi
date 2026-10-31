@@ -7,7 +7,7 @@ const {
   MAX_BYTES, guardarAdjunto, vincularAdjuntos, adjuntosDe, obtenerAdjunto, borrarAdjunto, leerFactura, lecturaDisponible
 } = require('../servicios/adjuntos-gastos');
 const { registrarArticulosCompraTx, revertirArticulosCompraTx, articulosDe } = require('../servicios/inventario');
-const { listarConProximos, guardar: guardarRecurrente } = require('../servicios/gastos-recurrentes');
+const { listarConProximos, guardar: guardarRecurrente, sumarDia } = require('../servicios/gastos-recurrentes');
 
 module.exports = function registrarRutas(app) {
 
@@ -317,6 +317,15 @@ app.post('/api/contabilidad/recurrentes', autenticar, requiere('admin'), async (
 app.put('/api/contabilidad/recurrentes/:id', autenticar, requiere('admin'), async (req, res) => {
   try {
     res.json(await guardarRecurrente(Number(req.params.id), req.body, req.usuario.id));
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// Día extra del pago que se repite (ej.: el ayudante vino un martes). body: { fecha?, monto? }
+app.post('/api/contabilidad/recurrentes/:id/dia', autenticar, requiere('admin'), async (req, res) => {
+  try {
+    res.status(201).json(await sumarDia(Number(req.params.id), req.body || {}, req.usuario.id));
   } catch (err) {
     errorInterno(res, err);
   }

@@ -4,7 +4,7 @@
 // (Antes era cache-first: después de una actualización los celulares seguían con el JS viejo.)
 // =============================================
 
-const CACHE_NAME = 'fadido-v28';
+const CACHE_NAME = 'fadido-v29';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
