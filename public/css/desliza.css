@@ -1,0 +1,42 @@
+/* =============================================
+   FADIDO - Barras que se deslizan de costado (ver js/desliza.js)
+   Va al final de los estilos de cada página. ":root .desliza.desliza" le gana a las reglas de cada barra
+   (.carta-elegante .momentos-carta, .pos-categories...) sin depender del orden.
+   ============================================= */
+
+/* Degradé en el borde: "hay más para este lado" */
+:root .desliza.desliza.desliza-der {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+          mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+}
+:root .desliza.desliza.desliza-izq {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent);
+          mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent);
+}
+:root .desliza.desliza.desliza-izq.desliza-der {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+          mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent);
+}
+
+/* Arrastrando con el mouse: sin "imanes" (scroll-snap) ni selección de texto */
+:root .desliza.desliza.desliza-arrastrando {
+  scroll-snap-type: none;
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Con mouse (PC o laptop): barra de desplazamiento visible y fácil de agarrar. Con el dedo queda oculta */
+@media (hover: hover) and (pointer: fine) {
+  :root .desliza.desliza {
+    cursor: grab;
+    scrollbar-width: auto;
+    scrollbar-color: var(--accent-primary, #ea580c) rgba(0, 0, 0, 0.06);
+    padding-bottom: 12px;
+  }
+  :root .desliza.desliza button,
+  :root .desliza.desliza a { cursor: pointer; }
+  :root .desliza.desliza::-webkit-scrollbar { display: block; height: 10px; }
+  :root .desliza.desliza::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.06); border-radius: 5px; }
+  :root .desliza.desliza::-webkit-scrollbar-thumb { background: var(--accent-primary, #ea580c); border-radius: 5px; }
+  :root .desliza.desliza::-webkit-scrollbar-thumb:hover { filter: brightness(0.9); }
+}
