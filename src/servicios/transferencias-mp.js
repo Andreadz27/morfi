@@ -8,7 +8,7 @@
 //   que se pueda confundir, el pedido se cobra solo (referencia MP-<id>, la misma que usan los pagos con el botón).
 //   Ante cualquier duda (dos pedidos por el mismo monto, dos transferencias iguales) no se cobra nada: queda
 //   para el "Transferencia recibida" de siempre.
-// - Reporte: las transferencias de un período, marcando cuáles quedaron registradas en un pedido y cuáles no
+// - Reporte: las transferencias y los cobros del Point de un período, marcando cuáles quedaron registrados en un pedido y cuáles no
 //   (para controlar contra la caja las que se cobraron a mano o nunca se cargaron).
 const { all } = require('../db');
 const { emitEvento, alEvento } = require('../realtime');
@@ -37,28 +37,55 @@ async function idCuenta(cfg) {
   return cuentas.get(clave);
 }
 
-// Transferencias aprobadas que entraron a la cuenta entre dos momentos (Date), de la más nueva a la más vieja
-async function transferenciasRecibidas(cfg, desde, hasta = new Date()) {
+// Pagos aprobados cobrados por la cuenta entre dos momentos (Date), del más nuevo al más viejo.
+// Sin filtrar por collector.id, la búsqueda de Mercado Pago a veces trae los cobros del Point y a veces no
+// (misma consulta, distinta respuesta); con el filtro los trae siempre.
+async function cobrosAprobados(cfg, desde, hasta = new Date()) {
   const yo = await idCuenta(cfg);
   const lista = [];
   for (let offset = 0; offset < MAX_RESULTADOS; offset += 100) {
     const q = new URLSearchParams({
-      sort: 'date_created', criteria: 'desc', range: 'date_created',
+      'collector.id': yo, sort: 'date_approved', criteria: 'desc', range: 'date_approved',
       begin_date: desde.toISOString(), end_date: hasta.toISOString(), limit: '100', offset: String(offset)
     });
     const r = await mpRequest(cfg, 'GET', `/v1/payments/search?${q}`);
     const resultados = r.results || [];
-    for (const p of resultados) {
-      if (p.status !== 'approved' || !OPERACIONES.includes(p.operation_type)) continue;
-      if (String(p.collector_id) !== yo || (p.payer && String(p.payer.id) === yo)) continue;
-      lista.push({
-        id: String(p.id), monto: centavos(Number(p.transaction_amount) || 0),
-        fecha: p.date_approved || p.date_created, medio: p.payment_method_id || ''
-      });
-    }
+    lista.push(...resultados.filter(p => p.status === 'approved' && String(p.collector_id) === yo));
     if (resultados.length < 100) break;
   }
-  return lista;
+  return { yo, pagos: lista };
+}
+
+// Transferencias que entraron a la cuenta. Las que llegan de un banco al CVU (account_fund) figuran con la
+// propia cuenta como pagador, así que solo se descartan las money_transfer que el local se mandó a sí mismo.
+function soloTransferencias({ yo, pagos }) {
+  return pagos
+    .filter(p => OPERACIONES.includes(p.operation_type))
+    .filter(p => p.operation_type === 'account_fund' || !(p.payer && String(p.payer.id) === yo))
+    .map(p => ({
+      id: String(p.id), monto: centavos(Number(p.transaction_amount) || 0),
+      fecha: p.date_approved || p.date_created, medio: p.payment_method_id || ''
+    }));
+}
+
+// Cobros con tarjeta en el Point: bruto, comisión de Mercado Pago, retenciones y lo que queda en la cuenta
+function soloPoint({ pagos }) {
+  return pagos.filter(p => p.operation_type === 'pos_payment').map(p => {
+    const monto = centavos(Number(p.transaction_amount) || 0);
+    const comision = centavos((p.fee_details || []).reduce((s, f) => s + (Number(f.amount) || 0), 0));
+    const neto = centavos(Number(p.transaction_details && p.transaction_details.net_received_amount) || 0);
+    return {
+      id: String(p.id), monto, fecha: p.date_approved || p.date_created,
+      medio: p.payment_method_id || '', tipo: p.payment_type_id || '', cuotas: Number(p.installments) || 1,
+      ultimos: (p.card && p.card.last_four_digits) || '',
+      comision, retenciones: neto ? centavos(Math.max(0, monto - comision - neto)) : 0, neto,
+      devuelto: centavos(Number(p.transaction_amount_refunded) || 0)
+    };
+  });
+}
+
+async function transferenciasRecibidas(cfg, desde, hasta = new Date()) {
+  return soloTransferencias(await cobrosAprobados(cfg, desde, hasta));
 }
 
 // Referencias MP-<id> ya usadas en un cobro (una transferencia no se usa dos veces)
@@ -132,13 +159,14 @@ async function conciliar() {
   }
 }
 
-// Cobros "Transferencia" cargados a mano (sin número de operación): se asocian a la transferencia del mismo monto
-// más cercana en el tiempo, que haya entrado después de hacer el pedido y antes del cobro (con tolerancia por relojes)
-async function asociarCobrosAMano(sueltas, inicio, fin) {
+// Cobros cargados a mano (sin número de operación) como "Transferencia" o "Tarjeta": se asocian al movimiento de
+// Mercado Pago del mismo monto más cercano en el tiempo, que haya entrado después de hacer el pedido y antes del
+// cobro (con tolerancia por relojes)
+async function asociarCobrosAMano(sueltas, inicio, fin, metodo = 'transferencia') {
   if (!sueltas.length) return new Map();
   const cobros = await all(`SELECT pg.monto, pg.fecha, p.id AS pedido_id, p.creado_en, p.numero_pedido FROM pagos pg JOIN pedidos p ON p.id = pg.pedido_id
-    WHERE pg.metodo = 'transferencia' AND COALESCE(pg.referencia, '') = '' AND p.estado = 'pagado' AND pg.fecha BETWEEN ? AND ?`,
-  [sqlFecha(inicio.getTime() - TOLERANCIA_MS), sqlFecha(fin.getTime() + HORAS_ATRAS * 3600e3)]);
+    WHERE pg.metodo = ? AND COALESCE(pg.referencia, '') = '' AND p.estado = 'pagado' AND pg.fecha BETWEEN ? AND ?`,
+  [metodo, sqlFecha(inicio.getTime() - TOLERANCIA_MS), sqlFecha(fin.getTime() + HORAS_ATRAS * 3600e3)]);
   const posibles = [];
   for (const c of cobros) {
     const cobrado = fechaSql(c.fecha);
@@ -160,18 +188,26 @@ async function asociarCobrosAMano(sueltas, inicio, fin) {
   return asociadas;
 }
 
-// Para el reporte: transferencias de un período (fechas locales AAAA-MM-DD) con el pedido en que se registraron
+// Cada movimiento con la venta en que quedó registrado: por número de operación (MP-<id>) o, si se cobró a mano,
+// por monto y hora contra los cobros de ese medio
+async function conSuVenta(movimientos, inicio, fin, metodo) {
+  const usadas = await referenciasUsadas(movimientos.map(m => m.id));
+  const aMano = await asociarCobrosAMano(movimientos.filter(m => !usadas.has(m.id)), inicio, fin, metodo);
+  return movimientos.map(m => ({ ...m, pedido: usadas.get(m.id) || aMano.get(m.id) || null }));
+}
+
+// Para el reporte: transferencias y cobros del Point de un período (fechas locales AAAA-MM-DD) con la venta en que
+// se registró cada uno
 async function transferenciasDelPeriodo(desde, hasta, offsetMin) {
   const cfg = await getIntCfg('mercadopago');
-  if (!mpListo(cfg)) return { disponible: false, transferencias: [] };
+  if (!mpListo(cfg)) return { disponible: false, transferencias: [], point: [] };
   const inicio = new Date(Date.parse(`${desde}T00:00:00Z`) - offsetMin * 60000);
   const fin = new Date(Math.min(Date.now(), Date.parse(`${hasta}T23:59:59Z`) - offsetMin * 60000));
-  const recibidas = await transferenciasRecibidas(cfg, inicio, fin);
-  const usadas = await referenciasUsadas(recibidas.map(t => t.id));
-  const aMano = await asociarCobrosAMano(recibidas.filter(t => !usadas.has(t.id)), inicio, fin);
+  const cobros = await cobrosAprobados(cfg, inicio, fin);
   return {
     disponible: true,
-    transferencias: recibidas.map(t => ({ ...t, pedido: usadas.get(t.id) || aMano.get(t.id) || null }))
+    transferencias: await conSuVenta(soloTransferencias(cobros), inicio, fin, 'transferencia'),
+    point: await conSuVenta(soloPoint(cobros), inicio, fin, 'tarjeta')
   };
 }
 

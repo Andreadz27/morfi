@@ -92,10 +92,15 @@ const Reportes = {
     if (actual) actual.outerHTML = this.htmlTransferencias();
   },
 
+  // Transferencias y cobros del Point en un mismo contenedor: al llegar la respuesta se reemplazan juntos
   htmlTransferencias() {
+    return `<div id="repTransferencias">${this._htmlTransferencias()}${this._htmlPoint()}</div>`;
+  },
+
+  _htmlTransferencias() {
     const t = this.transferencias;
     const tarjeta = cuerpo => `
-      <div class="card mt-10" id="repTransferencias">
+      <div class="card mt-10">
         <div class="card-header">
           <span class="card-title"><i class="fas fa-university"></i> Transferencias recibidas en Mercado Pago</span>
           ${t && t.disponible && t.transferencias.length ? (() => {
@@ -125,6 +130,42 @@ const Reportes = {
         <thead><tr><th>Fecha</th><th class="text-right">Monto</th><th>Registrada en</th><th>Operación</th></tr></thead>
         <tbody>${filas}</tbody>
       </table></div>`);
+  },
+
+  // Cobros con tarjeta en el Point de Mercado Pago: lo mismo que el resumen del Point, con descuentos, neto y la venta
+  _htmlPoint() {
+    const t = this.transferencias;
+    const lista = (t && t.disponible && t.point) || [];
+    if (!lista.length) return '';
+    const sumar = (filas, campo) => filas.reduce((s, x) => s + (Number(x[campo]) || 0), 0);
+    const sin = lista.filter(x => !x.pedido);
+    const marcas = { visa: 'Visa', debvisa: 'Visa débito', master: 'Mastercard', debmaster: 'Mastercard débito', maestro: 'Maestro',
+      amex: 'American Express', cabal: 'Cabal', debcabal: 'Cabal débito', naranja: 'Naranja', argencard: 'Argencard', cencosud: 'Cencosud' };
+    const filas = lista.map(x => `
+      <tr>
+        <td>${fmtFechaHora(x.fecha)}</td>
+        <td>${esc(marcas[x.medio] || x.medio || 'Tarjeta')}${x.ultimos ? ` ··${esc(x.ultimos)}` : ''}${x.cuotas > 1 ? ` · ${x.cuotas} cuotas` : ''}</td>
+        <td class="text-right font-bold">${fmtMoneda(x.monto)}</td>
+        <td class="text-right text-muted">${fmtMoneda(x.comision + x.retenciones)}</td>
+        <td class="text-right">${fmtMoneda(x.neto)}</td>
+        <td>${x.pedido ? `<span class="badge badge-green">Venta ${esc(x.pedido.numero_pedido)}</span>${x.pedido.a_mano ? ' <span class="text-muted" title="Cobrada como Tarjeta; asociada por monto y hora">(por monto y hora)</span>' : ''}` : '<span class="badge badge-red">Sin asociar</span>'}${x.devuelto ? ` <span class="badge badge-orange">Devuelto ${fmtMoneda(x.devuelto)}</span>` : ''}</td>
+        <td class="text-muted">MP-${esc(x.id)}</td>
+      </tr>`).join('');
+    return `
+      <div class="card mt-10">
+        <div class="card-header">
+          <span class="card-title"><i class="fas fa-credit-card"></i> Cobros con tarjeta en el Point</span>
+          <span class="badge badge-blue">${lista.length} · ${fmtMoneda(sumar(lista, 'monto'))}</span>
+          ${sin.length ? `<span class="badge badge-red" title="Se cobraron en el Point pero no están en ninguna venta">${sin.length} sin asociar · ${fmtMoneda(sumar(sin, 'monto'))}</span>` : ''}
+        </div>
+        <p class="text-muted">Lo mismo que el resumen del Point. <strong>Descuentos</strong> = comisión de Mercado Pago (${fmtMoneda(sumar(lista, 'comision'))})
+          más retenciones de impuestos (${fmtMoneda(sumar(lista, 'retenciones'))}). <strong>Neto</strong> = lo que queda en la cuenta (${fmtMoneda(sumar(lista, 'neto'))}).
+          <strong>Sin asociar</strong> = se cobró con el Point pero no hay ninguna venta cobrada como "Tarjeta" por ese monto.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Fecha</th><th>Tarjeta</th><th class="text-right">Bruto</th><th class="text-right">Descuentos</th><th class="text-right">Neto</th><th>Registrado en</th><th>Operación</th></tr></thead>
+          <tbody>${filas}</tbody>
+        </table></div>
+      </div>`;
   },
 
   // Productos y cobros de una venta, en texto corto
