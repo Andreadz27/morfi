@@ -39,7 +39,7 @@ const Reportes = {
         this.auditoria = await API.getAuditoria();
       }
       this.paint(view);
-      if (this.tab === 'ventas') this.cargarTransferencias();
+      if (this.tab === 'ventas') { this.cargarTransferencias(); this.cargarTicket(); }
     } catch (err) {
       view.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error: ${esc(err.message)}</p></div>`;
     }
@@ -77,6 +77,54 @@ const Reportes = {
     else if (cual === 'mes') { this.desde = inicioMes; this.hasta = hoy; }
     else if (cual === 'mes_pasado') { this.hasta = dia(inicioMes, -1); this.desde = this.hasta.slice(0, 8) + '01'; }
     this.render();
+  },
+
+  // Ticket promedio por persona: se calcula en el servidor con lo pedido (nadie carga cuántas personas hay)
+  async cargarTicket() {
+    if (!document.getElementById('repTicket')) return;
+    let t;
+    try { t = await API.getTicketPromedio(this.desde || hoyLocal(), this.hasta || hoyLocal()); } catch (err) { t = { error: err.message }; }
+    const caja = document.getElementById('repTicket');
+    if (caja) caja.innerHTML = this.htmlTicket(t);
+  },
+
+  htmlTicket(t) {
+    if (!t || t.error) return `<p class="text-muted">No se pudo calcular el ticket promedio${t && t.error ? ': ' + esc(t.error) : ''}.</p>`;
+    const x = t.total;
+    if (!x.tickets) return '';
+    const vs = (a, b) => {
+      if (!b) return '';
+      const v = Math.round((a - b) / b * 1000) / 10;
+      return ` <small class="${v >= 0 ? 'text-success' : 'text-danger'}">${v >= 0 ? '▲' : '▼'} ${Math.abs(v)} % vs. período anterior</small>`;
+    };
+    const fila = (nombre, s) => s.tickets ? `<tr><td>${nombre}</td><td class="text-right">${s.tickets}</td><td class="text-right">${s.personas}</td>
+      <td class="text-right font-bold">${fmtMoneda(s.por_ticket)}</td><td class="text-right font-bold">${fmtMoneda(s.por_persona)}</td>
+      <td class="text-right">${s.platos_por_persona.toLocaleString('es-AR')}</td></tr>` : '';
+    const semana = t.por_dia_semana.length > 1 ? `
+      <h4 class="mt-10">Por día de la semana</h4>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Día</th><th class="text-right">Tickets</th><th class="text-right">Personas</th><th class="text-right">Por ticket</th><th class="text-right">Por persona</th><th class="text-right">Platos por persona</th></tr></thead>
+        <tbody>${t.por_dia_semana.map(d => fila(d.dia, d)).join('')}</tbody>
+      </table></div>` : '';
+    return `
+      <div class="card mb-20">
+        <div class="card-header"><span class="card-title"><i class="fas fa-user-friends"></i> Ticket promedio</span></div>
+        <div class="grid grid-4">
+          <div class="stat-card"><div class="stat-info"><h3>${fmtMoneda(x.por_ticket)}</h3><span>Por ticket${vs(x.por_ticket, t.anterior.por_ticket)}</span></div></div>
+          <div class="stat-card"><div class="stat-info"><h3>${fmtMoneda(x.por_persona)}</h3><span>Por persona${vs(x.por_persona, t.anterior.por_persona)}</span></div></div>
+          <div class="stat-card"><div class="stat-info"><h3>${x.personas}</h3><span>Personas atendidas · ${x.personas_por_ticket.toLocaleString('es-AR')} por ticket</span></div></div>
+          <div class="stat-card"><div class="stat-info"><h3>${x.platos_por_persona.toLocaleString('es-AR')}</h3><span>Platos por persona${x.compartidos ? ` · ${x.compartidos} tickets con alguien que comparte o solo toma algo` : ''}</span></div></div>
+        </div>
+        <div class="table-wrap mt-10"><table>
+          <thead><tr><th></th><th class="text-right">Tickets</th><th class="text-right">Personas</th><th class="text-right">Por ticket</th><th class="text-right">Por persona</th><th class="text-right">Platos por persona</th></tr></thead>
+          <tbody>${fila('Salón (mesas)', t.salon)}${fila('Para llevar y mostrador', t.llevar)}</tbody>
+        </table></div>
+        ${semana}
+        <p class="text-muted mt-10"><i class="fas fa-circle-info"></i> Sin propinas. Las personas se cuentan solas con lo pedido: cada bebida o plato es una persona
+          (los platos "para 2", "dúo" o "para compartir" cuentan por dos; medialunas y pastelería no suman), y en cada ticket vale lo que dé más.
+          Si 2 comparten un plato siguen siendo 2 personas.${x.sin_detalle ? ` ${x.sin_detalle} venta${x.sin_detalle > 1 ? 's' : ''} sin detalle no entra${x.sin_detalle > 1 ? 'n' : ''} en el cálculo por persona.` : ''}
+          Con pocos días es una muestra: se vuelve confiable con 3 o 4 semanas.</p>
+      </div>`;
   },
 
   async cargarTransferencias() {
@@ -297,6 +345,7 @@ const Reportes = {
           <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-tags"></i></div>
             <div class="stat-info"><h3>${fmtMoneda(r.descuentos || 0)}</h3><span>Descuentos${r.cancelados.cantidad ? ` · ${r.cancelados.cantidad} cancelados` : ''}</span></div></div>
         </div>
+        <div id="repTicket"></div>
 
         <div class="grid grid-2 mb-20">
           ${tablaResumen('Por medio de pago', 'fa-credit-card', '<th>Medio</th><th class="text-right">Cobros</th><th class="text-right">Total</th><th class="text-right">%</th>', filasMetodo, 'Sin cobros en el período')}

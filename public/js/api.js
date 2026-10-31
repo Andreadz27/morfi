@@ -279,6 +279,7 @@ const API = {
 
   // ===== Reportes =====
   getDashboard() { return this.request('GET', '/reportes/dashboard'); },
+  getTicketPromedio(desde, hasta) { return this.request('GET', `/reportes/ticket?desde=${desde}&hasta=${hasta}`); },
   getReporteVentas(desde = null, hasta = null, metodo = '') {
     const params = new URLSearchParams();
     if (desde) params.append('desde', desde);

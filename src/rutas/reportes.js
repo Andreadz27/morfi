@@ -3,6 +3,7 @@ const {
   get, all, LOCAL, fechaLocal, offsetZonaMin, errorInterno, autenticar, esAdmin, requiere, tienePermiso, centavos, METODOS_PAGO
 } = require('../contexto');
 const { transferenciasDelPeriodo } = require('../servicios/transferencias-mp');
+const { ticketPromedio } = require('../servicios/ticket-promedio');
 const { estadoSalud } = require('../servicios/monitoreo');
 
 module.exports = function registrarRutas(app) {
@@ -213,6 +214,21 @@ app.get('/api/reportes/transferencias-mp', autenticar, requiere('reportes'), asy
     res.json(await transferenciasDelPeriodo(desde, hasta, offsetZonaMin()));
   } catch (err) {
     res.status(502).json({ error: `No se pudo consultar Mercado Pago: ${err.message}` });
+  }
+});
+
+// Ticket promedio por ticket y por persona (las personas se calculan solas con lo pedido: servicios/ticket-promedio.js),
+// salón / para llevar, por día de la semana y contra el período anterior del mismo largo
+app.get('/api/reportes/ticket', autenticar, requiere('reportes'), async (req, res) => {
+  try {
+    const fecha = /^\d{4}-\d{2}-\d{2}$/;
+    const hoy = fechaLocal();
+    const desde = fecha.test(req.query.desde || '') ? req.query.desde : hoy;
+    const hasta = fecha.test(req.query.hasta || '') ? req.query.hasta : hoy;
+    if (hasta < desde || Date.parse(hasta) - Date.parse(desde) > 370 * 86400000) return res.status(400).json({ error: 'Elegí un período de hasta un año' });
+    res.json(await ticketPromedio(desde, hasta));
+  } catch (err) {
+    errorInterno(res, err);
   }
 });
 

@@ -199,10 +199,14 @@ async function resumenGanancias({ desde, hasta, agrupar = 'dia' } = {}) {
   // Productos vendidos sin costo cargado: la ganancia sale inflada
   const sinCosto = await all(`SELECT pi.nombre_producto AS producto, SUM(pi.cantidad) AS unidades, SUM(pi.subtotal) AS ventas
     FROM pedido_items pi JOIN pedidos p ON p.id = pi.pedido_id LEFT JOIN productos pr ON pr.id = pi.producto_id
-    WHERE p.estado = 'pagado' AND ${DIA()} BETWEEN ? AND ? AND COALESCE(pr.costo, 0) <= 0
+    WHERE p.estado = 'pagado' AND ${DIA()} BETWEEN ? AND ? AND COALESCE(pr.costo, 0) <= 0 AND pi.producto_id IS NOT NULL
     GROUP BY pi.nombre_producto ORDER BY ventas DESC LIMIT 15`, [desde, hasta]);
+  // Compras de mercadería del período: no se restan (ya están en el costo de cada plato), pero se muestran para que se entienda
+  const { compras } = await get(`SELECT COALESCE(SUM(total), 0) AS compras FROM gastos
+    WHERE anulado = 0 AND categoria = 'mercaderia' AND fecha BETWEEN ? AND ?`, [desde, hasta]);
 
-  return { desde, hasta, agrupar, totales: t, periodos,
+  return { desde, hasta, agrupar, totales: t, periodos, compras_mercaderia: r2(compras), gastos_fijos_mes: cfg.total_gastos_fijos,
+    primer_dia_con_ventas: pedidos.length ? pedidos.reduce((m, p) => p.dia < m ? p.dia : m, pedidos[0].dia) : null,
     comparacion: { anterior: comparar({ desde: antDesde, hasta: antHasta, t: anterior }),
       anio_pasado: comparar({ desde: anioAnt(desde), hasta: anioAnt(hasta), t: anioPasado }) },
     sin_costo: sinCosto.map(x => ({ ...x, ventas: r2(x.ventas) })),

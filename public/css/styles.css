@@ -2561,3 +2561,6 @@ tr:hover td {
 .dia-chip span { display: inline-block; min-width: 52px; padding: 10px 8px; text-align: center; border: 1px solid var(--border, #cbd5e1); border-radius: 10px; font-weight: 600; }
 .dia-chip input:checked + span { background: var(--primary, #0ea5e9); border-color: var(--primary, #0ea5e9); color: #fff; }
 .dia-chip input:focus-visible + span { outline: 2px solid var(--primary, #0ea5e9); outline-offset: 2px; }
+
+/* Ganancias: ticket promedio por persona */
+.gan-ticket { padding: 10px 12px; border-radius: 8px; background: rgba(14, 165, 233, .1); }
