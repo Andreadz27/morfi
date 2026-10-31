@@ -264,12 +264,14 @@ async abrirPedidoDeMesa(mesaId) {
     Promise.all([API.getProductos(), Opciones.cargar()]).then(([todos]) => {
       const productos = todos.filter(p => (p.clase || 'venta') === 'venta'); // insumos y sub-recetas no se venden
       self._productosItem = productos;
-      const options = productos.map(p => `<option value="${p.id}" data-nombre="${esc(p.nombre)}" data-precio="${p.precio_venta}">${esc(p.nombre)} - ${fmtMoneda(p.precio_venta)}</option>`).join('');
       App.showModal(`
         <form onsubmit="Pedidos.guardarItem(event, ${pedidoId})">
           <div class="form-group">
-            <label>Producto</label>
-            <select id="itemProducto">${options}</select>
+            <label for="itemBuscar">Producto</label>
+            <input type="search" id="itemBuscar" placeholder="Buscar: nombre o categoría" autocomplete="off"
+              oninput="Pedidos.filtrarItem(this.value)" onkeydown="Pedidos.teclaBuscarItem(event)" aria-label="Buscar producto">
+            <select id="itemProducto" size="8" required aria-label="Producto" style="margin-top:8px"></select>
+            <small class="text-muted" id="itemCuantos"></small>
           </div>
           <div class="form-group">
             <label>Cantidad</label>
@@ -285,7 +287,51 @@ async abrirPedidoDeMesa(mesaId) {
           </div>
         </form>
       `, { title: 'Agregar item al pedido' });
+      self.filtrarItem('');
+      const buscar = document.getElementById('itemBuscar');
+      if (buscar) buscar.focus();
     }).catch(err => App.showToast(err.message, 'error'));
+  },
+
+  // Buscador del "+ Item": sin acentos ni mayúsculas; primero los que lo tienen en el nombre, después por
+  // categoría o descripción. Queda elegido el primero, así Enter pasa directo a la cantidad.
+  _sinAcentos(t) {
+    return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  },
+  filtrarItem(texto) {
+    const select = document.getElementById('itemProducto');
+    if (!select) return;
+    const q = this._sinAcentos(texto).trim();
+    const todos = this._productosItem || [];
+    let lista = todos;
+    if (q) {
+      const enNombre = todos.filter(p => this._sinAcentos(p.nombre).includes(q));
+      const resto = todos.filter(p => !enNombre.includes(p) &&
+        this._sinAcentos(`${p.categoria_nombre || ''} ${p.descripcion || ''}`).includes(q));
+      lista = enNombre.concat(resto);
+    }
+    select.innerHTML = lista.map(p => `<option value="${p.id}" data-nombre="${esc(p.nombre)}" data-precio="${p.precio_venta}">${esc(p.nombre)} - ${fmtMoneda(p.precio_venta)}</option>`).join('');
+    if (lista.length) select.selectedIndex = 0;
+    const cuantos = document.getElementById('itemCuantos');
+    if (cuantos) cuantos.textContent = q ? (lista.length ? `${lista.length} de ${todos.length} productos` : 'No hay productos con ese nombre') : `${todos.length} productos`;
+  },
+  // Enter: a la cantidad con el primero elegido (no agrega todavía). Flechas: moverse por la lista. Escape: borrar
+  teclaBuscarItem(e) {
+    const select = document.getElementById('itemProducto');
+    if (e.key === 'Escape' && e.target.value) { e.preventDefault(); e.stopPropagation(); e.target.value = ''; this.filtrarItem(''); return; }
+    if (!select || !select.options.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const i = select.selectedIndex + (e.key === 'ArrowDown' ? 1 : -1);
+      select.selectedIndex = Math.max(0, Math.min(select.options.length - 1, i));
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (select.selectedIndex < 0) select.selectedIndex = 0;
+      const cantidad = document.getElementById('itemCantidad');
+      if (cantidad) { cantidad.focus(); cantidad.select(); }
+    }
   },
 
   guardarItem(e, pedidoId) {
