@@ -112,7 +112,9 @@ const Pedidos = {
     const pagos = p.pagos.map(pg => `
       <tr>
         <td>${fmtFechaHora(pg.fecha)}</td>
-        <td>${esc(pg.metodo)}</td>
+        <td>${esc(Cobro.METODOS[pg.metodo] || pg.metodo)}
+          ${App.puede('admin') && pg.metodo !== 'giftcard' && p.estado !== 'cancelado'
+            ? `<button class="btn btn-sm btn-outline" onclick="Pedidos.cambiarMedio(${p.id}, ${pg.id})" title="Se cargó mal el medio de pago"><i class="fas fa-pen"></i> Cambiar</button>` : ''}</td>
         <td class="font-bold">${fmtMoneda(pg.monto)}</td>
       </tr>
     `).join('');
@@ -160,6 +162,7 @@ const Pedidos = {
       </div>
 
       <div class="modal-footer">
+        ${p.estado !== 'cancelado' && App.puede('admin') ? `<button class="btn btn-danger" onclick="Pedidos.eliminar(${p.id})"><i class="fas fa-trash-alt"></i> Eliminar pedido</button>` : ''}
         <button class="btn btn-outline" onclick="App.closeModal()">Cerrar</button>
         ${p.estado === 'pagado' && Cobro.puedeCobrar(p) ? `<button class="btn btn-outline" onclick="Cobro.compartir(${p.id})"><i class="fab fa-whatsapp"></i> WhatsApp</button>` : ''}
         ${App.puede('pedidos.tomar') ? `<button class="btn btn-primary" onclick="Pedidos.imprimirTicket(${p.id})"><i class="fas fa-print"></i> ${p.estado === 'pagado' ? 'Imprimir ticket' : 'Precuenta'}</button>` : ''}
@@ -168,7 +171,6 @@ const Pedidos = {
           esAbierto ? `
           ${App.puede('pedidos.tomar') ? `<button class="btn btn-primary" onclick="Pedidos.agregarItem(${p.id})"><i class="fas fa-plus"></i> Item</button>` : ''}
           ${App.puede('pedidos.descuento') ? `<button class="btn btn-warning" onclick="Pedidos.aplicarDescuentoModal(${p.id})"><i class="fas fa-percent"></i> Descuento</button>` : ''}
-          ${App.puede('pedidos.cancelar') && !(p.pagado > 0) ? `<button class="btn btn-danger" onclick="Pedidos.cancelar(${p.id})"><i class="fas fa-ban"></i> Cancelar</button>` : ''}
           ${App.puede('pedidos.cobrar') ? `
           <button class="btn btn-outline" onclick="Pedidos.linkMercadoPago(${p.id})"><i class="fas fa-link"></i> Link Mercado Pago</button>` : ''}
           ${Cobro.puedeCobrar(p) ? `
@@ -408,6 +410,87 @@ async abrirPedidoDeMesa(mesaId) {
       this.render();
     } catch (err) {
       App.showToast(err.message, 'error');
+    }
+  },
+
+  // ===== Corregir el medio de pago: un toque en el medio correcto =====
+  cambiarMedio(pedidoId, pagoId) {
+    const p = this.ultimoPedido;
+    const pg = p && p.pagos.find(x => x.id === pagoId);
+    if (!pg) return;
+    const botones = Object.entries(Cobro.METODOS).filter(([v]) => v !== 'giftcard').map(([v, t]) => v === pg.metodo
+      ? `<button type="button" class="btn btn-primary" disabled>${esc(t)} (actual)</button>`
+      : `<button type="button" class="btn btn-outline" onclick="Pedidos.guardarMedio(${pedidoId}, ${pagoId}, '${v}')">${esc(t)}</button>`).join('');
+    App.showModal(`
+      <p>Cobro de <strong>${fmtMoneda(pg.monto)}</strong> del ${fmtFechaHora(pg.fecha)}. ¿Con qué pagó en realidad?</p>
+      <div class="cobro-chips corregir-medios">${botones}</div>
+      <p class="text-muted mt-10">La caja, el cierre y los reportes se corrigen solos.</p>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="Pedidos.verDetalle(${pedidoId})"><i class="fas fa-arrow-left"></i> Volver</button>
+      </div>`, { title: `Corregir medio de pago · ${p.numero_pedido}` });
+  },
+
+  async guardarMedio(pedidoId, pagoId, metodo) {
+    try {
+      await API.corregirMedioPago(pedidoId, pagoId, metodo);
+      App.showToast(`Listo: el cobro quedó como ${Cobro.METODOS[metodo] || metodo}`, 'success');
+      this.verDetalle(pedidoId);
+      if (App.currentView === 'pedidos') this.render();
+    } catch (err) {
+      App.showToast(err.message, 'error');
+    }
+  },
+
+  // ===== Eliminar un pedido (también cobrado): se elige el motivo con un toque =====
+  MOTIVOS_ELIMINAR: ['Cargado por error', 'Pedido duplicado', 'Era una prueba', 'El cliente se fue', 'Otro'],
+
+  eliminar(id) {
+    const p = this.ultimoPedido;
+    if (!p || p.id !== id) return;
+    this._motivo = null;
+    const cobrado = (p.pagos || []).reduce((s, x) => s + (Number(x.monto) || 0), 0);
+    const efectivo = (p.pagos || []).filter(x => x.metodo === 'efectivo').reduce((s, x) => s + (Number(x.monto) || 0), 0);
+    App.showModal(`
+      <p>¿Por qué se elimina el pedido <strong>${esc(p.numero_pedido)}</strong> (${fmtMoneda(p.total)})?</p>
+      <div class="cobro-chips" id="eliminarMotivos">
+        ${this.MOTIVOS_ELIMINAR.map((m, i) => `<button type="button" class="btn btn-outline" data-i="${i}" onclick="Pedidos.elegirMotivo(${i})">${esc(m)}</button>`).join('')}
+      </div>
+      <input type="text" id="eliminarDetalle" maxlength="200" placeholder="Contá qué pasó" class="mt-10" style="display:none">
+      ${cobrado > 0 ? `<p class="text-warning mt-10"><i class="fas fa-exclamation-triangle"></i> Ya se cobró ${fmtMoneda(cobrado)}: el cobro se quita de la caja y de las ventas${efectivo > 0 ? ` (en la caja tiene que haber ${fmtMoneda(efectivo)} menos de efectivo)` : ''}.
+        Si hay que devolverle plata al cliente, hacelo aparte${cobrado > efectivo ? ' (tarjeta o transferencia: desde Mercado Pago)' : ''}.</p>` : ''}
+      <p class="text-muted">El pedido queda en "Cancelados" con el motivo, y vuelve el stock.</p>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="Pedidos.verDetalle(${id})">No, volver</button>
+        <button type="button" class="btn btn-danger" id="eliminarBtn" disabled onclick="Pedidos.confirmarEliminar(${id})"><i class="fas fa-trash-alt"></i> Eliminar pedido</button>
+      </div>`, { title: 'Eliminar pedido' });
+  },
+
+  elegirMotivo(i) {
+    this._motivo = this.MOTIVOS_ELIMINAR[i];
+    document.querySelectorAll('#eliminarMotivos button').forEach(b => {
+      b.classList.toggle('btn-primary', Number(b.dataset.i) === i);
+      b.classList.toggle('btn-outline', Number(b.dataset.i) !== i);
+    });
+    const d = document.getElementById('eliminarDetalle');
+    d.style.display = this._motivo === 'Otro' ? '' : 'none';
+    if (this._motivo === 'Otro') d.focus();
+    document.getElementById('eliminarBtn').disabled = false;
+  },
+
+  async confirmarEliminar(id) {
+    const detalle = document.getElementById('eliminarDetalle').value.trim();
+    if (!this._motivo) return App.showToast('Elegí por qué se elimina', 'warning');
+    if (this._motivo === 'Otro' && !detalle) return App.showToast('Escribí el motivo', 'warning');
+    const btn = document.getElementById('eliminarBtn');
+    btn.disabled = true;
+    try {
+      const r = await API.eliminarPedido(id, { motivo: this._motivo, detalle: this._motivo === 'Otro' ? detalle : '' });
+      App.closeModal();
+      App.showToast(`Pedido eliminado${r.cobrado > 0 ? ` · se quitaron ${fmtMoneda(r.cobrado)} de la caja` : ''}`, 'success', 7000);
+      if (App.currentView === 'pedidos') this.render();
+    } catch (err) {
+      btn.disabled = false;
+      App.showToast(err.message, 'error', 8000);
     }
   }
 };

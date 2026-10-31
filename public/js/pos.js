@@ -670,10 +670,10 @@ checkout() {
             ${metodos.map(([v, t], i) => `<label class="btn btn-outline btn-sm" style="cursor:pointer"><input type="radio" name="rapidoMetodo" value="${v}" ${i === 0 ? 'checked' : ''} onchange="POS.cambiarMetodoRapido()"> ${esc(t)}</label>`).join('')}
           </div>
         </div>
-        <div class="form-group" id="rapidoEfectivo">
-          <label>Recibido <small class="text-muted">(para calcular el vuelto; opcional)</small></label>
+        <div class="form-group">
+          <label id="rapidoRecibidoTxt">Recibido</label>
           <input type="number" id="rapidoRecibido" min="0" step="0.01" placeholder="${total}" oninput="POS.vueltoRapido()">
-          <small id="rapidoVuelto" class="text-muted"></small>
+          <div id="rapidoVuelto" class="mt-10"></div>
         </div>
         ${alias ? `<p class="text-muted" id="rapidoAlias" style="display:none"><i class="fas fa-university"></i> Alias: <strong>${esc(alias)}</strong></p>` : ''}
         <div class="form-group">
@@ -685,6 +685,7 @@ checkout() {
           <button type="submit" class="btn btn-success"><i class="fas fa-bolt"></i> Cobrar y enviar a cocina</button>
         </div>
       </form>`, { title: 'Cobrar y enviar' });
+    this._propinaRapida = false;
     this.cambiarMetodoRapido();
     setTimeout(() => { const i = document.getElementById('rapidoNombre'); if (i) i.focus(); }, 50);
   },
@@ -696,16 +697,42 @@ checkout() {
 
   cambiarMetodoRapido() {
     const m = this.metodoRapido();
-    const ef = document.getElementById('rapidoEfectivo');
-    if (ef) ef.style.display = m === 'efectivo' ? '' : 'none';
+    const txt = document.getElementById('rapidoRecibidoTxt');
+    if (txt) txt.innerHTML = m === 'efectivo'
+      ? 'Recibido <small class="text-muted">(para calcular el vuelto; opcional)</small>'
+      : 'Cobrado <small class="text-muted">(solo si pagó más que el total: la diferencia es propina)</small>';
     const al = document.getElementById('rapidoAlias');
     if (al) al.style.display = m === 'transferencia' ? '' : 'none';
+    this.vueltoRapido();
   },
 
+  // Lo que entregó/pagó por encima del total
+  excedenteRapido() {
+    const recibido = Number((document.getElementById('rapidoRecibido') || {}).value) || 0;
+    return recibido ? Math.round((recibido - this.cartFinal()) * 100) / 100 : 0;
+  },
+
+  // Vuelto (efectivo) o lo que pagó de más (tarjeta, transferencia): un toque y queda de propina
   vueltoRapido() {
+    const el = document.getElementById('rapidoVuelto');
+    if (!el) return;
     const recibido = Number(document.getElementById('rapidoRecibido').value) || 0;
-    const v = Math.round((recibido - this.cartFinal()) * 100) / 100;
-    document.getElementById('rapidoVuelto').textContent = recibido ? (v >= 0 ? `Vuelto: ${fmtMoneda(v)}` : `Faltan ${fmtMoneda(-v)}`) : '';
+    const v = this.excedenteRapido();
+    if (v <= 0) this._propinaRapida = false;
+    const efectivo = this.metodoRapido() === 'efectivo';
+    el.innerHTML = !recibido ? ''
+      : v < 0 ? `<span class="text-danger">Faltan ${fmtMoneda(-v)}</span>`
+      : v === 0 ? '<span class="text-muted">Justo, sin vuelto</span>'
+      : this._propinaRapida
+        ? `<span class="text-success"><i class="fas fa-hand-holding-usd"></i> Propina ${fmtMoneda(v)}${efectivo ? ' · sin vuelto' : ''}</span>
+           <button type="button" class="btn btn-sm btn-outline" onclick="POS.propinaRapida(false)">Deshacer</button>`
+        : `<strong>${efectivo ? 'Vuelto' : 'Pagó de más'}: ${fmtMoneda(v)}</strong>
+           <button type="button" class="btn btn-success btn-propina" onclick="POS.propinaRapida(true)"><i class="fas fa-hand-holding-usd"></i> ${efectivo ? 'No quiere el vuelto: es propina' : 'Es propina'}</button>`;
+  },
+
+  propinaRapida(si) {
+    this._propinaRapida = !!si;
+    this.vueltoRapido();
   },
 
   confirmarCobroRapido(e) {
@@ -717,12 +744,16 @@ checkout() {
     const metodo = this.metodoRapido();
     const cliente = document.getElementById('rapidoNombre').value.trim();
     const notas = document.getElementById('rapidoNotas').value.trim();
-    const recibidoTxt = metodo === 'efectivo' ? document.getElementById('rapidoRecibido').value : '';
-    if (recibidoTxt && Number(recibidoTxt) < this.cartFinal() - 0.009) return App.showToast('El efectivo recibido no cubre el total', 'warning');
+    const excedente = this.excedenteRapido();
+    if (excedente < -0.009) return App.showToast(metodo === 'efectivo' ? 'El efectivo recibido no cubre el total' : 'Lo cobrado no cubre el total', 'warning');
+    if (excedente > 0 && metodo !== 'efectivo' && !this._propinaRapida) return App.showToast('Pagó de más: tocá «Es propina» o corregí el monto', 'warning');
+    // Si deja el vuelto (o lo que pagó de más) de propina, se suma a la propina del pedido
+    const extra = this._propinaRapida && excedente > 0 ? excedente : 0;
+    const recibidoTxt = metodo === 'efectivo' && !extra ? document.getElementById('rapidoRecibido').value : '';
     const items = this.cart.map(item => ({ producto_id: item.producto_id, nombre: item.nombre, cantidad: item.cantidad, precio: item.precio, opciones: item.opciones || [] }));
     let pedido;
     try {
-      pedido = await API.createPedido({ tipo: 'mostrador', cliente, items, notas, descuento: this.descuento, propina: this.propina },
+      pedido = await API.createPedido({ tipo: 'mostrador', cliente, items, notas, descuento: this.descuento, propina: Math.round(((this.propina || 0) + extra) * 100) / 100 },
         `Pedido ${cliente}`.trim());
     } catch (err) { return App.showToast(err.message, 'error'); }
     this.cart = []; this.descuento = 0; this.propina = 0;
@@ -731,7 +762,7 @@ checkout() {
     if (pedido.encolado) return App.showToast('Sin WiFi: el pedido quedó guardado y se envía solo al volver la conexión. Cobralo desde Pedidos.', 'warning', 9000);
     try {
       const r = await API.cobrarEnMesa(pedido.id, { pagos: [{ metodo, monto: pedido.total, ...(recibidoTxt ? { recibido: Number(recibidoTxt) } : {}) }] });
-      App.showToast(`Pedido ${pedido.numero_pedido} cobrado y en la cocina${r && r.vuelto > 0 ? ` · vuelto ${fmtMoneda(r.vuelto)}` : ''}`, 'success', 7000);
+      App.showToast(`Pedido ${pedido.numero_pedido} cobrado y en la cocina${r && r.vuelto > 0 ? ` · vuelto ${fmtMoneda(r.vuelto)}` : ''}${extra ? ` · propina ${fmtMoneda(extra)}` : ''}`, 'success', 7000);
     } catch (err) {
       // El pedido ya está en la cocina: el cobro se hace desde Pedidos (no se crea de nuevo)
       App.showToast(`Pedido ${pedido.numero_pedido} enviado a la cocina, pero no se pudo cobrar: ${err.message}. Cobralo desde Pedidos.`, 'error', 10000);
