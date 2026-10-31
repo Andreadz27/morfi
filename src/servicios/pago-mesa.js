@@ -70,6 +70,7 @@ async function aplicarPagoMercadoPago(pago) {
     const referencia = `MP-${pago.id}`;
     const yaRegistrado = await get('SELECT 1 AS x FROM pagos WHERE referencia = ? LIMIT 1', [referencia]);
     let cerrado = false;
+    let cobrado = null; // lo que se cobró recién (para que la caja suene una sola vez, aunque Mercado Pago avise varias)
     if (intento && pago.status !== 'approved' && intento.estado === 'pendiente' && ['rejected', 'cancelled'].includes(pago.status))
       await run("UPDATE pagos_mesa SET estado = 'rechazado', payment_id = ? WHERE id = ?", [String(pago.id), intento.id]);
     if (pago.status === 'approved' && !yaRegistrado) {
@@ -91,6 +92,7 @@ async function aplicarPagoMercadoPago(pago) {
         const { saldo } = await saldoPedido(pedido.id);
         const r = await registrarCobroTx(pedido.id, { pagos: [{ metodo: 'mercadopago', monto: Math.min(monto, saldo), referencia }], usuarioId: null });
         cerrado = r.cerrado;
+        cobrado = { numero_pedido: actual.numero_pedido, monto: Math.min(monto, saldo) };
         await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (NULL, ?, ?)',
           ['pago_mercadopago', `Pedido ${actual.numero_pedido}: ${r.cerrado ? 'cobrado' : `cobro parcial de $${r.cobrado}, falta $${r.saldo}`} por Mercado Pago (pago ${pago.id})${intento ? ' desde la mesa' : ''}`]);
         if (monto > saldo + 0.009)
@@ -105,7 +107,7 @@ async function aplicarPagoMercadoPago(pago) {
         }
       }
     }
-    emitEvento('pago:recibido', { payment_id: pago.id, pedido_id: pedido.id, estado: pago.status });
+    emitEvento('pago:recibido', { payment_id: pago.id, pedido_id: pedido.id, estado: pago.status, cobrado, desde_mesa: !!intento });
     return { pedido_id: pedido.id, cerrado };
   });
   // Con la cuenta cerrada salen los comprobantes que pidieron por WhatsApp (fuera de la transacción: es HTTP)

@@ -78,9 +78,32 @@ const App = {
       this.socket.on('retiro:actualizar', (data) => {
         if (App.currentView === 'pos') POS.actualizarBadgeRetiro();
         this._refrescarRetiro();
-        if (data && data.aviso === 'transferencia' && App.puede('pedidos.cobrar')) this.showToast('Un cliente de la barra avisó que transfirió: confirmalo en Venta → Para retirar', 'warning', 8000);
+        if (data && data.aviso === 'transferencia' && App.puede('pedidos.cobrar')) {
+          this.showToast('Un cliente de la barra avisó que transfirió: confirmalo en Venta → Para retirar', 'warning', 8000);
+          this.avisarPago('Un cliente avisó que transfirió');
+        }
         // La transferencia entró a Mercado Pago y se cobró sola (servicios/transferencias-mp.js)
-        if (data && data.transferencia_detectada && App.puede('pedidos.cobrar')) this.showToast(`${data.transferencia_detectada.numero_pedido}: llegó la transferencia de ${fmtMoneda(data.transferencia_detectada.monto)} a Mercado Pago y se cobró sola`, 'success', 8000);
+        if (data && data.transferencia_detectada && App.puede('pedidos.cobrar')) {
+          const t = data.transferencia_detectada;
+          this.showToast(`${t.numero_pedido}: llegó la transferencia de ${fmtMoneda(t.monto)} a Mercado Pago y se cobró sola`, 'success', 8000);
+          this.avisarPago(`Llegó la transferencia de ${Math.round(t.monto)} pesos. Pedido ${this.numeroCorto(t.numero_pedido)}`);
+        }
+      });
+
+      // Entró una transferencia a Mercado Pago que no se cobró sola (nadie la estaba esperando): la caja la confirma
+      this.socket.on('transferencia:recibida', (data) => {
+        if (!data || !App.puede('pedidos.cobrar')) return;
+        this.showToast(`Llegó una transferencia de ${fmtMoneda(data.monto)} a Mercado Pago`, 'success', 10000);
+        this.avisarPago(`Llegó una transferencia de ${Math.round(data.monto)} pesos`);
+      });
+
+      // Pago con Mercado Pago (link o QR de la barra) aprobado y cobrado. El de la mesa avisa con mesa:solicitud
+      this.socket.on('pago:recibido', (data) => {
+        if (!data || !data.cobrado || data.desde_mesa || !App.puede('pedidos.cobrar')) return;
+        this.showToast(`${data.cobrado.numero_pedido}: pagó ${fmtMoneda(data.cobrado.monto)} con Mercado Pago`, 'success', 8000);
+        this.avisarPago(`Pago con Mercado Pago de ${Math.round(data.cobrado.monto)} pesos. Pedido ${this.numeroCorto(data.cobrado.numero_pedido)}`);
+        if (App.currentView === 'pos') POS.actualizarBadgeRetiro();
+        this._refrescarRetiro();
       });
 
       // Cocina: nueva comanda o cambio de estado
@@ -148,7 +171,8 @@ const App = {
           if (App.currentView === 'pedidos') Pedidos.render();
           if (App.currentView === 'caja') Caja.render();
         }
-        this.sonarAviso();
+        if (data.tipo === 'pago') this.avisarPago(`${data.mesa_nombre} pagó con Mercado Pago`);
+        else this.sonarAviso();
         this.contarSolicitudesMesa();
         if (App.currentView === 'mesas') Mesas.render();
       });
@@ -386,6 +410,17 @@ const App = {
     if (this._alarmaPedidos) clearInterval(this._alarmaPedidos);
     this._alarmaPedidos = null;
     try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {}
+  },
+
+  // Entró un pago (transferencia o Mercado Pago): campanada y la voz lo dice una vez
+  avisarPago(texto) {
+    this.campanada();
+    setTimeout(() => this.decir(texto), 1100);
+  },
+
+  // "P-20261031-00013" -> "13" (así lo dice la voz)
+  numeroCorto(numero) {
+    return String(numero || '').split('-').pop().replace(/^0+(?=\d)/, '');
   },
 
   // Botón "Probar sonido" de Para retirar

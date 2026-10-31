@@ -109,6 +109,15 @@ test('el cliente de la barra avisa que transfirió y la transferencia por el sal
   assert.ok(externo.busquedas.every(b => b.begin_date && b.end_date && b.range === 'date_approved' && b['collector.id'] === String(YO)));
 });
 
+test('con Mercado Pago activo se mira aunque nadie espere una transferencia (para que suene en la caja)', async () => {
+  assert.equal((await s.q("SELECT COUNT(*) AS n FROM pedidos WHERE estado = 'abierto' AND aviso_pago = 'transferencia'"))[0].n, 0);
+  const antes = externo.busquedas.length;
+  transferencia(1500, { segundos: 0 });
+  assert.ok(await hasta(async () => externo.busquedas.length > antes), 'consultó Mercado Pago');
+  const ultima = externo.busquedas[externo.busquedas.length - 1];
+  assert.ok(Date.now() - Date.parse(ultima.begin_date) <= 31 * 60 * 1000, 'sin pedidos esperando alcanza con la última media hora');
+});
+
 test('ante la duda no se cobra nada: dos pedidos por el mismo monto, o dos transferencias iguales', async () => {
   externo.pagos = [];
   const a = await pedirBarra(3);

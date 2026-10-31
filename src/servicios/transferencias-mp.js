@@ -8,6 +8,9 @@
 //   que se pueda confundir, el pedido se cobra solo (referencia MP-<id>, la misma que usan los pagos con el botón).
 //   Ante cualquier duda (dos pedidos por el mismo monto, dos transferencias iguales) no se cobra nada: queda
 //   para el "Transferencia recibida" de siempre.
+// - Aviso en la caja: cada transferencia nueva que entra a la cuenta suena una vez ("Llegó una transferencia de...")
+//   aunque nadie la esté esperando (el cajero cargó la venta y el cliente transfirió). Las que ya estaban al
+//   arrancar el sistema no se anuncian.
 // - Reporte: las transferencias y los cobros del Point de un período, marcando cuáles quedaron registrados en un pedido y cuáles no
 //   (para controlar contra la caja las que se cobraron a mano o nunca se cargaron).
 const { all } = require('../db');
@@ -122,6 +125,22 @@ function emparejar(pedidos, transferencias) {
   return parejas;
 }
 
+// Transferencias ya anunciadas en la caja (id -> cuándo entró), para que cada una suene una sola vez
+const VENTANA_AVISO_MS = 30 * 60 * 1000;
+const avisadas = new Map();
+const arranque = Date.now();
+
+// Las que entraron después de arrancar, en la última media hora, y todavía no sonaron
+function nuevasParaAvisar(transferencias, ahora = Date.now()) {
+  for (const [id, ms] of avisadas) if (ms < ahora - VENTANA_AVISO_MS) avisadas.delete(id);
+  const nuevas = transferencias.filter(t => {
+    const ms = Date.parse(t.fecha);
+    return !avisadas.has(t.id) && ms >= arranque && ms >= ahora - VENTANA_AVISO_MS;
+  });
+  for (const t of nuevas) avisadas.set(t.id, Date.parse(t.fecha));
+  return nuevas;
+}
+
 let enCurso = false;
 async function conciliar() {
   if (enCurso) return { cobrados: [] };
@@ -130,10 +149,11 @@ async function conciliar() {
     const cfg = await getIntCfg('mercadopago');
     if (!mpListo(cfg)) return { cobrados: [] };
     const pedidos = await pedidosEsperando();
-    if (!pedidos.length) return { cobrados: [] };
-    const recibidas = await transferenciasRecibidas(cfg, new Date(Date.now() - HORAS_ATRAS * 3600e3));
+    // Sin pedidos esperando alcanza con la última media hora (solo para avisar las nuevas)
+    const recibidas = await transferenciasRecibidas(cfg, new Date(Date.now() - (pedidos.length ? HORAS_ATRAS * 3600e3 : VENTANA_AVISO_MS)));
     const usadas = await referenciasUsadas(recibidas.map(t => t.id));
     const libres = recibidas.filter(t => !usadas.has(t.id));
+    const nuevas = nuevasParaAvisar(libres);
     const cobrados = [];
     // require diferido: barra.js y mesa-qr.js cargan medio sistema
     const { cobrarTransferencia } = require('./barra');
@@ -150,7 +170,10 @@ async function conciliar() {
         if (err.status !== 400) console.error('[transferencias] No se pudo cobrar', pedido.numero_pedido, err.message);
       }
     }
-    return { cobrados };
+    // Las que se cobraron solas ya sonaron con su pedido (retiro:actualizar); el resto suena como "llegó una transferencia"
+    const avisos = nuevas.filter(t => !cobrados.some(c => c.transferencia === t.id));
+    for (const t of avisos) emitEvento('transferencia:recibida', { id: t.id, monto: t.monto, fecha: t.fecha });
+    return { cobrados, avisos };
   } catch (err) {
     console.error('[transferencias] No se pudo consultar Mercado Pago:', err.message);
     return { cobrados: [], error: err.message };
@@ -219,4 +242,4 @@ function iniciarConciliacionTransferencias() {
   alEvento('mesa:solicitud', d => d && d.tipo === 'cuenta' && pronto());
 }
 
-module.exports = { iniciarConciliacionTransferencias, conciliar, transferenciasDelPeriodo, emparejar, transferenciasRecibidas };
+module.exports = { iniciarConciliacionTransferencias, conciliar, transferenciasDelPeriodo, emparejar, transferenciasRecibidas, nuevasParaAvisar };
