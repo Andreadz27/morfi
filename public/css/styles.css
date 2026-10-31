@@ -2567,3 +2567,9 @@ tr:hover td {
 
 /* Dashboard: ticket promedio por persona */
 .dash-por-persona { margin-top: 4px; font-size: .9rem; }
+
+/* Botón del menú: sonido de los avisos activo (verde) o apagado (rojo) */
+.btn-sonido { color: #86efac; }
+.btn-sonido.apagado { background: #dc2626; color: #fff; }
+.btn-sonido:hover { background: rgba(134, 239, 172, .18); color: #bbf7d0; }
+.btn-sonido.apagado:hover { background: #b91c1c; color: #fff; }

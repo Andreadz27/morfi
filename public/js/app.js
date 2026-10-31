@@ -339,16 +339,16 @@ const App = {
     if (this._sonidoPreparado || !this.puede('pedidos.ver')) return;
     this._sonidoPreparado = true;
     const activar = () => {
-      try {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (Ctx) this._audio = this._audio || new Ctx();
-        if (this._audio && this._audio.state === 'suspended') this._audio.resume();
-      } catch (e) {}
+      this.despertarSonido();
       const f = document.getElementById('franjaSonido');
       if (f) f.remove();
     };
     document.addEventListener('pointerdown', activar, { once: true });
     document.addEventListener('keydown', activar, { once: true });
+    // Botón "Sonido activo / apagado" del menú: se ve siempre y se actualiza solo
+    const b = document.getElementById('btnSonido');
+    if (b) b.style.display = '';
+    setInterval(() => this.pintarBotonSonido(), 3000);
     const yaTocada = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
     if (yaTocada) return activar();
     const f = document.createElement('div');
@@ -359,13 +359,46 @@ const App = {
     document.body.appendChild(f);
   },
 
+  // Crea o reanuda el sonido del navegador (si la PC se suspendió o la pestaña quedó en segundo plano, el navegador lo
+  // "duerme" y las campanadas no se oían) y actualiza el botón del menú
+  despertarSonido() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      this._audio = this._audio || new Ctx();
+      if (this._audio.state === 'suspended') this._audio.resume().then(() => this.pintarBotonSonido()).catch(() => {});
+      if (!this._audioVigilado) {
+        this._audioVigilado = true;
+        this._audio.addEventListener('statechange', () => this.pintarBotonSonido());
+      }
+    } catch (e) { return null; }
+    this.pintarBotonSonido();
+    return this._audio;
+  },
+
+  sonidoActivo() { return !!(this._audio && this._audio.state === 'running'); },
+
+  pintarBotonSonido() {
+    const b = document.getElementById('btnSonido');
+    if (!b) return;
+    const activo = this.sonidoActivo();
+    b.classList.toggle('apagado', !activo);
+    b.querySelector('i').className = `fas fa-volume-${activo ? 'high' : 'xmark'}`;
+    document.getElementById('btnSonidoTexto').textContent = activo ? 'Sonido activo' : 'Sonido apagado: tocá';
+  },
+
+  // Tocar el botón del menú: activa el sonido y suena la prueba
+  botonSonido() {
+    this.despertarSonido();
+    setTimeout(() => this.probarSonido(), 150);
+  },
+
   // Campanada fuerte (tres notas) que se oye en la caja aunque haya ruido
   campanada() {
     try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      this._audio = this._audio || new Ctx();
-      const a = this._audio, ahora = a.currentTime;
+      const a = this.despertarSonido();
+      if (!a) return;
+      const ahora = a.currentTime;
       [[659, 0], [880, 0.28], [1319, 0.56]].forEach(([hz, t]) => {
         for (const [mult, vol] of [[1, 0.5], [2, 0.12]]) { // nota + armónico: suena a campana, no a pitido
           const o = a.createOscillator(), g = a.createGain();
@@ -444,9 +477,7 @@ const App = {
   // Dos tonos cortos (sin archivo de sonido). El navegador solo deja sonar después de que el usuario tocó la página.
   sonarAviso() {
     try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      this._audio = this._audio || new Ctx();
+      if (!this.despertarSonido()) return;
       [0, 0.18].forEach((t, i) => {
         const osc = this._audio.createOscillator();
         const vol = this._audio.createGain();
