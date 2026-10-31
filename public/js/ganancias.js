@@ -173,6 +173,8 @@ const Ganancias = {
         <div class="card">
           <div class="card-header"><span class="card-title"><i class="fas fa-water"></i> De la venta a la ganancia</span></div>
           <div class="gan-cascada">${filasCascada}</div>
+          ${t.propinas > 0 ? `<p class="gan-propinas mt-10"><i class="fas fa-hand-holding-usd"></i> Además entraron <strong>${fmtContable(t.propinas)}</strong> de propinas:
+            son del personal, por eso no suman a las ventas ni a la ganancia.</p>` : ''}
           <p class="text-muted mt-10">Margen bruto ${t.margen_bruto_pct} % · Margen neto ${t.margen_neto_pct} % · Costo de mercadería ${t.costo_pct} % de las ventas netas.</p>
         </div>
         <div class="card">

@@ -5,6 +5,7 @@ const {
   autorizar, requiereAutorizacion, facturaVigente, datosTicketFiscalConQR, getIntCfg, revertirFidelizacionTx, avisarRetiroWhatsApp
 } = require('../contexto');
 const { idempotente } = require('../idempotencia');
+const { corregirMedioDePago, eliminarPedido } = require('../servicios/correcciones');
 
 module.exports = function registrarRutas(app) {
 
@@ -371,6 +372,27 @@ app.put('/api/pedidos/:id/cancelar', autenticar, requiereAutorizacion('pedidos.c
     // Avisar a cocina/barra que no preparen el pedido
     await comandaAutomatica(Number(req.params.id), { titulo: 'ANULADO' }).catch(() => false);
     res.json({ message: 'Pedido cancelado' });
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// Corregir el medio de un cobro mal cargado (ej.: era transferencia y se marcó efectivo). body: { metodo }
+app.put('/api/pedidos/:id/pagos/:pagoId', autenticar, requiere('admin'), async (req, res) => {
+  try {
+    res.json(await corregirMedioDePago(Number(req.params.id), Number(req.params.pagoId), String((req.body || {}).metodo || ''), req.usuario.id));
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// Eliminar un pedido (también cobrado): queda en Cancelados con el motivo. body: { motivo, detalle? }
+app.post('/api/pedidos/:id/eliminar', autenticar, requiere('admin'), async (req, res) => {
+  try {
+    const r = await eliminarPedido(Number(req.params.id), req.body || {}, req.usuario.id);
+    // Si estaba en preparación, que cocina/barra no lo hagan
+    if (r.estado_anterior === 'abierto') await comandaAutomatica(Number(req.params.id), { titulo: 'ANULADO' }).catch(() => false);
+    res.json(r);
   } catch (err) {
     errorInterno(res, err);
   }

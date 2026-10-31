@@ -285,11 +285,40 @@ const Cobro = {
     const resto = this.r2(this.saldo() - this.aCobrar());
     const vuelto = this.r2(this.pagos.reduce((s, x) =>
       s + (x.metodo === 'efectivo' && Number(x.recibido) > Number(x.monto) ? Number(x.recibido) - Number(x.monto) : 0), 0));
-    if (resto < -0.009) return `<span class="text-danger">Se está cobrando ${fmtMoneda(-resto)} de más</span>`;
+    // Pagó de más (tarjeta, transferencia o un monto mayor): casi siempre es propina, se suma con un toque
+    if (resto < -0.009) return `<span class="text-danger">Paga ${fmtMoneda(-resto)} de más.</span>
+      <button type="button" class="btn btn-success btn-propina" onclick="Cobro.excesoAPropina()"><i class="fas fa-hand-holding-usd"></i> Es propina (${fmtMoneda(-resto)})</button>`;
     return [
       resto > 0.009 ? `Después de este pago faltan <strong>${fmtMoneda(resto)}</strong>; la mesa sigue abierta.` : 'Con este pago se cierra la cuenta.',
-      vuelto > 0 ? `Vuelto: <strong>${fmtMoneda(vuelto)}</strong>` : ''
+      vuelto > 0 ? `Vuelto: <strong>${fmtMoneda(vuelto)}</strong>
+        <button type="button" class="btn btn-success btn-propina" onclick="Cobro.vueltoAPropina()"><i class="fas fa-hand-holding-usd"></i> No quiere el vuelto: es propina</button>` : '',
+      this.propinaNueva() > 0 ? `<span class="text-success">Incluye ${fmtMoneda(this.propinaNueva())} de propina.</span>
+        <button type="button" class="btn btn-sm btn-outline" onclick="Cobro.setPropina(${Number(this.p.propina) || 0})">Deshacer</button>` : ''
     ].filter(Boolean).join(' ');
+  },
+
+  propinaElegida() { return this.propina === null ? (Number(this.p.propina) || 0) : this.propina; },
+  // Lo que se sumó de propina en esta pantalla
+  propinaNueva() { return this.r2(this.propinaElegida() - (Number(this.p.propina) || 0)); },
+
+  // El cliente deja el vuelto: el cobro en efectivo pasa a ser todo lo que entregó y la diferencia es propina
+  vueltoAPropina() {
+    let extra = 0;
+    for (const x of this.pagos) {
+      const v = x.metodo === 'efectivo' ? this.r2(Number(x.recibido) - Number(x.monto)) : 0;
+      if (v > 0) { extra += v; x.monto = this.r2(Number(x.monto) + v); }
+    }
+    if (!extra) return;
+    this.propina = this.r2(this.propinaElegida() + extra);
+    this.paint();
+  },
+
+  // Se cobró más que el saldo (ej.: el Point o la transferencia vino con más): la diferencia es propina
+  excesoAPropina() {
+    const extra = this.r2(this.aCobrar() - this.saldo());
+    if (extra <= 0) return;
+    this.propina = this.r2(this.propinaElegida() + extra);
+    this.paint();
   },
 
   // Actualiza resumen, factura y botón sin redibujar los campos (no se pierde el foco al tipear)
@@ -401,7 +430,7 @@ const Cobro = {
       .filter(x => x.monto > 0);
     if (!pagos.length) return App.showToast('Ingresá el monto a cobrar', 'warning');
     if (pagos.some(x => x.metodo === 'giftcard' && !x.referencia)) return App.showToast('Ingresá el código de la gift card', 'warning');
-    if (this.aCobrar() > this.saldo() + 0.009) return App.showToast('El monto supera lo que falta cobrar', 'warning');
+    if (this.aCobrar() > this.saldo() + 0.009) return App.showToast('Paga de más: tocá «Es propina» o corregí el monto', 'warning');
 
     const body = { pagos };
     if (this.modo === 'platos') {
@@ -440,6 +469,7 @@ const Cobro = {
         <i class="fas fa-check-circle"></i>
         <h3>Cobrado ${fmtMoneda(r.cobrado)}</h3>
         ${r.vuelto > 0 ? `<p class="cobro-vuelto">Vuelto: <strong>${fmtMoneda(r.vuelto)}</strong></p>` : ''}
+        ${r.cerrado && Number(p.propina) > 0 ? `<p class="text-success"><i class="fas fa-hand-holding-usd"></i> Propina: <strong>${fmtMoneda(p.propina)}</strong></p>` : ''}
         ${r.cerrado ? '<p>Cuenta cerrada y mesa liberada.</p>' : `<p>Falta cobrar <strong>${fmtMoneda(r.saldo)}</strong>.</p>`}
         ${f && f.ok ? `<p class="text-success"><i class="fas fa-file-invoice"></i> ${esc(f.tipo_nombre)}
             ${String(f.punto_venta).padStart(4, '0')}-${String(f.numero_comprobante).padStart(8, '0')} &mdash; ${esc(f.autorizacion || 'CAE')} ${esc(f.cae)}</p>

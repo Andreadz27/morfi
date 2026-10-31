@@ -272,7 +272,7 @@ const Reportes = {
           <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-receipt"></i></div>
             <div class="stat-info"><h3>${this.ventas.cantidad}</h3><span>Ventas · promedio ${fmtMoneda(r.ticket_promedio || 0)}</span></div></div>
           <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-hand-holding-usd"></i></div>
-            <div class="stat-info"><h3>${fmtMoneda(r.propinas || 0)}</h3><span>Propinas</span></div></div>
+            <div class="stat-info"><h3>${fmtMoneda(r.propinas || 0)}</h3><span>Propinas (del personal)${(this.ventas.pedidos || []).some(p => Number(p.propina) > 0) ? ` · en ${(this.ventas.pedidos || []).filter(p => Number(p.propina) > 0).length} ventas` : ''}</span></div></div>
           <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-tags"></i></div>
             <div class="stat-info"><h3>${fmtMoneda(r.descuentos || 0)}</h3><span>Descuentos${r.cancelados.cantidad ? ` · ${r.cancelados.cantidad} cancelados` : ''}</span></div></div>
         </div>

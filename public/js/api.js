@@ -179,6 +179,8 @@ const API = {
   pagarPedido(id, data) { return this.request('POST', `/pedidos/${id}/pagar`, data); },
   cobrarEnMesa(id, data) { return this.request('POST', `/pedidos/${id}/cobro`, data); },
   cancelarPedido(id) { return this.request('PUT', `/pedidos/${id}/cancelar`); },
+  eliminarPedido(id, data) { return this.request('POST', `/pedidos/${id}/eliminar`, data); },
+  corregirMedioPago(id, pagoId, metodo) { return this.request('PUT', `/pedidos/${id}/pagos/${pagoId}`, { metodo }); },
 
   // ===== Delivery / Plataformas de entrega =====
   getPlataformasDelivery() { return this.request('GET', '/delivery/plataformas'); },

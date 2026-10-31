@@ -2532,3 +2532,9 @@ tr:hover td {
 .foto-tile-nombre { font-size: 13px; line-height: 1.2; }
 .foto-tile:not(.con) .foto-tile-nombre { color: var(--text-muted, #64748b); }
 .foto-tile.subiendo { opacity: .5; pointer-events: none; }
+
+/* Propina en un toque: el vuelto o lo que pagó de más */
+.btn-propina { margin: 6px 0 0; padding: 10px 14px; font-size: 1rem; }
+.gan-propinas { padding: 10px 12px; border-radius: 8px; background: rgba(139, 92, 246, .1); }
+/* Corregir el medio de pago: botones grandes, uno por medio */
+.corregir-medios .btn { flex: 1 1 140px; padding: 12px; font-size: 1rem; }
