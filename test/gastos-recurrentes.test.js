@@ -49,3 +49,44 @@ test('datos inválidos se rechazan', async () => {
   assert.equal((await s.llamar('POST', '/api/contabilidad/recurrentes', { descripcion: '', monto: 1000, dias: [1] }, s.tokenAdmin))[0], 400);
   assert.equal((await s.llamar('POST', '/api/contabilidad/recurrentes', { descripcion: 'X', monto: 0, dias: [1] }, s.tokenAdmin))[0], 400);
 });
+
+test('día extra (no fijo): se suma en ese día con el monto de siempre o uno distinto; editar los sábados no lo toca', async () => {
+  const [, r] = await s.llamar('POST', '/api/contabilidad/recurrentes', { descripcion: 'Ayudante extra', monto: 40000, dias: [6] }, s.tokenAdmin);
+  const hoy = (await s.llamar('GET', '/api/contabilidad/opciones', undefined, s.tokenAdmin))[1].hoy;
+  // El próximo martes después de mañana
+  let martes = hoy;
+  do { martes = new Date(Date.parse(martes + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10); } while (diaSemana(martes) !== 2 || martes <= hoy);
+
+  assert.equal((await s.llamar('POST', `/api/contabilidad/recurrentes/${r.id}/dia`, { fecha: martes }, s.tokenVendedor))[0], 403);
+  let [st, d] = await s.llamar('POST', `/api/contabilidad/recurrentes/${r.id}/dia`, { fecha: martes }, s.tokenAdmin);
+  assert.equal(st, 201, JSON.stringify(d));
+  assert.equal(d.monto, 40000, 'por defecto, el monto de siempre');
+  assert.match(d.descripcion, /martes \(día extra\)/);
+  assert.equal((await s.llamar('POST', `/api/contabilidad/recurrentes/${r.id}/dia`, { fecha: martes }, s.tokenAdmin))[0], 409, 'no se carga dos veces');
+
+  // Hoy, con otro monto
+  [st, d] = await s.llamar('POST', `/api/contabilidad/recurrentes/${r.id}/dia`, { fecha: hoy, monto: 25000 }, s.tokenAdmin);
+  if (diaSemana(hoy) === 6) assert.equal(st, 409, 'hoy sábado ya estaba');
+  else { assert.equal(st, 201, JSON.stringify(d)); assert.equal(d.monto, 25000); }
+
+  // Editar los días fijos (sábado + domingo) no anula el martes extra
+  await s.llamar('PUT', `/api/contabilidad/recurrentes/${r.id}`, { descripcion: 'Ayudante extra', monto: 40000, dias: [6, 0] }, s.tokenAdmin);
+  await s.llamar('PUT', `/api/contabilidad/recurrentes/${r.id}`, { descripcion: 'Ayudante extra', monto: 40000, dias: [6] }, s.tokenAdmin);
+  const [extra] = await s.q('SELECT anulado, total FROM gastos WHERE recurrente_id = ? AND fecha = ?', [r.id, martes]);
+  assert.deepEqual(extra, { anulado: 0, total: 40000 });
+  assert.equal((await s.q('SELECT COUNT(*) n FROM gastos WHERE recurrente_id = ? AND anulado = 0 AND fecha > ?', [r.id, hoy]))
+    .map(x => x.n)[0] >= 4, true);
+});
+
+test('un sábado anulado a mano (no vino) no vuelve al editar el monto', async () => {
+  const [, r] = await s.llamar('POST', '/api/contabilidad/recurrentes', { descripcion: 'Ayudante pausa', monto: 30000, dias: [6] }, s.tokenAdmin);
+  const hoy = (await s.llamar('GET', '/api/contabilidad/opciones', undefined, s.tokenAdmin))[1].hoy;
+  const [sab] = await s.q('SELECT id FROM gastos WHERE recurrente_id = ? AND fecha > ? ORDER BY fecha LIMIT 1', [r.id, hoy]);
+  assert.equal((await s.llamar('DELETE', `/api/contabilidad/gastos/${sab.id}`, undefined, s.tokenAdmin))[0], 200);
+  await s.llamar('PUT', `/api/contabilidad/recurrentes/${r.id}`, { descripcion: 'Ayudante pausa', monto: 32000, dias: [6] }, s.tokenAdmin);
+  assert.equal((await s.q('SELECT anulado FROM gastos WHERE id = ?', [sab.id]))[0].anulado, 1);
+  // Pausar y reactivar sí lo recupera
+  await s.llamar('PUT', `/api/contabilidad/recurrentes/${r.id}`, { descripcion: 'Ayudante pausa', monto: 32000, dias: [6], activo: false }, s.tokenAdmin);
+  await s.llamar('PUT', `/api/contabilidad/recurrentes/${r.id}`, { descripcion: 'Ayudante pausa', monto: 32000, dias: [6], activo: true }, s.tokenAdmin);
+  assert.equal((await s.q("SELECT COUNT(*) n FROM gastos WHERE recurrente_id = ? AND anulado = 0 AND fecha > ?", [r.id, hoy]))[0].n >= 3, true);
+});

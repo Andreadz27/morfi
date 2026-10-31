@@ -221,6 +221,7 @@ const API = {
   pagarGasto(id, data) { return this.request('POST', `/contabilidad/gastos/${id}/pagar`, data); },
   anularGasto(id) { return this.request('DELETE', `/contabilidad/gastos/${id}`); },
   getGastosRecurrentes() { return this.request('GET', '/contabilidad/recurrentes'); },
+  sumarDiaRecurrente(id, data) { return this.request('POST', `/contabilidad/recurrentes/${id}/dia`, data); },
   guardarGastoRecurrente(id, data) { return id ? this.request('PUT', `/contabilidad/recurrentes/${id}`, data) : this.request('POST', '/contabilidad/recurrentes', data); },
   // Factura adjunta: el archivo va tal cual en el cuerpo (no JSON)
   async subirAdjunto(archivo, nombre, gastoId) {
