@@ -7,6 +7,7 @@ const {
   MAX_BYTES, guardarAdjunto, vincularAdjuntos, adjuntosDe, obtenerAdjunto, borrarAdjunto, leerFactura, lecturaDisponible
 } = require('../servicios/adjuntos-gastos');
 const { registrarArticulosCompraTx, revertirArticulosCompraTx, articulosDe } = require('../servicios/inventario');
+const { listarConProximos, guardar: guardarRecurrente } = require('../servicios/gastos-recurrentes');
 
 module.exports = function registrarRutas(app) {
 
@@ -291,6 +292,31 @@ app.delete('/api/contabilidad/gastos/:id', autenticar, requiere('contabilidad'),
     });
     for (const producto_id of stockTocado) emitEvento('stock:actualizar', { producto_id, accion: 'compra_anulada' });
     res.json({ message: stockTocado.length ? 'Compra anulada: se restó del stock lo que había sumado' : 'Gasto anulado' });
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+// ----- Pagos que se repiten (servicios/gastos-recurrentes.js): solo la administración -----
+app.get('/api/contabilidad/recurrentes', autenticar, requiere('admin'), async (req, res) => {
+  try {
+    res.json(await listarConProximos());
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+app.post('/api/contabilidad/recurrentes', autenticar, requiere('admin'), async (req, res) => {
+  try {
+    res.status(201).json(await guardarRecurrente(null, req.body, req.usuario.id));
+  } catch (err) {
+    errorInterno(res, err);
+  }
+});
+
+app.put('/api/contabilidad/recurrentes/:id', autenticar, requiere('admin'), async (req, res) => {
+  try {
+    res.json(await guardarRecurrente(Number(req.params.id), req.body, req.usuario.id));
   } catch (err) {
     errorInterno(res, err);
   }

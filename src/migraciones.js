@@ -544,6 +544,19 @@ async function migrarEsquema() {
     actualizado_en TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (producto_id) REFERENCES productos(id)
   )`);
+
+  // Pagos que se repiten (ej.: el ayudante que viene los sábados): qué días de la semana y cuánto. Cada día elegido
+  // se carga solo como gasto pendiente (servicios/gastos-recurrentes.js); gastos.recurrente_id lo vincula.
+  await run(`CREATE TABLE IF NOT EXISTS gastos_recurrentes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    descripcion TEXT NOT NULL,
+    categoria TEXT NOT NULL DEFAULT 'sueldos',
+    monto REAL NOT NULL,
+    dias TEXT NOT NULL DEFAULT '',
+    activo INTEGER NOT NULL DEFAULT 1,
+    creado_en TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await agregarColumna('gastos', 'recurrente_id', 'INTEGER');
 }
 
 // ============ Migración segura (lo que usa server.js) ============

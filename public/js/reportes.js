@@ -120,7 +120,7 @@ const Reportes = {
       <tr>
         <td>${fmtFechaHora(x.fecha)}</td>
         <td class="text-right font-bold">${fmtMoneda(x.monto)}</td>
-        <td>${x.pedido ? `<span class="badge badge-green">Venta ${esc(x.pedido.numero_pedido)}</span>${x.pedido.a_mano ? ' <span class="text-muted" title="Cobrada a mano como Transferencia; asociada por monto y hora">(cobrada a mano)</span>' : ''}` : '<span class="badge badge-red">Sin asociar</span>'}</td>
+        <td>${x.pedido ? `<span class="badge badge-green">Venta ${esc(x.pedido.numero_pedido)}</span>${x.pedido.a_mano ? ' <span class="text-muted" title="Cobrada a mano como Transferencia; asociada por monto y hora">(cobrada a mano)</span>' : ''}${this._htmlDeMas(x)}` : '<span class="badge badge-red">Sin asociar</span>'}</td>
         <td class="text-muted">MP-${esc(x.id)}</td>
       </tr>`).join('');
     return tarjeta(`
@@ -130,6 +130,27 @@ const Reportes = {
         <thead><tr><th>Fecha</th><th class="text-right">Monto</th><th>Registrada en</th><th>Operación</th></tr></thead>
         <tbody>${filas}</tbody>
       </table></div>`);
+  },
+
+  // Mercado Pago cobró más que la venta (el cliente pagó de más): casi siempre es propina, se carga con un toque
+  _htmlDeMas(x) {
+    const p = x.pedido;
+    const deMas = p && !p.varios && p.pago_id && p.en_fadido ? Math.round((x.monto - p.en_fadido) * 100) / 100 : 0;
+    if (deMas <= 0.009) return '';
+    return ` <span class="badge badge-orange">Pagó ${fmtMoneda(deMas)} de más</span>${App.puede('admin')
+      ? ` <button class="btn btn-sm btn-success" onclick="Reportes.propinaDeMas(${p.pedido_id}, ${p.pago_id}, ${deMas}, this)"><i class="fas fa-hand-holding-usd"></i> Es propina</button>` : ''}`;
+  },
+
+  async propinaDeMas(pedidoId, pagoId, monto, btn) {
+    if (btn) btn.disabled = true;
+    try {
+      const r = await API.propinaACobro(pedidoId, pagoId, monto);
+      App.showToast(`${r.numero_pedido}: ${fmtMoneda(monto)} cargados como propina`, 'success');
+      this.render();
+    } catch (err) {
+      if (btn) btn.disabled = false;
+      App.showToast(err.message, 'error');
+    }
   },
 
   // Cobros con tarjeta en el Point de Mercado Pago: lo mismo que el resumen del Point, con descuentos, neto y la venta
@@ -148,7 +169,7 @@ const Reportes = {
         <td class="text-right font-bold">${fmtMoneda(x.monto)}</td>
         <td class="text-right text-muted">${fmtMoneda(x.comision + x.retenciones)}</td>
         <td class="text-right">${fmtMoneda(x.neto)}</td>
-        <td>${x.pedido ? `<span class="badge badge-green">Venta ${esc(x.pedido.numero_pedido)}</span>${x.pedido.a_mano ? ' <span class="text-muted" title="Cobrada como Tarjeta; asociada por monto y hora">(por monto y hora)</span>' : ''}` : '<span class="badge badge-red">Sin asociar</span>'}${x.devuelto ? ` <span class="badge badge-orange">Devuelto ${fmtMoneda(x.devuelto)}</span>` : ''}</td>
+        <td>${x.pedido ? `<span class="badge badge-green">Venta ${esc(x.pedido.numero_pedido)}</span>${x.pedido.a_mano ? ' <span class="text-muted" title="Cobrada como Tarjeta; asociada por monto y hora">(por monto y hora)</span>' : ''}${this._htmlDeMas(x)}` : '<span class="badge badge-red">Sin asociar</span>'}${x.devuelto ? ` <span class="badge badge-orange">Devuelto ${fmtMoneda(x.devuelto)}</span>` : ''}</td>
         <td class="text-muted">MP-${esc(x.id)}</td>
       </tr>`).join('');
     return `

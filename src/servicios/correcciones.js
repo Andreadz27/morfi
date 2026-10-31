@@ -167,4 +167,28 @@ async function quitarItem(pedidoId, itemId, cantidad, usuarioId) {
   return { ok: true, total: r.total, quitado: `${r.quitar} x ${r.nombre}` };
 }
 
-module.exports = { corregirMedioDePago, eliminarPedido, quitarItem, MOTIVOS_ELIMINAR };
+// El cliente pagó de más (el Point o la transferencia vinieron por más que la venta) y es propina: el cobro pasa a ser
+// lo que realmente entró y la diferencia se suma a la propina del pedido (no cuenta como venta ni ganancia)
+async function sumarPropinaACobro(pedidoId, pagoId, monto, usuarioId) {
+  monto = redondear(monto);
+  if (!(monto > 0) || monto > 1000000) throw errorHttp(400, 'Monto de propina inválido');
+  const r = await transaccion(async () => {
+    const pago = await get(`SELECT pg.*, p.numero_pedido, p.estado, p.propina, p.total FROM pagos pg JOIN pedidos p ON p.id = pg.pedido_id
+      WHERE pg.id = ? AND pg.pedido_id = ?`, [pagoId, pedidoId]);
+    if (!pago) throw errorHttp(404, 'Ese cobro no es de este pedido');
+    if (pago.estado !== 'pagado') throw errorHttp(400, 'La propina por pagar de más se suma a un pedido ya cobrado');
+    if (pago.metodo === 'giftcard') throw errorHttp(400, 'A un pago con gift card no se le suma propina');
+    await run('UPDATE pagos SET monto = ? WHERE id = ?', [redondear(pago.monto + monto), pago.id]);
+    await run('UPDATE pedidos SET propina = ?, total = ?, sincronizado_nube = NULL WHERE id = ?',
+      [redondear((Number(pago.propina) || 0) + monto), redondear(pago.total + monto), pedidoId]);
+    const cajas = await actualizarCierresTx([pago.fecha]);
+    await run('INSERT INTO auditoria (usuario_id, accion, detalle) VALUES (?, ?, ?)', [usuarioId, 'propina_excedente',
+      `Pedido ${pago.numero_pedido}: pagó ${monto} de más (${pago.metodo}${pago.referencia ? ' ' + pago.referencia : ''}), cargado como propina por ${await nombreUsuario(usuarioId)}`]);
+    return { numero: pago.numero_pedido, propina: redondear((Number(pago.propina) || 0) + monto), cajas };
+  });
+  emitEvento('dashboard:actualizar', { motivo: 'propina' });
+  emitEvento('caja:actualizar', { pedido_id: Number(pedidoId) });
+  return { ok: true, propina: r.propina, numero_pedido: r.numero };
+}
+
+module.exports = { corregirMedioDePago, eliminarPedido, quitarItem, sumarPropinaACobro, MOTIVOS_ELIMINAR };

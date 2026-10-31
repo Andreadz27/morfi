@@ -2549,3 +2549,15 @@ tr:hover td {
 /* POS: ¿cuándo paga? */
 .pos-cuando-paga .btn { flex: 1 1 150px; padding: 12px; font-size: 1rem; }
 .btn-quitar-item { color: #dc2626; }
+
+/* Pedidos: elegir el día */
+.pedidos-fechas { align-items: center; flex-wrap: wrap; gap: 8px; }
+.pedidos-fechas input[type="date"] { width: auto; min-width: 150px; }
+
+/* Pagos que se repiten: días de la semana como casillas grandes */
+.recurrente-dias { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.dia-chip { position: relative; cursor: pointer; }
+.dia-chip input { position: absolute; opacity: 0; }
+.dia-chip span { display: inline-block; min-width: 52px; padding: 10px 8px; text-align: center; border: 1px solid var(--border, #cbd5e1); border-radius: 10px; font-weight: 600; }
+.dia-chip input:checked + span { background: var(--primary, #0ea5e9); border-color: var(--primary, #0ea5e9); color: #fff; }
+.dia-chip input:focus-visible + span { outline: 2px solid var(--primary, #0ea5e9); outline-offset: 2px; }

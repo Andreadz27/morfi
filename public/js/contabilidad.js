@@ -241,6 +241,7 @@ const Contabilidad = {
               <option value="pendiente" ${this.filtroEstado === 'pendiente' ? 'selected' : ''}>A pagar</option>
               <option value="pagado" ${this.filtroEstado === 'pagado' ? 'selected' : ''}>Pagados</option>
             </select>
+            ${App.puede('admin') ? '<button class="btn btn-primary btn-sm" onclick="Contabilidad.pagosRepetidos()"><i class="fas fa-calendar-week"></i> Pagos que se repiten</button>' : ''}
             <button class="btn btn-outline btn-sm" onclick="Contabilidad.exportarGastos()"><i class="fas fa-file-excel"></i> Excel</button>
           </div>
         </div>
@@ -381,6 +382,75 @@ const Contabilidad = {
           : '<div class="empty-state"><i class="fas fa-book"></i><p>Sin movimientos en el período</p></div>'}
         </div>
       </div>`;
+  },
+
+  // ===== Pagos que se repiten (ej.: el ayudante de los sábados): días de la semana con casillas y el monto =====
+  DIAS_SEMANA: [[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [0, 'Dom']],
+  CATS_REPETIDOS: { sueldos: 'Sueldos', alquiler: 'Alquiler', servicios: 'Servicios', impuestos: 'Impuestos', mantenimiento: 'Mantenimiento', marketing: 'Publicidad', otros: 'Otros' },
+
+  htmlRepetido(r, i) {
+    return `
+      <div class="card sub-card mb-10 recurrente" data-i="${i}">
+        <div class="grid grid-2">
+          <div class="form-group"><label>Qué se paga</label>
+            <input type="text" class="recDesc" maxlength="120" value="${esc(r.descripcion || '')}" placeholder="Ej.: Ayudante"></div>
+          <div class="form-group"><label>Cuánto por día ($)</label>
+            <input type="number" class="recMonto" min="0" step="1" value="${r.monto || ''}" placeholder="Ej.: 40000"></div>
+        </div>
+        <label>Qué días viene</label>
+        <div class="recurrente-dias">${this.DIAS_SEMANA.map(([d, t]) => `
+          <label class="dia-chip"><input type="checkbox" class="recDia" value="${d}" ${(r.dias || []).includes(d) ? 'checked' : ''}><span>${t}</span></label>`).join('')}
+        </div>
+        <div class="grid grid-2 mt-10">
+          <div class="form-group"><label>Categoría</label>
+            <select class="recCat">${Object.entries(this.CATS_REPETIDOS).map(([v, t]) => `<option value="${v}" ${(r.categoria || 'sueldos') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+          <div class="form-group"><label class="checkbox-label"><input type="checkbox" class="recActivo" ${r.activo === false ? '' : 'checked'}> Activo (destildado = en pausa)</label></div>
+        </div>
+        ${(r.proximos || []).length ? `<p class="text-muted"><i class="fas fa-calendar-check"></i> Próximos: ${r.proximos.map(g => `${fmtFecha(g.fecha)} ${fmtContable(g.total)}${g.estado === 'pagado' ? ' (pagado)' : ''}`).join(' · ')}</p>` : ''}
+        <button type="button" class="btn btn-success btn-sm" onclick="Contabilidad.guardarRepetido(${i})"><i class="fas fa-save"></i> Guardar</button>
+      </div>`;
+  },
+
+  async pagosRepetidos() {
+    try {
+      this.recurrentes = await API.getGastosRecurrentes();
+    } catch (err) { return App.showToast(err.message, 'error'); }
+    this._recurrentesForm = this.recurrentes.length ? this.recurrentes : [{ descripcion: 'Ayudante', categoria: 'sueldos', dias: [6], activo: true }];
+    App.showModal(`
+      <p class="text-muted">Marcá qué días viene y cuánto se le paga: Fadido carga solo el pago de cada uno de esos días (las próximas 4 semanas)
+        en Gastos, como "a pagar". Si cambiás los días, se acomodan los próximos; lo ya pagado no se toca.</p>
+      <div id="recurrentesLista">${this._recurrentesForm.map((r, i) => this.htmlRepetido(r, i)).join('')}</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="Contabilidad.agregarRepetido()"><i class="fas fa-plus"></i> Otro pago</button>
+        <button type="button" class="btn btn-outline" onclick="App.closeModal(); Contabilidad.render()">Cerrar</button>
+      </div>`, { title: 'Pagos que se repiten', large: true });
+  },
+
+  agregarRepetido() {
+    const i = this._recurrentesForm.length;
+    this._recurrentesForm.push({ descripcion: '', categoria: 'sueldos', dias: [], activo: true });
+    document.getElementById('recurrentesLista').insertAdjacentHTML('beforeend', this.htmlRepetido(this._recurrentesForm[i], i));
+  },
+
+  async guardarRepetido(i) {
+    const el = document.querySelector(`.recurrente[data-i="${i}"]`);
+    const r = this._recurrentesForm[i];
+    const data = {
+      descripcion: el.querySelector('.recDesc').value.trim(),
+      monto: Number(el.querySelector('.recMonto').value),
+      dias: [...el.querySelectorAll('.recDia:checked')].map(c => Number(c.value)),
+      categoria: el.querySelector('.recCat').value,
+      activo: el.querySelector('.recActivo').checked
+    };
+    if (!data.descripcion) return App.showToast('Escribí qué se paga', 'warning');
+    if (!(data.monto > 0)) return App.showToast('Escribí cuánto se paga por día', 'warning');
+    if (data.activo && !data.dias.length) return App.showToast('Marcá al menos un día', 'warning');
+    try {
+      const res = await API.guardarGastoRecurrente(r.id, data);
+      const partes = [res.cargados && `${res.cargados} días nuevos cargados`, res.actualizados && `${res.actualizados} actualizados`, res.anulados && `${res.anulados} quitados`].filter(Boolean);
+      App.showToast(`Guardado${partes.length ? ': ' + partes.join(', ') : ''}`, 'success', 6000);
+      this.pagosRepetidos();
+    } catch (err) { App.showToast(err.message, 'error'); }
   },
 
   // ===== Alta y edición de gastos =====

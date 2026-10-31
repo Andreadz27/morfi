@@ -182,6 +182,7 @@ const API = {
   eliminarPedido(id, data) { return this.request('POST', `/pedidos/${id}/eliminar`, data); },
   corregirMedioPago(id, pagoId, metodo) { return this.request('PUT', `/pedidos/${id}/pagos/${pagoId}`, { metodo }); },
   quitarItemPedido(id, itemId, cantidad) { return this.request('DELETE', `/pedidos/${id}/items/${itemId}`, cantidad ? { cantidad } : {}); },
+  propinaACobro(id, pagoId, monto) { return this.request('POST', `/pedidos/${id}/pagos/${pagoId}/propina`, { monto }); },
 
   // ===== Delivery / Plataformas de entrega =====
   getPlataformasDelivery() { return this.request('GET', '/delivery/plataformas'); },
@@ -219,6 +220,8 @@ const API = {
   updateGasto(id, data) { return this.request('PUT', `/contabilidad/gastos/${id}`, data); },
   pagarGasto(id, data) { return this.request('POST', `/contabilidad/gastos/${id}/pagar`, data); },
   anularGasto(id) { return this.request('DELETE', `/contabilidad/gastos/${id}`); },
+  getGastosRecurrentes() { return this.request('GET', '/contabilidad/recurrentes'); },
+  guardarGastoRecurrente(id, data) { return id ? this.request('PUT', `/contabilidad/recurrentes/${id}`, data) : this.request('POST', '/contabilidad/recurrentes', data); },
   // Factura adjunta: el archivo va tal cual en el cuerpo (no JSON)
   async subirAdjunto(archivo, nombre, gastoId) {
     const r = await this.archivo('POST', `/contabilidad/adjuntos${gastoId ? '?gasto_id=' + gastoId : ''}`, archivo,
