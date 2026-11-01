@@ -17,7 +17,7 @@ aunque se corte internet; la nube guarda las copias y da acceso remoto.
 
 ## 2. Instalar (una vez por local, unos 15 minutos)
 
-Cada instalación descarga el sistema de GitHub (`Andreadz27/morfi`). Hoy el repositorio es **público**: se instala
+Cada instalación descarga el sistema de GitHub (`Andreadz27/fadido`). Hoy el repositorio es **público**: se instala
 sin token. **Si pasa a privado**, cada instalación necesita un token de GitHub de solo lectura (`-Token`):
 
 - **Una vez (para todos los locales):** en GitHub, **Settings → Developer settings → Personal access tokens →
@@ -143,7 +143,7 @@ a la nube con la copia de R2, así que antes tiene que estar andando la copia de
 1. En el sistema del local, como administrador: **Configuración → Crear copia ahora** (o `POST /api/backups`).
    Esperar a que se suba (aparece en `npm run restaurar -- --listar` bajo "Copias en la nube").
 2. **Desde ese momento no cargar más ventas en el local**: lo que se cargue después no viaja a la nube.
-3. En Render: **New → Blueprint**, repositorio `Andreadz27/morfi`, **Blueprint path**: `render-local.yaml`. Pide los
+3. En Render: **New → Blueprint**, repositorio `Andreadz27/fadido`, **Blueprint path**: `render-local.yaml`. Pide los
    `BACKUP_S3_*` y `BACKUP_CLAVE`: los mismos del `.env` del local. Las demás variables del `.env` (Mercado Pago,
    WhatsApp, `NUBE_URL`, `NUBE_TOKEN`, etc.) se cargan en **Environment → Add from .env**, sin `PORT` ni `GM_DATA_DIR`.
 4. Al primer arranque, `scripts/arranque-nube.js` ve el disco vacío y restaura la copia más nueva. En **Logs** tiene
@@ -210,7 +210,7 @@ Render (más abajo).
 
 **Montar la nube en Render (cuando haya clientes que paguen):** no hay servidor que mantener, tiene https incluido y se
 actualiza sola cuando el CI pasa. Cuesta unos USD 7,25 por mes: plan Starter más 1 GB de disco.
-1. En Render: **New → Blueprint**, elegir el repositorio `Andreadz27/morfi` y, en **Blueprint path**, poner
+1. En Render: **New → Blueprint**, elegir el repositorio `Andreadz27/fadido` y, en **Blueprint path**, poner
    `nube/render.yaml`. Crea el servicio `fadido-nube` con el disco y las variables.
 2. En el servicio: **Environment → Secret Files → Add**. Nombre: `licencias-privada.pem`. Contenido: el de
    `Documents\Morfi-claves\licencias-privada.pem`. Guardar y redesplegar.
