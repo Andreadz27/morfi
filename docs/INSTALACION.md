@@ -134,6 +134,32 @@ todos los datos (no hay que descubrir a mitad de camino que faltaba uno). Despu�
 También existe `npm run restaurar -- --nube --ultima` para hacerlo a mano.
 **Hacer este simulacro una vez antes del primer cliente**, en una PC cualquiera.
 
+### El local en la nube (Render), sin PC prendida
+
+Para locales que **no imprimen** desde el sistema (un servidor en la nube no llega a las impresoras del local) y
+que tienen internet estable (sin internet no se puede cobrar). Cuesta unos USD 7,25 por mes. La base pasa del local
+a la nube con la copia de R2, así que antes tiene que estar andando la copia del punto 3.
+
+1. En el sistema del local, como administrador: **Configuración → Crear copia ahora** (o `POST /api/backups`).
+   Esperar a que se suba (aparece en `npm run restaurar -- --listar` bajo "Copias en la nube").
+2. **Desde ese momento no cargar más ventas en el local**: lo que se cargue después no viaja a la nube.
+3. En Render: **New → Blueprint**, repositorio `Andreadz27/morfi`, **Blueprint path**: `render-local.yaml`. Pide los
+   `BACKUP_S3_*` y `BACKUP_CLAVE`: los mismos del `.env` del local. Las demás variables del `.env` (Mercado Pago,
+   WhatsApp, `NUBE_URL`, `NUBE_TOKEN`, etc.) se cargan en **Environment → Add from .env**, sin `PORT` ni `GM_DATA_DIR`.
+4. Al primer arranque, `scripts/arranque-nube.js` ve el disco vacío y restaura la copia más nueva. En **Logs** tiene
+   que decir `Copia verificada: N pedidos`. Si la restauración falla, el servidor no arranca (para no empezar vacío).
+5. Abrir `https://morfi-local.onrender.com/api/salud` (o la dirección que dé Render): `"ok":true` y en `"ip"` tu IP
+   pública (si no, subir `TRUST_PROXY` a 2 o 3). Entrar y revisar que estén los últimos pedidos.
+6. Poner `BASE_URL` con esa dirección (los QR de mesa y los links de pago la usan) y apuntar el link del cliente a
+   la nueva dirección.
+7. Apagar el servidor del local (`pm2 stop fadido` y sacarlo del arranque): si quedan los dos andando, cada uno sube
+   sus copias al mismo bucket y se mezclan.
+
+Copias: el servidor de la nube sigue haciendo la copia diaria y subiéndola a R2, y Render guarda una instantánea
+diaria del disco durante 7 días. Cada merge a `main` con el CI en verde lo actualiza y lo reinicia (un minuto
+sin servicio): mergear fuera del horario del local. Volver al local: crear copia en la nube y en la PC del local
+`npm run restaurar -- --nube --ultima`.
+
 ## 4. Monitoreo (aviso si un local se cae)
 
 1. Crear una cuenta en [healthchecks.io](https://healthchecks.io) (tiene plan gratuito) y un check por local,

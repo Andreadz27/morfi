@@ -1,0 +1,50 @@
+# El sistema de un local corriendo en Render (no depende de que una PC del local esté prendida).
+# Sirve para locales que NO imprimen desde el sistema: un servidor en la nube no llega a las impresoras del local.
+# Cuesta unos USD 7,25 por mes (plan Starter + 1 GB de disco). Está separado del render.yaml de la raíz (la demo
+# gratis) para que nada se cobre sin crearlo a mano: en Render, New → Blueprint → este repositorio →
+# "Blueprint path": render-local.yaml. Pasos en docs/INSTALACION.md, "El local en la nube (Render)".
+services:
+  - type: web
+    name: morfi-local
+    runtime: node
+    plan: starter
+    # La región más cercana a Argentina que ofrece Render
+    region: virginia
+    # Se actualiza solo cuando se mergea a main y el CI pasó (reinicia un minuto: mergear fuera del horario del local)
+    autoDeployTrigger: checksPass
+    # sqlite3 se compila en el servidor: el binario precompilado pide una glibc más nueva que la de Render
+    buildCommand: npm ci --omit=dev --build-from-source=sqlite3
+    # La primera vez (disco vacío) restaura la copia más nueva de la nube antes de arrancar
+    startCommand: node scripts/arranque-nube.js && npm start
+    healthCheckPath: /api/salud
+    # La base del local tiene que sobrevivir a cada despliegue
+    disk:
+      name: datos
+      mountPath: /var/data/morfi
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: GM_DATA_DIR
+        value: /var/data/morfi
+      - key: ZONA_HORARIA
+        value: America/Argentina/Buenos_Aires
+      # Cantidad de proxies de Render delante del servicio (nunca "true": permite falsear la IP y saltear el límite
+      # de intentos de login). Si /api/salud no muestra tu IP pública, subir a 2 o 3.
+      - key: TRUST_PROXY
+        value: "1"
+      # Copia en la nube (las mismas del .env del local): con estas el primer arranque trae la base del local
+      - key: BACKUP_S3_ENDPOINT
+        sync: false
+      - key: BACKUP_S3_BUCKET
+        sync: false
+      - key: BACKUP_S3_KEY_ID
+        sync: false
+      - key: BACKUP_S3_SECRET
+        sync: false
+      - key: BACKUP_S3_PREFIJO
+        sync: false
+      - key: BACKUP_CLAVE
+        sync: false

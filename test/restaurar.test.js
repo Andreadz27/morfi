@@ -54,6 +54,7 @@ function pc(envExtra = {}) {
   return {
     dir, env,
     restaurar: (...a) => correr([path.join(RAIZ, 'scripts', 'restaurar.js'), ...a], { cwd: RAIZ, env }),
+    arranque: () => correr([path.join(RAIZ, 'scripts', 'arranque-nube.js')], { cwd: RAIZ, env }),
     q: async sql => (await correr(['-e', `
       const db = new (require('sqlite3').Database)(${JSON.stringify(path.join(env.GM_DATA_DIR, 'fadido.db'))});
       db.all(${JSON.stringify(sql)}, (e, r) => { console.log(JSON.stringify(e ? e.message : r)); db.close(); });`], { cwd: RAIZ })).stdout,
@@ -110,6 +111,40 @@ test('la copia se sube cifrada; una PC nueva la restaura desde la nube con la cl
     assert.match(await reemplazo.q('SELECT nombre_negocio FROM configuracion'), /La Buena Mesa/);
   } finally {
     reemplazo.borrar();
+  }
+
+  // Servidor en la nube (render-local.yaml): con el disco vacío el arranque trae la copia más nueva; con base, no la pisa
+  const render = pc({ ...nube(), BACKUP_CLAVE: CLAVE });
+  try {
+    const r = await render.arranque();
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(await render.q('SELECT nombre_negocio FROM configuracion'), /La Buena Mesa/);
+    await render.q("UPDATE configuracion SET nombre_negocio = 'Cambiada en la nube' WHERE id = 1");
+    const otra = await render.arranque();
+    assert.equal(otra.status, 0, otra.stdout + otra.stderr);
+    assert.match(otra.stdout, /Base encontrada/);
+    assert.match(await render.q('SELECT nombre_negocio FROM configuracion'), /Cambiada en la nube/, 'no pisó la base');
+  } finally {
+    render.borrar();
+  }
+  // Si la copia no se puede restaurar (clave equivocada), no arranca: arrancar vacío dejaría al local sin datos
+  const malaClave = pc({ ...nube(), BACKUP_CLAVE: crypto.randomBytes(32).toString('hex') });
+  try {
+    const r = await malaClave.arranque();
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /el servidor no arranca/);
+    assert.equal(fs.existsSync(path.join(malaClave.dir, 'fadido.db')), false);
+  } finally {
+    malaClave.borrar();
+  }
+  // Sin copia en la nube configurada: instalación desde cero, arranca con base nueva
+  const desdeCero = pc();
+  try {
+    const r = await desdeCero.arranque();
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(r.stdout, /base nueva/);
+  } finally {
+    desdeCero.borrar();
   }
 });
 
